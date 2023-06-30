@@ -1,0 +1,4 @@
+*.swp
+.vimspector.json
+/MBPM_BuildFiles/
+/MBPM_Builds/

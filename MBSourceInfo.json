@@ -1,0 +1,34 @@
+{
+    "Dependancies": 
+    [
+        "MBUtility"
+    ],
+    "ExtraIncludes": 
+    [
+
+    ],
+    "Language": "C++",
+    "Standard": "C++17",
+    "Targets": 
+    {
+        "MBLisp": 
+        {
+            "OutputName": "mblisp",
+            "Sources": 
+            [
+                "/Evaluator.cpp",
+                "/MBLisp_CLIMain.cpp"
+            ],
+            "TargetType": "Executable"
+        },
+        "Lib": 
+        {
+            "OutputName": "MBLisp",
+            "Sources": 
+            [
+                "/Evaluator.cpp"
+            ],
+            "TargetType": "Library"
+        }
+    }
+}
