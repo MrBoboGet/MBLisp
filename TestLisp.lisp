@@ -17,3 +17,5 @@
 
 (set func (lambda (x) (set temp (+ x 1)) (+ temp 2)   ))
 (print (func 17))
+(set testmacro (macro (lambda () (list (quote print) "macro result"))))
+(testmacro)

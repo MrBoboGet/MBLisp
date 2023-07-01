@@ -171,8 +171,7 @@ namespace MBLisp
                     {
                         throw std::runtime_error("macro requires exactly 1 arguments, function to make macro of");   
                     }
-                    OpCode_PushLiteral LiteralToPush;
-                    LiteralToPush.Literal = ListToConvert[1];
+                    p_CreateOpCodes(ListToConvert[1],ListToAppend,CurrentState);
                     ListToAppend.push_back(OpCode_Macro());
                 }
                 else if(CurrentSymbol == SymbolID(PrimitiveForms::quote))

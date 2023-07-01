@@ -166,7 +166,7 @@ namespace MBLisp
                 {
                     LiteralToPush.GetType<Lambda>().AssociatedScope = CurrentFrame.StackScope;
                 }
-                CurrentFrame.ArgumentStack.push_back(std::move(PushCode.Literal));
+                CurrentFrame.ArgumentStack.push_back(LiteralToPush);
             }
             else if(CurrentCode.IsType<OpCode_Goto>())
             {
@@ -473,6 +473,7 @@ namespace MBLisp
                     {"print",Print},
                     {"+",Plus},
                     {"<",Less},
+                    {"list",CreateList},
                 })
         {
             Function NewBuiltin;
