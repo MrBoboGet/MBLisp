@@ -17,6 +17,7 @@
             "Sources": 
             [
                 "/Evaluator.cpp",
+                "/OpCodes.cpp",
                 "/MBLisp_CLIMain.cpp"
             ],
             "TargetType": "Executable"

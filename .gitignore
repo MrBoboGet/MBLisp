@@ -2,3 +2,6 @@
 .vimspector.json
 /MBPM_BuildFiles/
 /MBPM_Builds/
+/out
+/.vs/
+#/CMake*

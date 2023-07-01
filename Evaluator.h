@@ -1,170 +1,64 @@
 #pragma once
 #include "Value.h"
+#include "OpCodes.h"
 #include <unordered_map>
 namespace MBLisp
 {
-    typedef uint_least32_t IPIndex;
-    //we go with two 
-    struct OpCode_PushVar
-    {
-        SymbolID ID;
-    };
-    struct OpCode_PushLiteral
-    {
-        Value Literal;
-    };
-    struct OpCode_Set
-    {
-
-    };
-    struct OpCode_Pop
-    {
-           
-    };
-    struct OpCode_Goto
-    {
-        IPIndex NewIP;
-    };
-    struct OpCode_Jump
-    {
-        IPIndex NewIP;
-    };
-    struct OpCode_JumpNotTrue
-    {
-        IPIndex NewIP;
-    };
-    struct OpCode_CallFunc
-    {
-        //determines the amount of vales to take from the stack when calling the function
-        int ArgumentCount = 0;
-    };
-    struct OpCode
-    {
-        std::variant<OpCode_PushVar,OpCode_Set,OpCode_PushLiteral,OpCode_Pop,OpCode_Goto,OpCode_JumpNotTrue,OpCode_Jump,OpCode_CallFunc> m_Data;
-    public:
-        OpCode() = default;
-        OpCode(OpCode const&) = default;
-        OpCode(OpCode&&) noexcept = default;
-        OpCode& operator=(OpCode const&) = default;
-        OpCode& operator=(OpCode&&) = default;
-
-        template<typename T>
-        OpCode(T NewValue)
-        {
-            m_Data = NewValue;
-        }
-        template<typename T>
-        bool IsType() const
-        {
-            return std::holds_alternative<T>(m_Data);
-        }
-        template<typename T>
-        T& GetType()
-        {
-            return std::get<T>(m_Data);
-        }
-        template<typename T>
-        T const& GetType() const
-        {
-            return std::get<T>(m_Data);
-        }
-        template<typename T>
-        OpCode& operator=(T NewValue)
-        {
-            m_Data = std::move(NewValue);
-            return *this;
-        }
-    };
-
-
-    class OpCodeList
-    {
-        friend class OpCodeExtractor;
-        
-        std::vector<OpCode> m_OpCodes;
-
-        struct EncodingState
-        {
-            std::vector<std::pair<SymbolID,IPIndex>> UnResolvedGotos;
-        };
-        
-        void p_CreateOpCodes(Value const& ValueToEncode,std::vector<OpCode>& ListToAppend,EncodingState& CurrentState);
-        void p_CreateFuncCall(List const& ValueToEncode,std::vector<OpCode>& OutCodes,EncodingState& CurrentState);
-        void p_CreateOpCodes(List const& ListToConvert,std::vector<OpCode>& ListToAppend,EncodingState& CurrentState);
-        public:
-        OpCodeList();
-        OpCodeList(List const& ListToConvert);
-    };
-    class OpCodeExtractor
-    {
-        OpCodeList* m_AssociatedList = nullptr;
-        IPIndex m_IP = 0;
-    public:
-        OpCodeExtractor(OpCodeList& OpCodes);
-        OpCode& GetCurrentCode();
-        void SetIP(IPIndex NewIP);
-        IPIndex GetIP();
-        void Pop();
-        bool Finished() const;
-    };
    
 
     class Evaluator;
     class Scope
     {
-        Evaluator* m_AssociatedEvaluator;
+        std::shared_ptr<Scope> m_ParentScope = nullptr;
         std::unordered_map<SymbolID,Value> m_Variables;
     public:
-        Scope(Evaluator* AssoicatedEvaluator)
-        {
-            m_AssociatedEvaluator = AssoicatedEvaluator;
-        }
+        void SetParentScope(std::shared_ptr<Scope> ParentScope);
         Value FindVariable(SymbolID Variable);
         void SetVariable(SymbolID Variable,Value NewValue);
+        Value* TryGet(SymbolID Variable);
     };
 
     struct StackFrame
     {
-        Scope StackScope;
+        std::shared_ptr<Scope> StackScope;
         OpCodeExtractor ExecutionPosition;
         std::vector<Value> ArgumentStack;
-        StackFrame(OpCodeExtractor Extractor,Evaluator* AssociatedEvaluator) : ExecutionPosition(std::move(Extractor)),StackScope(AssociatedEvaluator)
+
+        StackFrame(OpCodeExtractor Extractor) : ExecutionPosition(std::move(Extractor))
         {
         }
     };
     
-    enum class PrimitiveForms
-    {
-        cond = 1,
-        tagbody,
-        go,
-        set,
-        LAST
-    };
     
     class Evaluator
     {
         friend class Scope;
         SymbolID m_CurrentSymbolID = 1;
+        SymbolID m_PrimitiveSymbolMax = 0;
 
-        typedef Value (*BuiltinFuncType)(std::vector<Value>&);
         static Value Print(std::vector<Value>& Arguments);
-        std::unordered_map<FunctionID,BuiltinFuncType> m_Builtins;
+        static Value Less(std::vector<Value>& Arguments);
+        static Value Plus(std::vector<Value>& Arguments);
+        static Value CreateList(std::vector<Value>& Arguments);
 
         std::unordered_map<std::string,SymbolID> m_InternedSymbols;
         std::unordered_map<SymbolID,std::string> m_SymbolToString;
-        
-
+        std::shared_ptr<Scope> m_GlobalScope = std::make_shared<Scope>();
         //easiest possible testable variant
-        OpCodeList m_OpCodes;
 
         //The fundamental dispatch loop
-        void p_Eval(OpCodeList& OpCodes);
+        Value p_Eval(std::shared_ptr<Scope> CurrentScope,OpCodeList& OpCodes,IPIndex  Offset = 0);
+        Value p_Eval(std::shared_ptr<Scope> AssociatedScope,FunctionDefinition& FunctionToExecute,std::vector<Value> Arguments);
 
         void p_SkipWhiteSpace(std::string_view& Content);
+        
 
+        Value p_Expand(std::shared_ptr<Scope> ExpandScope,Value ValueToExpand);
+        Value p_Expand(std::shared_ptr<Scope> ExpandScope,List ListToExpand);
+
+        //reading
         String p_ReadString(std::string_view& Content);
-        Symbol p_ReadSymbol(std::string_view& Content);
+        Value p_ReadSymbol(std::string_view& Content);
         Int p_ReadInteger(std::string_view& Content);
         List p_ReadList(std::string_view& Content);
         Value p_ReadTerm(std::string_view& Content);

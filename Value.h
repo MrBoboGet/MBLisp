@@ -5,7 +5,6 @@
 #include <vector>
 #include <string>
 #include <variant>
-
 #include <MBUtility/Dynamic.h>
 namespace MBLisp
 {
@@ -29,14 +28,34 @@ namespace MBLisp
     struct Symbol
     {
         SymbolID ID;
+        Symbol() = default;
+        Symbol(SymbolID  NewId)
+        {
+            ID = NewId;
+        }
     };
+
+    class OpCodeList;
+    class Scope;
+    struct FunctionDefinition
+    {
+        std::vector<Symbol> Arguments;
+        std::shared_ptr<OpCodeList> Instructions;
+    };
+    //TODO add support for 
+    struct Lambda
+    {
+        std::shared_ptr<FunctionDefinition> Definition;
+        std::shared_ptr<Scope> AssociatedScope;
+    };
+    typedef Value (*BuiltinFuncType)(std::vector<Value>&);
     struct Function
     {
-        FunctionID ID;
+        BuiltinFuncType Func;
     };
     struct Macro
     {
-        FunctionID ID;
+        std::shared_ptr<FunctionDefinition> AssociatedFunction;
     };
     
 
@@ -58,43 +77,15 @@ namespace MBLisp
         template<typename T>
         static constexpr bool IsBuiltin()
         {
-            if constexpr(std::is_same_v<T,Int>)
-            {
-                return true;
-            }
-            else if constexpr(std::is_same_v<T,Float>)
-            {
-                return true;
-            }
-            else if constexpr(std::is_same_v<T,List>)
-            {
-                return true;
-            }
-            else if constexpr(std::is_same_v<T,Symbol>)
-            {
-                return true;
-            }
-            else if constexpr(std::is_same_v<T,String>)
-            {
-                return true;
-            }
-            else if constexpr(std::is_same_v<T,bool>)
-            {
-                return true;
-            }
-            else if constexpr(std::is_same_v<T,Function>)
-            {
-                return true;
-            }
-            return false;
+            return TypeIn<T,bool,Function,Int,Float,Symbol,List,String,Lambda,Macro>;
         }
-        std::variant<bool,Function,Int,Float,MBUtility::Dynamic<String>,std::shared_ptr<List>,Symbol> m_Data;
+        std::variant<bool,Function,Macro,Int,Float,MBUtility::Dynamic<String>,std::shared_ptr<Lambda>,std::shared_ptr<List>,Symbol> m_Data;
 
 
         template<typename T>
         static constexpr bool IsValueType()
         {
-            return TypeIn<T,bool,Function,Int,Float,Symbol>;
+            return TypeIn<T,bool,Function,Int,Float,Symbol,Macro>;
         }
         
         template<typename T>
@@ -102,33 +93,21 @@ namespace MBLisp
         {
             if constexpr(IsBuiltin<T>())
             {
-                if constexpr(std::is_same_v<T,Int>)
+                if constexpr(IsValueType<T>())
                 {
-                    return std::get<Int>(m_Data);
-                }
-                else if constexpr(std::is_same_v<T,Float>)
-                {
-                    return std::get<Float>(m_Data);
-                }
-                else if constexpr(std::is_same_v<T,bool>)
-                {
-                    return std::get<bool>(m_Data);
+                    return std::get<T>(m_Data);
                 }
                 else if constexpr(std::is_same_v<T,List>)
                 {
                     return *std::get<std::shared_ptr<List>>(m_Data);
                 }
-                else if constexpr(std::is_same_v<T,Function>)
-                {
-                    return std::get<Function>(m_Data);
-                }
-                else if constexpr(std::is_same_v<T,Symbol>)
-                {
-                    return std::get<Symbol>(m_Data);
-                }
                 else if constexpr(std::is_same_v<T,String>)
                 {
                     return *std::get<MBUtility::Dynamic<String>>(m_Data);
+                }
+                else if constexpr(std::is_same_v<T,Lambda>)
+                {
+                    return *std::get<std::shared_ptr<Lambda>>(m_Data);
                 }
             }
             throw std::runtime_error("Invalid type access: Value was not of type "+std::string(typeid(T).name()));
@@ -141,6 +120,12 @@ namespace MBLisp
         Value(Value&&) noexcept= default;
         Value(Value const& ) = default;
         Value() = default;
+
+
+        bool IsSameType(Value const& OtherValue) const
+        {
+            return m_Data.index() == OtherValue.m_Data.index();
+        }
         template<typename T>
         bool IsType() const
         {
@@ -158,6 +143,10 @@ namespace MBLisp
                 {
                     return std::holds_alternative<MBUtility::Dynamic<String>>(m_Data);
                 }
+                else if constexpr(std::is_same_v<T,Lambda>)
+                {
+                    return std::holds_alternative<std::shared_ptr<Lambda>>(m_Data);
+                }
             }
             return false;
         }
@@ -171,7 +160,37 @@ namespace MBLisp
         {
             return p_GetType<T>();
         }
-        
+        template<typename T>
+        Value(T Rhs)
+        {
+            if constexpr(IsBuiltin<T>())
+            {
+                if constexpr(IsValueType<T>())
+                {
+                    m_Data = std::move(Rhs);
+                }
+                else if constexpr(std::is_same_v<T,String>)
+                {
+                    m_Data = MBUtility::Dynamic(std::move(Rhs));
+                }
+                else if constexpr(std::is_same_v<T,List>)
+                {
+                    m_Data = std::make_shared<List>(std::move(Rhs));
+                }
+                else if constexpr(std::is_same_v<T,Lambda>)
+                {
+                    m_Data = std::make_shared<Lambda>(std::move(Rhs));
+                }
+                else
+                {
+                    static_assert(!std::is_same<T,T>::value,"Initialization of value doesnt take into consideration all builtin types");
+                }
+            }
+            else
+            {
+                static_assert(!std::is_same<T,T>::value,"Can only initialize value with builtin types");
+            }
+        }
         template<typename T>
         Value& operator=(T Rhs)
         {
@@ -188,6 +207,10 @@ namespace MBLisp
                 else if constexpr(std::is_same_v<T,List>)
                 {
                     m_Data = std::make_shared<List>(std::move(Rhs));
+                }
+                else if constexpr(std::is_same_v<T,Lambda>)
+                {
+                    m_Data = std::make_shared<Lambda>(std::move(Rhs));
                 }
                 else
                 {
