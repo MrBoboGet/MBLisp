@@ -200,7 +200,7 @@ namespace MBLisp
         }
         else if(ListToConvert[0].IsType<List>())
         {
-               
+            p_CreateFuncCall(ListToConvert, ListToAppend, CurrentState);
         }
     }
     void OpCodeList::p_WriteProgn(List const& ListToConvert,std::vector<OpCode>& ListToAppend,EncodingState& CurrentState,int Offset)

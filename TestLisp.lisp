@@ -19,3 +19,7 @@
 (print (func 17))
 (set testmacro (macro (lambda () (list (quote print) "macro result"))))
 (testmacro)
+(print "nested lambda test")
+(set TestLambda (lambda () (progn (set reqvar 100) (lambda () reqvar))))
+(print "lambda assigned")
+(print ((TestLambda)))
