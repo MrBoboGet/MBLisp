@@ -55,7 +55,7 @@ namespace MBLisp
         lambda,
         progn,
         quote,
-        macro,
+        macro,//should probably replace with function call semantics
         LAST
     };
     struct OpCode

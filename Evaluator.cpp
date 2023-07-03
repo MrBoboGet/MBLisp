@@ -113,6 +113,113 @@ namespace MBLisp
         std::cout<<std::endl;
         return ReturnValue;
     }
+    void Evaluator::p_MergeClasses(std::vector<Ref<ClassDefinition>> const& ClassesToMerge,ClassDefinition& NewClass)
+    {
+        std::vector<ClassID> NewClasses;
+        for(auto const& Class : ClassesToMerge)
+        {
+            std::vector<ClassID> TempClasses;
+            std::swap(NewClasses,TempClasses);
+            std::merge(TempClasses.begin(),TempClasses.end(),Class->Types.begin(),Class->Types.end(),std::inserter(TempClasses,TempClasses.begin()));
+            std::swap(NewClasses,TempClasses);
+        }
+        NewClass.Types = std::move(NewClasses);
+    }
+
+    //TODO MEGA temporarty
+    ClassID i___CurrentClassID = 0;
+    Value Evaluator::Class(std::vector<Value>& Arguments)
+    {
+        Value ReturnValue;
+        if(Arguments.size() < 2)
+        {
+            throw std::runtime_error("to few arguments for class: class requires exactly 2 argument, a list of overrides, and a list of slots");
+        }
+        if(Arguments.size() > 2)
+        {
+            throw std::runtime_error("to many arguments for class: class requires exactly 2 argument, a list of overrides, and a list of slots");
+        }
+        ClassDefinition NewClass;
+        if(!Arguments[0].IsType<List>())
+        {
+            throw std::runtime_error("first argument of class has to be a list of parent types");
+        }
+        std::vector<std::shared_ptr<ClassDefinition>> Parents;
+        for(auto& Value : Arguments[0].GetType<List>())
+        {
+            if(!Value.IsType<ClassDefinition>())
+            {
+                throw std::runtime_error("non-ClassDefinition object in list of parent classes in second argument to class");
+            }
+            Parents.push_back(Value.GetRef<ClassDefinition>());
+        }
+        p_MergeClasses(Parents,NewClass);
+        NewClass.Types.push_back(i___CurrentClassID);
+        NewClass.ID = i___CurrentClassID;
+        i___CurrentClassID++;
+        return std::move(NewClass);
+    }
+    Value Evaluator::AddMethod(std::vector<Value>& Arguments)
+    {
+        Value ReturnValue;
+        if(Arguments.size() < 3)
+        {
+            throw std::runtime_error(
+                    "to few arguments for addmethod: addmethod requires 3 arguments, the generic to modify, a list of types, and a callable");
+        }
+        if(Arguments.size() > 3)
+        {
+            throw std::runtime_error(
+                    "to many arguments for addmethod: addmethod requires 3 arguments, the generic to modify, a list of types, and a callable");
+        }
+        if(!Arguments[0].IsType<GenericFunction>())
+        {
+            throw std::runtime_error("first argument to addmethod has to be a generic to be modified");
+        }
+        GenericFunction& GenericToModify = Arguments[0].GetType<GenericFunction>();
+        if(!Arguments[1].IsType<List>())
+        {
+            throw std::runtime_error("second argument to addmethod has to be a list of specified types");
+        }
+        std::vector<ClassID> OverridenTypes;
+        for(auto& Type : Arguments[1].GetType<List>())
+        {
+            if(!Type.IsType<ClassDefinition>())
+            {
+                throw std::runtime_error("non-classdefinition in list of class definitions supplied to addmethod");
+            }
+            OverridenTypes.push_back(Type.GetType<ClassDefinition>().ID);
+        }
+        GenericToModify.AddMethod(OverridenTypes,Arguments[2]);
+        return ReturnValue;
+    }
+    Value Evaluator::Generic(std::vector<Value>& Arguments)
+    {
+        Value ReturnValue;
+        if(Arguments.size() < 1)
+        {
+            throw std::runtime_error("to few arguments sfor generic: exactly one argument is required, a list of symbols");
+        }
+        if(Arguments.size() < 1)
+        {
+            throw std::runtime_error("to emany arguments for generic: exactly one argument is required, a list of symbols");
+        }
+        if (!Arguments[0].IsType<List>())
+        {
+            throw std::runtime_error("argument to generic has to be a list of symbols");
+        }
+        std::vector<SymbolID> GenericArgs;
+        for(auto const& Argument : Arguments[0].GetType<List>())
+        {
+            if(!Argument.IsType<Symbol>())
+            {
+                throw std::runtime_error("non-symbol in list of symbols supplied to generic");   
+            }
+            GenericArgs.push_back(Argument.GetType<Symbol>().ID);
+        }
+        ReturnValue = std::move(GenericFunction(std::move(GenericArgs)));
+        return ReturnValue;
+    }
     Value Evaluator::p_Eval(std::shared_ptr<Scope> AssociatedScope,FunctionDefinition& FunctionToExecute,std::vector<Value> Arguments)
     {
         for(int i = 0; i <Arguments.size();i++)
@@ -120,6 +227,55 @@ namespace MBLisp
             AssociatedScope->SetVariable(FunctionToExecute.Arguments[i].ID,std::move(Arguments[i]));
         }
         return p_Eval(AssociatedScope,*FunctionToExecute.Instructions);
+    }
+    void Evaluator::p_Invoke(Value& ObjectToCall,std::vector<Value>& Arguments,std::vector<StackFrame>& CurrentCallStack)
+    {
+        if(ObjectToCall.IsType<Function>())
+        {
+            BuiltinFuncType AssociatedFunc = ObjectToCall.GetType<Function>().Func;
+            assert(AssociatedFunc != nullptr);
+            CurrentCallStack.back().ArgumentStack.push_back(AssociatedFunc(Arguments));
+        }
+        else if(ObjectToCall.IsType<Lambda>())
+        {
+            Lambda& AssociatedLambda = ObjectToCall.GetType<Lambda>();
+            if(Arguments.size() < AssociatedLambda.Definition->Arguments.size())
+            {
+                throw std::runtime_error("To few arguments for function call");
+            }
+            else if(Arguments.size() > AssociatedLambda.Definition->Arguments.size())
+            {
+                throw std::runtime_error("To many arguments for function call");
+            }
+            StackFrame NewStackFrame(OpCodeExtractor(*AssociatedLambda.Definition->Instructions));
+            NewStackFrame.StackScope = std::make_shared<Scope>();
+            NewStackFrame.StackScope->SetParentScope(AssociatedLambda.AssociatedScope);
+            for(int i = 0; i < Arguments.size();i++)
+            {
+                NewStackFrame.StackScope->SetVariable(AssociatedLambda.Definition->Arguments[i].ID,Arguments[i]);   
+            }
+            CurrentCallStack.push_back(std::move(NewStackFrame));
+        }
+        else if(ObjectToCall.IsType<ClassDefinition>())
+        {
+            ClassInstance NewInstance;
+            NewInstance.AssociatedClass = ObjectToCall.GetRef<ClassDefinition>();
+            CurrentCallStack.back().ArgumentStack.push_back(std::move(NewInstance));
+        }
+        else if(ObjectToCall.IsType<GenericFunction>())
+        {
+            GenericFunction& GenericToInvoke = ObjectToCall.GetType<GenericFunction>();
+            Value* Callable = GenericToInvoke.GetMethod(Arguments);
+            if(Callable == nullptr)
+            {
+                throw std::runtime_error("No method associated with the argumnet list");   
+            }
+            p_Invoke(*Callable,Arguments,CurrentCallStack);
+        }
+        else
+        {
+            throw std::runtime_error("Cannot invoke object");   
+        }
     }
     Value Evaluator::p_Eval(std::shared_ptr<Scope> CurrentScope,OpCodeList& OpCodes,IPIndex Offset)
     {
@@ -199,10 +355,10 @@ namespace MBLisp
                 //last value is the function to call, rest is arguments
                 //creates new stack frame
                 assert(CurrentFrame.ArgumentStack.size() != 0);
-                if(!(CurrentFrame.ArgumentStack.back().IsType<Function>() || CurrentFrame.ArgumentStack.back().IsType<Lambda>()))
-                {
-                    throw std::runtime_error("can only invoke objects of type function");
-                }
+                //if(!(CurrentFrame.ArgumentStack.back().IsType<Function>() || CurrentFrame.ArgumentStack.back().IsType<Lambda>()))
+                //{
+                //    throw std::runtime_error("can only invoke objects of type function");
+                //}
                 OpCode_CallFunc&  CallFuncCode = CurrentCode.GetType<OpCode_CallFunc>();
                 Value FunctionToCall = std::move(CurrentFrame.ArgumentStack.back());
                 CurrentFrame.ArgumentStack.pop_back();
@@ -215,32 +371,7 @@ namespace MBLisp
                 {
                     CurrentFrame.ArgumentStack.pop_back();
                 }
-                if(FunctionToCall.IsType<Function>())
-                {
-                    BuiltinFuncType AssociatedFunc = FunctionToCall.GetType<Function>().Func;
-                    assert(AssociatedFunc != nullptr);
-                    CurrentFrame.ArgumentStack.push_back(AssociatedFunc(Arguments));
-                }
-                else if(FunctionToCall.IsType<Lambda>())
-                {
-                    Lambda& AssociatedLambda = FunctionToCall.GetType<Lambda>();
-                    if(Arguments.size() < AssociatedLambda.Definition->Arguments.size())
-                    {
-                        std::runtime_error("To few arguments for function call");
-                    }
-                    else if(Arguments.size() > AssociatedLambda.Definition->Arguments.size())
-                    {
-                        std::runtime_error("To many arguments for function call");
-                    }
-                    StackFrame NewStackFrame(OpCodeExtractor(*AssociatedLambda.Definition->Instructions));
-                    NewStackFrame.StackScope = std::make_shared<Scope>();
-                    NewStackFrame.StackScope->SetParentScope(AssociatedLambda.AssociatedScope);
-                    for(int i = 0; i < Arguments.size();i++)
-                    {
-                        NewStackFrame.StackScope->SetVariable(AssociatedLambda.Definition->Arguments[i].ID,Arguments[i]);   
-                    }
-                    StackFrames.push_back(std::move(NewStackFrame));
-                }
+                p_Invoke(FunctionToCall,Arguments,StackFrames);
             }
             else if(CurrentCode.IsType<OpCode_Macro>())
             {
@@ -474,6 +605,9 @@ namespace MBLisp
                     {"+",Plus},
                     {"<",Less},
                     {"list",CreateList},
+                    {"class",Class},
+                    {"addmethod",AddMethod},
+                    {"generic",Generic},
                 })
         {
             Function NewBuiltin;

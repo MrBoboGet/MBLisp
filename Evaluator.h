@@ -41,11 +41,21 @@ namespace MBLisp
         static Value Plus(std::vector<Value>& Arguments);
         static Value CreateList(std::vector<Value>& Arguments);
 
+
+        //classes and generics
+        static void p_MergeClasses(std::vector<Ref<ClassDefinition>> const& ClassesToMerge,ClassDefinition& NewClass);
+        static Value Class(std::vector<Value>& Arguments);
+        static Value AddMethod(std::vector<Value>& Arguments);
+        static Value Generic(std::vector<Value>& Arguments);
+
         std::unordered_map<std::string,SymbolID> m_InternedSymbols;
         std::unordered_map<SymbolID,std::string> m_SymbolToString;
         std::shared_ptr<Scope> m_GlobalScope = std::make_shared<Scope>();
         //easiest possible testable variant
 
+
+
+        void p_Invoke(Value& ObjectToCall,std::vector<Value>& Arguments,std::vector<StackFrame>& CurrentCallStack);
         //The fundamental dispatch loop
         Value p_Eval(std::shared_ptr<Scope> CurrentScope,OpCodeList& OpCodes,IPIndex  Offset = 0);
         Value p_Eval(std::shared_ptr<Scope> AssociatedScope,FunctionDefinition& FunctionToExecute,std::vector<Value> Arguments);

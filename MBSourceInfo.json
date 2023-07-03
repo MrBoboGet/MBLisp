@@ -17,6 +17,7 @@
             "Sources": 
             [
                 "/Evaluator.cpp",
+                "/Value.cpp",
                 "/OpCodes.cpp",
                 "/MBLisp_CLIMain.cpp"
             ],
