@@ -36,17 +36,23 @@ namespace MBLisp
         SymbolID m_CurrentSymbolID = 1;
         SymbolID m_PrimitiveSymbolMax = 0;
 
-        static Value Print(std::vector<Value>& Arguments);
-        static Value Less(std::vector<Value>& Arguments);
-        static Value Plus(std::vector<Value>& Arguments);
-        static Value CreateList(std::vector<Value>& Arguments);
+        static Value Print(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+        static Value Less(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+        static Value Plus(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+        static Value CreateList(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
 
 
         //classes and generics
         static void p_MergeClasses(std::vector<Ref<ClassDefinition>> const& ClassesToMerge,ClassDefinition& NewClass);
-        static Value Class(std::vector<Value>& Arguments);
-        static Value AddMethod(std::vector<Value>& Arguments);
-        static Value Generic(std::vector<Value>& Arguments);
+        static Value Class(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+        static Value AddMethod(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+        static Value Generic(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+
+
+        //builtin containers
+        static Value Index_List(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+        static Value Index_ClassInstance(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+
 
         std::unordered_map<std::string,SymbolID> m_InternedSymbols;
         std::unordered_map<SymbolID,std::string> m_SymbolToString;
@@ -80,6 +86,7 @@ namespace MBLisp
         void p_InternPrimitiveSymbols();
     public:
         Evaluator();
+        SymbolID GetSymbolID(std::string const& SymbolString);
         void Eval(std::string_view Content);
     };
 }

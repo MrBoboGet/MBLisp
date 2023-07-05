@@ -1,6 +1,9 @@
 #include "OpCodes.h"
 #include <unordered_map>
 #include <assert.h>
+
+
+#include "Value.h"
 namespace MBLisp
 {
     OpCodeList::OpCodeList()
@@ -242,6 +245,21 @@ namespace MBLisp
         {
             throw std::runtime_error("go's to tags without corresponding label detected");
         }
+    }
+    OpCodeList::OpCodeList(SymbolID ArgID,SymbolID IndexFunc,std::vector<SlotDefinition> const& Initializers)
+    {
+        for(auto const& Slot : Initializers)
+        {
+            m_OpCodes.push_back(OpCode_PushVar(ArgID));
+            m_OpCodes.push_back(OpCode_PushLiteral(Value(Symbol(Slot.Symbol))));
+            m_OpCodes.push_back(OpCode_PushVar(IndexFunc));
+            m_OpCodes.push_back(OpCode_CallFunc());
+            EncodingState CurrentState;
+            p_CreateOpCodes(Slot.DefaultValue,m_OpCodes,CurrentState);
+            m_OpCodes.push_back(OpCode_Set());
+            m_OpCodes.push_back(OpCode_Pop());
+        }
+        m_OpCodes.push_back(OpCode_PushVar(ArgID));
     }
 
     OpCodeExtractor::OpCodeExtractor(OpCodeList& OpCodes)

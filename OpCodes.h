@@ -1,3 +1,4 @@
+#pragma once
 #include "Value.h"
 namespace MBLisp
 {
@@ -6,19 +7,29 @@ namespace MBLisp
     struct OpCode_PushVar
     {
         SymbolID ID;
+        OpCode_PushVar()
+        {
+               
+        }
+        OpCode_PushVar(SymbolID NewID)
+        {
+            ID = NewID;   
+        }
     };
     struct OpCode_PushLiteral
     {
+        OpCode_PushLiteral()
+        {
+                
+        }
+        OpCode_PushLiteral(Value LiteralToUse)
+        {
+            Literal = LiteralToUse;
+        }
         Value Literal;
     };
     struct OpCode_Set
     {
-        bool SetMacro = false;
-        OpCode_Set() = default;
-        OpCode_Set(bool IsMacro)
-        {
-            SetMacro = IsMacro;   
-        }
     };
     struct OpCode_Pop
     {
@@ -114,6 +125,7 @@ namespace MBLisp
         OpCodeList();
         OpCodeList(List const& ListToConvert);
         OpCodeList(List const& ListToConvert,int Offset);
+        OpCodeList(SymbolID ArgID,SymbolID IndexFunc,std::vector<SlotDefinition> const& Initializers);
         void Append(List const& ListToConvert);
         IPIndex Size()
         {
@@ -133,3 +145,4 @@ namespace MBLisp
         bool Finished() const;
     };
 }
+

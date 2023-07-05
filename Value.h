@@ -6,6 +6,7 @@
 #include <string>
 #include <variant>
 #include <MBUtility/Dynamic.h>
+#include <functional>
 namespace MBLisp
 {
     typedef int_least64_t Int;
@@ -58,10 +59,16 @@ namespace MBLisp
         std::shared_ptr<FunctionDefinition> Definition;
         std::shared_ptr<Scope> AssociatedScope;
     };
-    typedef Value (*BuiltinFuncType)(std::vector<Value>&);
+    class Evaluator;
+    typedef Value (*BuiltinFuncType)(Evaluator&,std::vector<Value>&);
     struct Function
     {
         BuiltinFuncType Func;
+        Function(){};
+        Function(BuiltinFuncType FuncToSet)
+        {
+            Func = FuncToSet;   
+        }
     };
     struct Macro
     {
@@ -79,18 +86,102 @@ namespace MBLisp
     {
         static constexpr bool value = std::is_same<T,U>::value;
     };
+
+
+
+
+    inline constexpr int ExternalClassBit = 30;
+    inline constexpr int UserClassBit = 31;
+    class ClassIdentificator
+    {
+        template<typename T>
+        friend ClassID GetClassID();
+        static ClassID m_CurrentID;
+    };
+
+    template<typename T>
+    ClassID GetClassID()
+    {
+        static ClassID ID = ++ClassIdentificator::m_CurrentID;
+        return ID;
+    }
+
+
+
+
+    class ExternalValue
+    {
+        ClassID m_ClassID = 0;
+        void* m_ExternalData = nullptr;
+        std::function<void(void*)> m_Deleter;
+    public:
+        ExternalValue(ExternalValue const&) = delete;
+        ExternalValue& operator=(ExternalValue const&) = delete;
+        ExternalValue(ExternalValue&& OtherValue) noexcept
+        {
+            m_ClassID = OtherValue.m_ClassID;   
+            m_ExternalData = OtherValue.m_ExternalData;
+            OtherValue.m_ExternalData = nullptr;
+            OtherValue.m_ClassID = 0;
+        }
+    
+        template<typename T>
+        explicit ExternalValue(T ValueToStore)
+        {
+            m_ExternalData = new T(std::move(ValueToStore));
+            m_Deleter = [](void* DataToDelete){delete static_cast<T*>(DataToDelete);};
+            m_ClassID = GetClassID<T>();
+        }
+        ~ExternalValue()
+        {
+            if(m_ExternalData != nullptr)
+            {
+                m_Deleter(m_ExternalData);   
+            }
+        }
+
+        ClassID GetTypeID()
+        {
+            return m_ClassID;   
+        }
+        template<typename T>
+        bool IsType() const
+        {
+            return m_ClassID = GetClassID<T>();
+        }
+        template<typename T>
+        T& GetType()
+        {
+            if(!IsType<T>())
+            {
+                throw std::runtime_error("Invalid type access for ExternalValue: "+std::string(typeid(T).name()));
+            }
+            return *static_cast<T*>(m_ExternalData);
+        }
+        template<typename T>
+        T const& GetType() const
+        {
+            if(!IsType<T>())
+            {
+                throw std::runtime_error("Invalid type access for ExternalValue: "+std::string(typeid(T).name()));
+            }
+            return *static_cast<T const*>(m_ExternalData);
+        }
+    };
     
     template<typename TypeToCheck,typename... OtherType>
     inline constexpr bool TypeIn = i_TypeIn<TypeToCheck,OtherType...>::value;
     class Value
     {
-        template<typename T>
-        static constexpr bool IsBuiltin()
-        {
-            return TypeIn<T,bool,Function,Int,Float,Symbol,List,String,Lambda,Macro,GenericFunction,ClassDefinition,ClassInstance>;
-        }
-        std::variant<bool,Function,Macro,Int,Float,Symbol,MBUtility::Dynamic<String>,
-            std::shared_ptr<Lambda>,std::shared_ptr<List>,std::shared_ptr<GenericFunction>,std::shared_ptr<ClassDefinition>,std::shared_ptr<ClassInstance>> m_Data;
+        typedef std::variant<bool,Function,Macro,Int,Float,Symbol,MBUtility::Dynamic<String>,
+            Ref<Lambda>,
+            Ref<List>,
+            Ref<GenericFunction>,
+            Ref<ClassDefinition>,
+            Ref<ClassInstance>,
+            Ref<Value>,
+            Ref<ExternalValue>> DataStorage;
+        DataStorage m_Data;
 
 
         template<typename T>
@@ -101,9 +192,13 @@ namespace MBLisp
         template<typename T>
         static constexpr bool IsReferenceType()
         {
-            return TypeIn<T,ClassDefinition,Lambda,GenericFunction,ClassInstance,List>;
+            return TypeIn<T,ClassDefinition,Lambda,GenericFunction,ClassInstance,List,Value>;
         }
-        
+        template<typename T>
+        static constexpr bool IsBuiltin()
+        {
+            return IsValueType<T>() || IsReferenceType<T>() || std::is_same_v<T,String>;
+        }
         
         template<typename T>
         T const& p_GetType() const
@@ -116,63 +211,127 @@ namespace MBLisp
                 }
                 else if constexpr(IsReferenceType<T>())
                 {
-                    return *std::get<std::shared_ptr<T>>(m_Data);
+                    return *std::get<Ref<T>>(m_Data);
                 }
                 else if constexpr(std::is_same_v<T,String>)
                 {
                     return *std::get<MBUtility::Dynamic<String>>(m_Data);
                 }
             }
+            else
+            {
+                return std::get<Ref<ExternalValue>>(m_Data)->GetType<T>();
+            }
             throw std::runtime_error("Invalid type access: Value was not of type "+std::string(typeid(T).name()));
         }
-
+        template<typename VariantType, typename T, std::size_t Index = 0>
+        static constexpr std::size_t VariantIndex() 
+        {
+            static_assert(std::variant_size_v<VariantType> > Index, "Type not found in variant");
+            if constexpr (Index == std::variant_size_v<VariantType>) 
+            {
+                return Index;
+            } 
+            else if constexpr (std::is_same_v<std::variant_alternative_t<Index, VariantType>, T>) 
+            {
+                return Index;
+            } 
+            else 
+            {
+                return VariantIndex<VariantType, T, Index + 1>();
+            }
+        } 
 
     public:
-        Value& operator=(Value const&) = default;
         Value& operator=(Value&&) = default;
         Value(Value&&) noexcept= default;
         Value(Value const& ) = default;
         Value() = default;
 
-
-        bool IsSameType(Value const& OtherValue) const
+        Value& operator=(Value const& ValueToCopy)
         {
-            return m_Data.index() == OtherValue.m_Data.index();
+            //reference, assign this value 
+            DataStorage* StorageToAssign = &m_Data;
+            Value const* PointerToCopy = &ValueToCopy;
+            if(ValueToCopy.IsType<Value>())
+            {
+                PointerToCopy = &ValueToCopy.GetType<Value>();
+            }
+            if(IsType<Value>())
+            {
+                StorageToAssign = &GetType<Value>().m_Data;
+            }
+            *StorageToAssign = PointerToCopy->m_Data;
+            return *this;
         }
-        //temporrary implementation
-        ClassID GetTypeID() const
+       
+        template<typename T> 
+        static constexpr ClassID GetBuiltinTypeID()
         {
-            return m_Data.index();
-        }
-        template<typename T>
-        bool IsType() const
-        {
+            static_assert(IsBuiltin<T>(),"Can only get builtin type ID for builtin type");
             if constexpr(IsValueType<T>())
             {
-                return std::holds_alternative<T>(m_Data);
+                return VariantIndex<DataStorage,T>();
             }
             else
             {
-                if constexpr(IsReferenceType<T>())
+                return VariantIndex<DataStorage,Ref<T>>();
+            }
+        }
+        
+        bool IsSameType(Value const& OtherValue) const
+        {
+            return GetTypeID() == OtherValue.GetTypeID();
+        }
+        //temporrary implementation
+        ClassID GetTypeID() const;
+        template<typename T>
+        bool IsType() const
+        {
+            if constexpr(IsBuiltin<T>())
+            {
+                if constexpr(IsValueType<T>())
                 {
-                    return std::holds_alternative<std::shared_ptr<T>>(m_Data);
+                    return std::holds_alternative<T>(m_Data);
                 }
-                else if constexpr(std::is_same_v<T,String>)
+                else
                 {
-                    return std::holds_alternative<MBUtility::Dynamic<String>>(m_Data);
+                    if constexpr(IsReferenceType<T>())
+                    {
+                        return std::holds_alternative<Ref<T>>(m_Data);
+                    }
+                    else if constexpr(std::is_same_v<T,String>)
+                    {
+                        return std::holds_alternative<MBUtility::Dynamic<String>>(m_Data);
+                    }
                 }
+            }
+            else
+            {
+                return GetType<ExternalValue>().IsType<T>();
             }
             return false;
         }
-       
+        void MakeRef()
+        {
+            if(IsType<Value>())
+            {
+                return;   
+            }
+            Ref<Value> NewValue = std::make_shared<Value>();
+            NewValue->m_Data = std::move(m_Data);
+            m_Data = NewValue;
+        }
         template<typename T>
         Ref<T> GetRef()
         {
+            static_assert(IsReferenceType<T>(),"Can only get reference to value type");
             return std::get<Ref<T>>(m_Data);
         } 
         template<typename T>
         Ref<T> const GetRef() const
         {
+            static_assert(IsReferenceType<T>(),"Can only get reference to value type");
             return std::get<Ref<T>>(m_Data);
         } 
         template<typename T>
@@ -213,6 +372,23 @@ namespace MBLisp
             }
         }
         template<typename T>
+        Value(Ref<T> Rhs)
+        {
+            if constexpr(IsReferenceType<T>())
+            {
+                m_Data = Rhs;
+            }
+            else
+            {
+                static_assert(!std::is_same<T,T>::value,"Can only initialize refernce type with reference");
+            }
+        }
+        template<typename T,typename std::enable_if_t<!IsValueType<T>(),bool> = true>
+        explicit Value(T ValueToAssign)
+        {
+            m_Data = std::make_shared<ExternalValue>(std::move(ValueToAssign));
+        }
+        template<typename T>
         Value& operator=(T Rhs)
         {
             if constexpr(IsBuiltin<T>())
@@ -220,6 +396,10 @@ namespace MBLisp
                 if constexpr(IsValueType<T>())
                 {
                     m_Data = std::move(Rhs);
+                }
+                else if(IsType<Value>())
+                {
+                    GetType<Value>() = std::move(Rhs);
                 }
                 else if constexpr(std::is_same_v<T,String>)
                 {
@@ -241,16 +421,27 @@ namespace MBLisp
             return *this;
         }
     };
+    struct SlotDefinition
+    {
+        SymbolID Symbol = 0;
+        int Order = 0;
+        Value DefaultValue;
+
+        bool operator<(SlotDefinition const& rhs) const
+        {
+            return Symbol < rhs.Symbol;   
+        }
+    };
     class ClassDefinition
     {
         public:
         ClassID ID = 0;
         std::vector<ClassID> Types;
         //expression to compile
-        std::vector<std::pair<SymbolID,Value>> SlotDefinitions;
-        std::shared_ptr<FunctionDefinition> SlotInitializers;
-        //constructor is run after slot initializers, which are always run
-        std::shared_ptr<FunctionDefinition> Constructor;
+        std::vector<SlotDefinition> SlotDefinitions;
+        Ref<FunctionDefinition> SlotInitializers;
+        //constructor is optionally run after slot initializers, which are always run
+        Ref<FunctionDefinition> Constructor;
     };
     class ClassInstance
     {
@@ -280,4 +471,29 @@ namespace MBLisp
         //TODO more efficient implementation, the current one is the most naive one
         Value* GetMethod(std::vector<Value>& Arguments);
     };
+
+
+
+
+    inline ClassID Value::GetTypeID() const
+    {
+        ClassID ReturnValue = 0;
+        if(IsType<Value>())
+        {
+            ReturnValue = GetType<Value>().GetTypeID();
+        }
+        else if(std::holds_alternative<Ref<ExternalValue>>(m_Data))
+        {
+            ReturnValue = std::get<Ref<ExternalValue>>(m_Data)->GetTypeID();
+        }
+        else if(std::holds_alternative<Ref<ClassInstance>>(m_Data))
+        {
+            ReturnValue = GetType<ClassInstance>().AssociatedClass->ID;
+        }
+        else
+        {
+            return m_Data.index();
+        }
+        return ReturnValue;
+    }
 };

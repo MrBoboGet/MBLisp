@@ -43,7 +43,7 @@ namespace MBLisp
     
 
 
-    Value Evaluator::Less(std::vector<Value>& Arguments)
+    Value Evaluator::Less(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
     {
         Value ReturnValue;
         if(Arguments.size() != 2)
@@ -65,12 +65,12 @@ namespace MBLisp
         }
         return  ReturnValue;
     }
-    Value Evaluator::CreateList(std::vector<Value>& Arguments)
+    Value Evaluator::CreateList(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
     {
         Value ReturnValue = List(std::move(Arguments));
         return  ReturnValue;
     }
-    Value Evaluator::Plus(std::vector<Value>& Arguments)
+    Value Evaluator::Plus(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
     {
         Value ReturnValue;
         if(Arguments.size() != 2)
@@ -92,7 +92,7 @@ namespace MBLisp
         }
         return  ReturnValue;
     }
-    Value Evaluator::Print(std::vector<Value>& Arguments)
+    Value Evaluator::Print(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
     {
         Value ReturnValue;
         for(auto const& Argument : Arguments)
@@ -116,19 +116,26 @@ namespace MBLisp
     void Evaluator::p_MergeClasses(std::vector<Ref<ClassDefinition>> const& ClassesToMerge,ClassDefinition& NewClass)
     {
         std::vector<ClassID> NewClasses;
+        std::vector<SlotDefinition> NewSlots;
         for(auto const& Class : ClassesToMerge)
         {
             std::vector<ClassID> TempClasses;
             std::swap(NewClasses,TempClasses);
             std::merge(TempClasses.begin(),TempClasses.end(),Class->Types.begin(),Class->Types.end(),std::inserter(TempClasses,TempClasses.begin()));
             std::swap(NewClasses,TempClasses);
+
+            std::vector<SlotDefinition> TempSlots;
+            std::swap(NewSlots,TempSlots);
+            std::merge(TempSlots.begin(),TempSlots.end(),Class->SlotDefinitions.begin(),Class->SlotDefinitions.end(),std::inserter(TempSlots,TempSlots.begin()));
+            std::swap(NewClasses,TempClasses);
         }
         NewClass.Types = std::move(NewClasses);
+        NewClass.SlotDefinitions = std::move(NewSlots);
     }
 
-    //TODO MEGA temporarty
-    ClassID i___CurrentClassID = 0;
-    Value Evaluator::Class(std::vector<Value>& Arguments)
+    //TODO MEGA temporary
+    ClassID i___CurrentClassID = 1u<<UserClassBit;
+    Value Evaluator::Class(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
     {
         Value ReturnValue;
         if(Arguments.size() < 2)
@@ -153,13 +160,23 @@ namespace MBLisp
             }
             Parents.push_back(Value.GetRef<ClassDefinition>());
         }
+        if(Parents.size() == 0)
+        {
+            NewClass.Types.push_back(1u<<UserClassBit);   
+        }
         p_MergeClasses(Parents,NewClass);
+
+        Ref<FunctionDefinition> SlotInitializers = std::make_shared<FunctionDefinition>();
+        SlotInitializers->Arguments = {AssociatedEvaluator.GetSymbolID("INIT")};
+        SlotInitializers->Instructions = std::make_shared<OpCodeList>(OpCodeList(AssociatedEvaluator.GetSymbolID("INIT"),AssociatedEvaluator.GetSymbolID("index"),
+                NewClass.SlotDefinitions));
+        NewClass.SlotInitializers = SlotInitializers;
+        i___CurrentClassID++;
         NewClass.Types.push_back(i___CurrentClassID);
         NewClass.ID = i___CurrentClassID;
-        i___CurrentClassID++;
         return std::move(NewClass);
     }
-    Value Evaluator::AddMethod(std::vector<Value>& Arguments)
+    Value Evaluator::AddMethod(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
     {
         Value ReturnValue;
         if(Arguments.size() < 3)
@@ -193,7 +210,7 @@ namespace MBLisp
         GenericToModify.AddMethod(OverridenTypes,Arguments[2]);
         return ReturnValue;
     }
-    Value Evaluator::Generic(std::vector<Value>& Arguments)
+    Value Evaluator::Generic(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
     {
         Value ReturnValue;
         if(Arguments.size() < 1)
@@ -220,6 +237,51 @@ namespace MBLisp
         ReturnValue = std::move(GenericFunction(std::move(GenericArgs)));
         return ReturnValue;
     }
+    Value Evaluator::Index_List(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    {
+        assert(Arguments.size() >= 2 && Arguments[0].IsType<List>());
+        List& AssociatedList = Arguments[0].GetType<List>();
+        if(AssociatedList[1].IsType<Int>())
+        {
+            throw std::runtime_error("Can only index list type with integer");
+        }
+        Int Index = Arguments[1].GetType<Int>();
+        if(Index >= AssociatedList.size() || Index < 0)
+        {
+            throw std::runtime_error("Index out of range when indexing list"); 
+        }
+        Value& AssociatedValue = AssociatedList[Index];
+        if(!AssociatedValue.IsType<Value>())
+        {
+            AssociatedValue.MakeRef();
+        }
+        return AssociatedValue;
+    }
+    Value Evaluator::Index_ClassInstance(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    {
+        Value ReturnValue;
+        assert(Arguments.size() >= 2 && Arguments[0].IsType<ClassInstance>());
+        ClassInstance& AssociatedInstance = Arguments[0].GetType<ClassInstance>();
+        if(Arguments[1].IsType<Symbol>())
+        {
+            throw std::runtime_error("Can only index class instance with value type");
+        }
+        Symbol& IndexSymbol = Arguments[1].GetType<Symbol>();
+        auto SymbolIt = std::lower_bound(AssociatedInstance.Slots.begin(),AssociatedInstance.Slots.end(),IndexSymbol.ID,
+                [](std::pair<SymbolID,Value> const& lhs,SymbolID rhs)
+                {
+                    return lhs.first < rhs;
+                });
+        if(SymbolIt == AssociatedInstance.Slots.end() || SymbolIt->first != IndexSymbol.ID)
+        {
+            throw std::runtime_error("Couldn't find symbol when indexing class instance");
+        }
+        if(!SymbolIt->second.IsType<Value>())
+        {
+            SymbolIt->second.MakeRef();
+        }
+        return SymbolIt->second;
+    }
     Value Evaluator::p_Eval(std::shared_ptr<Scope> AssociatedScope,FunctionDefinition& FunctionToExecute,std::vector<Value> Arguments)
     {
         for(int i = 0; i <Arguments.size();i++)
@@ -234,7 +296,7 @@ namespace MBLisp
         {
             BuiltinFuncType AssociatedFunc = ObjectToCall.GetType<Function>().Func;
             assert(AssociatedFunc != nullptr);
-            CurrentCallStack.back().ArgumentStack.push_back(AssociatedFunc(Arguments));
+            CurrentCallStack.back().ArgumentStack.push_back(AssociatedFunc(*this,Arguments));
         }
         else if(ObjectToCall.IsType<Lambda>())
         {
@@ -258,9 +320,19 @@ namespace MBLisp
         }
         else if(ObjectToCall.IsType<ClassDefinition>())
         {
-            ClassInstance NewInstance;
-            NewInstance.AssociatedClass = ObjectToCall.GetRef<ClassDefinition>();
-            CurrentCallStack.back().ArgumentStack.push_back(std::move(NewInstance));
+            Ref<ClassInstance> NewInstance = std::make_shared<ClassInstance>();
+            NewInstance->AssociatedClass = ObjectToCall.GetRef<ClassDefinition>();
+
+            for(auto const& Slot : NewInstance->AssociatedClass->SlotDefinitions)
+            {
+                NewInstance->Slots.push_back(std::make_pair(Slot.Symbol,Value()));
+            }
+            StackFrame NewStackFrame(OpCodeExtractor(*NewInstance->AssociatedClass->SlotInitializers->Instructions));
+            NewStackFrame.StackScope = std::make_shared<Scope>();
+            NewStackFrame.StackScope->SetParentScope(m_GlobalScope);
+            Value NewValue = NewInstance;
+            NewStackFrame.StackScope->SetVariable(p_GetSymbolID("INIT"),NewValue);
+            CurrentCallStack.push_back(std::move(NewStackFrame));
         }
         else if(ObjectToCall.IsType<GenericFunction>())
         {
@@ -590,6 +662,10 @@ namespace MBLisp
         }
         return ReturnValue;
     }
+    SymbolID Evaluator::GetSymbolID(std::string const& SymbolString)
+    {
+        return p_GetSymbolID(SymbolString);
+    }
     bool Evaluator::p_SymbolIsPrimitive(SymbolID IDToCompare)
     {
         return IDToCompare < m_PrimitiveSymbolMax;
@@ -615,6 +691,11 @@ namespace MBLisp
             m_GlobalScope->SetVariable(p_GetSymbolID(Pair.first),NewBuiltin);
         }
         m_PrimitiveSymbolMax = m_CurrentSymbolID;
+
+        //default generics
+        GenericFunction IndexGeneric = GenericFunction({p_GetSymbolID("container"),p_GetSymbolID("index")});
+        IndexGeneric.AddMethod({Value::GetBuiltinTypeID<List>()},Function(Index_List));
+        IndexGeneric.AddMethod({1u<<UserClassBit},Function(Index_ClassInstance));
     }
     Evaluator::Evaluator()
     {
