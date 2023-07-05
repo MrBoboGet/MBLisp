@@ -43,7 +43,7 @@ namespace MBLisp
 
 
         //classes and generics
-        static void p_MergeClasses(std::vector<Ref<ClassDefinition>> const& ClassesToMerge,ClassDefinition& NewClass);
+        static void p_MergeClasses(std::vector<ClassDefinition*> const& ClassesToMerge,ClassDefinition& NewClass);
         static Value Class(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
         static Value AddMethod(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
         static Value Generic(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);

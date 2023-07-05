@@ -56,6 +56,11 @@ namespace MBLisp
     {
         //determines the amount of vales to take from the stack when calling the function
         int ArgumentCount = 0;
+        OpCode_CallFunc() {};
+        OpCode_CallFunc(int ArgCount)
+        {
+            ArgumentCount = ArgCount;   
+        }
     };
     enum class PrimitiveForms
     {

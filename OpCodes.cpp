@@ -260,7 +260,7 @@ namespace MBLisp
             m_OpCodes.push_back(OpCode_PushVar(ArgID));
             m_OpCodes.push_back(OpCode_PushLiteral(Value(Symbol(Slot.Symbol))));
             m_OpCodes.push_back(OpCode_PushVar(IndexFunc));
-            m_OpCodes.push_back(OpCode_CallFunc());
+            m_OpCodes.push_back(OpCode_CallFunc(2));
             EncodingState CurrentState;
             p_CreateOpCodes(Slot.DefaultValue,m_OpCodes,CurrentState);
             m_OpCodes.push_back(OpCode_Set());

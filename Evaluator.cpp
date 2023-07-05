@@ -113,7 +113,7 @@ namespace MBLisp
         std::cout<<std::endl;
         return ReturnValue;
     }
-    void Evaluator::p_MergeClasses(std::vector<Ref<ClassDefinition>> const& ClassesToMerge,ClassDefinition& NewClass)
+    void Evaluator::p_MergeClasses(std::vector<ClassDefinition*> const& ClassesToMerge,ClassDefinition& NewClass)
     {
         std::vector<ClassID> NewClasses;
         std::vector<SlotDefinition> NewSlots;
@@ -127,7 +127,7 @@ namespace MBLisp
             std::vector<SlotDefinition> TempSlots;
             std::swap(NewSlots,TempSlots);
             std::merge(TempSlots.begin(),TempSlots.end(),Class->SlotDefinitions.begin(),Class->SlotDefinitions.end(),std::inserter(TempSlots,TempSlots.begin()));
-            std::swap(NewClasses,TempClasses);
+            std::swap(NewSlots, TempSlots);
         }
         NewClass.Types = std::move(NewClasses);
         NewClass.SlotDefinitions = std::move(NewSlots);
@@ -151,21 +151,40 @@ namespace MBLisp
         {
             throw std::runtime_error("first argument of class has to be a list of parent types");
         }
-        std::vector<std::shared_ptr<ClassDefinition>> Parents;
+        std::vector<ClassDefinition*> Parents;
         for(auto& Value : Arguments[0].GetType<List>())
         {
             if(!Value.IsType<ClassDefinition>())
             {
                 throw std::runtime_error("non-ClassDefinition object in list of parent classes in second argument to class");
             }
-            Parents.push_back(Value.GetRef<ClassDefinition>());
+            Parents.push_back(Value.GetRef<ClassDefinition>().get());
         }
-        if(Parents.size() == 0)
+        ClassDefinition TemporaryClass;//slots get added here
+        if(!Arguments[1].IsType<List>())
         {
-            NewClass.Types.push_back(1u<<UserClassBit);   
+             throw std::runtime_error("second argument to class has to be a list of slot definitions");
         }
+        for(auto const& Slot : Arguments[1].GetType<List>())
+        {
+            if(!Slot.IsType<List>() || Slot.GetType<List>().size() != 2 || !(Slot.GetType<List>()[0].IsType<Symbol>()))
+            {
+                throw std::runtime_error(
+                        "error in class: slot definition has to be a list containing a symbol as the first element, "
+                        "and an arbitrary form "
+                        "as the second");
+            }
+            SlotDefinition NewSlot;
+            NewSlot.DefaultValue = Slot.GetType<List>()[1];
+            NewSlot.Symbol = Slot.GetType<List>()[0].GetType<Symbol>().ID;
+            TemporaryClass.SlotDefinitions.push_back(NewSlot);
+        }
+        if (Parents.size() == 0)
+        {
+            TemporaryClass.Types.push_back(1u << UserClassBit);
+        }
+        Parents.push_back(&TemporaryClass);
         p_MergeClasses(Parents,NewClass);
-
         Ref<FunctionDefinition> SlotInitializers = std::make_shared<FunctionDefinition>();
         SlotInitializers->Arguments = {AssociatedEvaluator.GetSymbolID("INIT")};
         SlotInitializers->Instructions = std::make_shared<OpCodeList>(OpCodeList(AssociatedEvaluator.GetSymbolID("INIT"),AssociatedEvaluator.GetSymbolID("index"),
@@ -262,9 +281,9 @@ namespace MBLisp
         Value ReturnValue;
         assert(Arguments.size() >= 2 && Arguments[0].IsType<ClassInstance>());
         ClassInstance& AssociatedInstance = Arguments[0].GetType<ClassInstance>();
-        if(Arguments[1].IsType<Symbol>())
+        if(!Arguments[1].IsType<Symbol>())
         {
-            throw std::runtime_error("Can only index class instance with value type");
+            throw std::runtime_error("Can only index class instance with symbol type");
         }
         Symbol& IndexSymbol = Arguments[1].GetType<Symbol>();
         auto SymbolIt = std::lower_bound(AssociatedInstance.Slots.begin(),AssociatedInstance.Slots.end(),IndexSymbol.ID,
