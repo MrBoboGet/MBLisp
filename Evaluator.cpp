@@ -241,7 +241,7 @@ namespace MBLisp
     {
         assert(Arguments.size() >= 2 && Arguments[0].IsType<List>());
         List& AssociatedList = Arguments[0].GetType<List>();
-        if(AssociatedList[1].IsType<Int>())
+        if(!Arguments[1].IsType<Int>())
         {
             throw std::runtime_error("Can only index list type with integer");
         }
@@ -464,13 +464,16 @@ namespace MBLisp
                 assert(CurrentFrame.ArgumentStack.size() >= 2);
                 Value SymbolToAssign = std::move(*(CurrentFrame.ArgumentStack.end()-2));
                 Value AssignedValue = std::move(*(CurrentFrame.ArgumentStack.end()-1));
-                if(!SymbolToAssign.IsType<Symbol>())
+                CurrentFrame.ArgumentStack.pop_back();
+                CurrentFrame.ArgumentStack.pop_back();
+                if(SymbolToAssign.IsType<Symbol>())
                 {
-                    throw std::runtime_error("lhs of set has to be a symbol");
+                    CurrentFrame.StackScope->SetVariable(SymbolToAssign.GetType<Symbol>().ID,AssignedValue);
                 }
-                CurrentFrame.ArgumentStack.pop_back();
-                CurrentFrame.ArgumentStack.pop_back();
-                CurrentFrame.StackScope->SetVariable(SymbolToAssign.GetType<Symbol>().ID,AssignedValue);
+                else
+                {
+                    SymbolToAssign = AssignedValue;   
+                }
                 CurrentFrame.ArgumentStack.push_back(AssignedValue);
             }
         }
@@ -693,9 +696,11 @@ namespace MBLisp
         m_PrimitiveSymbolMax = m_CurrentSymbolID;
 
         //default generics
-        GenericFunction IndexGeneric = GenericFunction({p_GetSymbolID("container"),p_GetSymbolID("index")});
+        GenericFunction IndexGeneric = GenericFunction({p_GetSymbolID("container"),p_GetSymbolID("asdad")});
         IndexGeneric.AddMethod({Value::GetBuiltinTypeID<List>()},Function(Index_List));
         IndexGeneric.AddMethod({1u<<UserClassBit},Function(Index_ClassInstance));
+
+        m_GlobalScope->SetVariable(p_GetSymbolID("index"),Value(std::make_shared<GenericFunction>(std::move(IndexGeneric))));
     }
     Evaluator::Evaluator()
     {

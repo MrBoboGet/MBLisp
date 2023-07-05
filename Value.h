@@ -205,6 +205,14 @@ namespace MBLisp
         {
             if constexpr(IsBuiltin<T>())
             {
+                if constexpr (std::is_same_v<T, Value>)
+                {
+                    return *std::get<Ref<Value>>(m_Data);
+                }
+                if (std::holds_alternative<Ref<Value>>(m_Data))
+                {
+                    return std::get<Ref<Value>>(m_Data)->p_GetType<T>();
+                }
                 if constexpr(IsValueType<T>())
                 {
                     return std::get<T>(m_Data);
@@ -290,6 +298,14 @@ namespace MBLisp
         {
             if constexpr(IsBuiltin<T>())
             {
+                if constexpr (std::is_same_v<T, Value>)
+                {
+                    return std::holds_alternative < Ref<Value>>(m_Data);
+                }
+                if (std::holds_alternative <Ref<Value>>(m_Data))
+                {
+                    return std::get<Ref<Value>>(m_Data)->IsType<T>();
+                }
                 if constexpr(IsValueType<T>())
                 {
                     return std::holds_alternative<T>(m_Data);

@@ -162,9 +162,16 @@ namespace MBLisp
                     {
                         throw std::runtime_error("Set requires exactly 2 arguments, the symbol to modify, and the new value");   
                     }
-                    OpCode_PushLiteral LiteralToPush;
-                    LiteralToPush.Literal = ListToConvert[1];
-                    ListToAppend.push_back(LiteralToPush);
+                    if (!ListToConvert[1].IsType<List>())
+                    {
+                        OpCode_PushLiteral LiteralToPush;
+                        LiteralToPush.Literal = ListToConvert[1];
+                        ListToAppend.push_back(LiteralToPush);
+                    }
+                    else 
+                    {
+                        p_CreateOpCodes(ListToConvert[1], ListToAppend, CurrentState);
+                    }
                     p_CreateOpCodes(ListToConvert[2],ListToAppend,CurrentState);
                     ListToAppend.push_back(OpCode_Set());
                 }
