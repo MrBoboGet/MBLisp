@@ -30,7 +30,12 @@ namespace MBLisp
         {
         }
     };
-    
+   
+
+    struct ReadTable
+    {
+        std::unordered_map<char,Value> Mappings;
+    };
     
     class Evaluator
     {
@@ -52,11 +57,15 @@ namespace MBLisp
         static Value Generic(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
 
 
+        static Value ReadTerm(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+
         //builtin containers
         static Value Index_List(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
         static Value Index_ClassInstance(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
 
 
+        //READING
+        
         std::unordered_map<std::string,SymbolID> m_InternedSymbols;
         std::unordered_map<SymbolID,std::string> m_SymbolToString;
         std::shared_ptr<Scope> m_GlobalScope = std::make_shared<Scope>();
@@ -66,8 +75,10 @@ namespace MBLisp
 
         void p_Invoke(Value& ObjectToCall,std::vector<Value>& Arguments,std::vector<StackFrame>& CurrentCallStack);
         //The fundamental dispatch loop
+        Value p_Eval(std::vector<StackFrame>& CurrentCallStack);
         Value p_Eval(std::shared_ptr<Scope> CurrentScope,OpCodeList& OpCodes,IPIndex  Offset = 0);
         Value p_Eval(std::shared_ptr<Scope> AssociatedScope,FunctionDefinition& FunctionToExecute,std::vector<Value> Arguments);
+        Value p_Eval(Value Callable,std::vector<Value> Arguments);
 
         void p_SkipWhiteSpace(MBUtility::StreamReader& Content);
         
@@ -79,9 +90,9 @@ namespace MBLisp
         String p_ReadString(MBUtility::StreamReader& Content);
         Value p_ReadSymbol(MBUtility::StreamReader& Content);
         Int p_ReadInteger(MBUtility::StreamReader& Content);
-        List p_ReadList(MBUtility::StreamReader& Content);
-        Value p_ReadTerm(MBUtility::StreamReader& Content);
-        List p_Read(MBUtility::StreamReader& Content);
+        List p_ReadList(std::shared_ptr<Scope> AssociatedScope,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
+        Value p_ReadTerm(std::shared_ptr<Scope> AssociatedScope,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
+        List p_Read(std::shared_ptr<Scope> AssociatedScope,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
         
         SymbolID p_GetSymbolID(std::string const& SymbolString);
         
@@ -89,8 +100,12 @@ namespace MBLisp
         void p_InternPrimitiveSymbols();
     public:
         Evaluator();
+
+        //TEMP AF
+        ReadTable& GetReadTable();
         SymbolID GetSymbolID(std::string const& SymbolString);
         std::string GetSymbolString(SymbolID SymbolToConvert);
         void Eval(std::string_view Content);
+        Value Eval(Value Callable,std::vector<Value> Arguments);
     };
 }

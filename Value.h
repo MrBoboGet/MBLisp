@@ -147,7 +147,7 @@ namespace MBLisp
         template<typename T>
         bool IsType() const
         {
-            return m_ClassID = GetClassID<T>();
+            return m_ClassID == GetClassID<T>();
         }
         template<typename T>
         T& GetType()
@@ -228,6 +228,10 @@ namespace MBLisp
             }
             else
             {
+                if constexpr (std::is_same_v<ExternalValue, T>)
+                {
+                    return *std::get<Ref<ExternalValue>>(m_Data);
+                }
                 return std::get<Ref<ExternalValue>>(m_Data)->GetType<T>();
             }
             throw std::runtime_error("Invalid type access: Value was not of type "+std::string(typeid(T).name()));
@@ -399,10 +403,14 @@ namespace MBLisp
                 static_assert(!std::is_same<T,T>::value,"Can only initialize refernce type with reference");
             }
         }
-        template<typename T,typename std::enable_if_t<!IsValueType<T>(),bool> = true>
-        explicit Value(T ValueToAssign)
+
+
+        template<typename T>
+        static Value MakeExternal(T ExternalObject)
         {
-            m_Data = std::make_shared<ExternalValue>(std::move(ValueToAssign));
+            Value ReturnValue;
+            ReturnValue.m_Data = std::make_shared<ExternalValue>(std::move(ExternalObject));
+            return ReturnValue;
         }
         template<typename T>
         Value& operator=(T Rhs)

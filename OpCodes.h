@@ -31,6 +31,9 @@ namespace MBLisp
     struct OpCode_Set
     {
     };
+    struct OpCode_SetReader
+    {
+    };
     struct OpCode_Pop
     {
            
@@ -72,11 +75,13 @@ namespace MBLisp
         progn,
         quote,
         macro,//should probably replace with function call semantics
+        setreader,
         LAST
     };
     struct OpCode
     {
-        std::variant<OpCode_PushVar,OpCode_Macro,OpCode_Set,OpCode_PushLiteral,OpCode_Pop,OpCode_Goto,OpCode_JumpNotTrue,OpCode_Jump,OpCode_CallFunc> m_Data;
+        std::variant<OpCode_PushVar,OpCode_Macro,OpCode_Set,OpCode_PushLiteral,OpCode_Pop,OpCode_Goto,OpCode_JumpNotTrue,OpCode_Jump,OpCode_CallFunc,
+            OpCode_SetReader> m_Data;
     public:
         OpCode() = default;
         OpCode(OpCode const&) = default;

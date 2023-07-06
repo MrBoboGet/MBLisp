@@ -198,6 +198,16 @@ namespace MBLisp
                     LiteralToPush.Literal = ListToConvert[1];
                     ListToAppend.push_back(LiteralToPush);
                 }
+                else if(CurrentSymbol == SymbolID(PrimitiveForms::setreader))
+                {
+                    if(ListToConvert.size() != 3)
+                    {
+                        throw std::runtime_error("set-reader requires exactly 2 arguments, the character, and the function");   
+                    }
+                    p_CreateOpCodes(ListToConvert[1], ListToAppend, CurrentState);
+                    p_CreateOpCodes(ListToConvert[2],ListToAppend,CurrentState);
+                    ListToAppend.push_back(OpCode_SetReader());
+                }
                 else
                 {
                     assert(false && "OpCode list doesn't cover all cases");   
