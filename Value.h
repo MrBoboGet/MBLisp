@@ -11,7 +11,7 @@ namespace MBLisp
 {
     typedef int_least64_t Int;
     typedef double Float;
-    typedef int SymbolID;
+    typedef uint_least32_t SymbolID;
     typedef int FunctionID;
     typedef int MacroID;
     typedef uint_least32_t ClassID;
@@ -21,7 +21,9 @@ namespace MBLisp
     template<typename T>
     using Ref = std::shared_ptr<T>;
       
-
+    
+    inline constexpr uint_least32_t RestSymbol = 1<<30;
+    
     enum class ValueType
     {
         List,
@@ -51,6 +53,7 @@ namespace MBLisp
     struct FunctionDefinition
     {
         std::vector<Symbol> Arguments;
+        SymbolID RestParameter = 0;
         std::shared_ptr<OpCodeList> Instructions;
     };
     //TODO add support for 
@@ -72,7 +75,7 @@ namespace MBLisp
     };
     struct Macro
     {
-        std::shared_ptr<FunctionDefinition> AssociatedFunction;
+        std::shared_ptr<Value> Callable;
     };
     
 
@@ -254,6 +257,13 @@ namespace MBLisp
             }
         } 
 
+        template<template<class...> class Template, class Instance>
+        struct IsTemplateInstance_t : std::false_type {};
+        template<class... TemplateArgs, template<class...> class Template>
+        struct IsTemplateInstance_t<Template, Template<TemplateArgs...> > : std::true_type {};
+        
+        template<template<class...> class T,typename U>
+        static constexpr bool IsTemplateInstance = IsTemplateInstance_t<T,U>::value;
     public:
         Value& operator=(Value&&) = default;
         Value(Value&&) noexcept= default;
@@ -278,16 +288,28 @@ namespace MBLisp
         }
        
         template<typename T> 
-        static constexpr ClassID GetBuiltinTypeID()
+        static constexpr ClassID GetTypeTypeID()
         {
-            static_assert(IsBuiltin<T>(),"Can only get builtin type ID for builtin type");
-            if constexpr(IsValueType<T>())
+            if(std::is_same_v<T,ClassInstance>)
             {
-                return VariantIndex<DataStorage,T>();
+                return 1<<UserClassBit;   
+            }
+            if constexpr(IsBuiltin<T>())
+            {
+                   
+                if constexpr(IsValueType<T>())
+                {
+                    return VariantIndex<DataStorage,T>();
+                }
+                else
+                {
+                    return VariantIndex<DataStorage,Ref<T>>();
+                }
+
             }
             else
             {
-                return VariantIndex<DataStorage,Ref<T>>();
+                return GetClassID<T>();   
             }
         }
         
@@ -367,7 +389,19 @@ namespace MBLisp
         template<typename T>
         Value(T Rhs)
         {
-            if constexpr(IsBuiltin<T>())
+            if constexpr (std::is_same_v<T,BuiltinFuncType>)
+            {
+                m_Data = Function(Rhs);
+            }
+            else if constexpr(std::is_same_v<T,bool>)
+            {
+                m_Data = Rhs;
+            }
+            else if constexpr (std::is_integral_v<T>)
+            {
+                m_Data = Int(Rhs);
+            }
+            else if constexpr(IsBuiltin<T>())
             {
                 if constexpr(IsValueType<T>())
                 {
@@ -476,7 +510,6 @@ namespace MBLisp
     };
     class GenericFunction
     {
-        std::vector<SymbolID> m_Arguments;
         //specificity is found argument by argument, the first 
         //argument winning, then the second and so on
         //un specified type is specificty 0, the last used alternative
@@ -490,7 +523,6 @@ namespace MBLisp
         bool p_TypesAreSatisifed(std::vector<ClassID> const& Overrides,std::vector<std::vector<ClassID>> const& ArgumentsClasses);
         std::vector<ClassID> p_GetValueTypes(Value const& ValueToInspect);
     public:
-        GenericFunction(std::vector<SymbolID> Arguments);
         void AddMethod(std::vector<ClassID> OverridenTypes,Value Callable);
         //TODO more efficient implementation, the current one is the most naive one
         Value* GetMethod(std::vector<Value>& Arguments);

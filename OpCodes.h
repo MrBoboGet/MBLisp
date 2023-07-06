@@ -137,6 +137,7 @@ namespace MBLisp
         OpCodeList(List const& ListToConvert,int Offset);
         OpCodeList(SymbolID ArgID,SymbolID IndexFunc,std::vector<SlotDefinition> const& Initializers);
         void Append(List const& ListToConvert);
+        void Append(Value const& ListToConvert);
         IPIndex Size()
         {
             return m_OpCodes.size();   
@@ -147,6 +148,10 @@ namespace MBLisp
         OpCodeList* m_AssociatedList = nullptr;
         IPIndex m_IP = 0;
     public:
+        OpCodeExtractor()
+        {
+               
+        }
         OpCodeExtractor(OpCodeList& OpCodes);
         OpCode& GetCurrentCode();
         void SetIP(IPIndex NewIP);

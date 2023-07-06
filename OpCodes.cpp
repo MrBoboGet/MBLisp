@@ -143,13 +143,28 @@ namespace MBLisp
                     }
                     Lambda NewLambda;
                     NewLambda.Definition = std::make_shared<FunctionDefinition>();
-                    for(auto const& Argument : ListToConvert[1].GetType<List>())
+                    List const& ArgumentList = ListToConvert[1].GetType<List>();
+                    for(int i = 0; i < ArgumentList.size();i++)
                     {
+                        Value const& Argument = ArgumentList[i];
                         if(!Argument.IsType<Symbol>())
                         {
                             throw std::runtime_error("Values in lambda argument list has to be symbols");
                         }
-                        NewLambda.Definition->Arguments.push_back(Argument.GetType<Symbol>());
+                        Symbol const& CurrentSymbol = Argument.GetType<Symbol>().ID;
+                        if(CurrentSymbol.ID & RestSymbol)
+                        {
+                            if(!(i + 1 < ArgumentList.size()) || !ArgumentList[i+1].IsType<Symbol>())
+                            {
+                                throw std::runtime_error("&rest parameter requires a symbol as the next value in the list");
+                            }
+                            NewLambda.Definition->RestParameter = ArgumentList[i+1].GetType<Symbol>().ID;
+                            i+=1;
+                        }
+                        else
+                        {
+                            NewLambda.Definition->Arguments.push_back(Argument.GetType<Symbol>());
+                        }
                     }
                     NewLambda.Definition->Instructions = std::make_shared<OpCodeList>(ListToConvert,2);
                     OpCode_PushLiteral NewCode;
@@ -254,6 +269,17 @@ namespace MBLisp
             throw std::runtime_error("go's to tags without corresponding label detected");
         }
     }
+    void OpCodeList::Append(Value const& ListToConvert)
+    {
+        EncodingState CurrentState;
+        p_CreateOpCodes(ListToConvert,m_OpCodes,CurrentState);
+        //TODO fix with let/cc
+        //m_OpCodes.push_back(OpCode_Pop());
+        if(CurrentState.UnResolvedGotos.size() != 0)
+        {
+            throw std::runtime_error("go's to tags without corresponding label detected");
+        }
+    }
     OpCodeList::OpCodeList(List const& ListToConvert,int Offset)
     {
         EncodingState CurrentState;
@@ -301,6 +327,6 @@ namespace MBLisp
     }
     bool OpCodeExtractor::Finished() const
     {
-        return m_IP >= m_AssociatedList->m_OpCodes.size();
+        return m_AssociatedList == nullptr || m_IP >= m_AssociatedList->m_OpCodes.size();
     }
 }

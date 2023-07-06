@@ -137,6 +137,10 @@ namespace MBLisp
             Print(AssociatedEvaluator,Argument);
         }
         std::cout<<std::endl;
+        if(Arguments.size() != 0)
+        {
+            ReturnValue = Arguments.back();
+        }
         return ReturnValue;
     }
     void Evaluator::p_MergeClasses(std::vector<ClassDefinition*> const& ClassesToMerge,ClassDefinition& NewClass)
@@ -279,7 +283,7 @@ namespace MBLisp
             }
             GenericArgs.push_back(Argument.GetType<Symbol>().ID);
         }
-        ReturnValue = std::move(GenericFunction(std::move(GenericArgs)));
+        ReturnValue = std::move(GenericFunction());
         return ReturnValue;
     }
     Value Evaluator::ReadTerm(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
@@ -298,6 +302,23 @@ namespace MBLisp
         std::shared_ptr<Scope> CurrentScope = std::make_shared<Scope>();
         ReturnValue = AssociatedEvaluator.p_ReadTerm(CurrentScope,Table,Reader,Arguments[0]);
         return ReturnValue;
+    }
+    Value Evaluator::Stream_EOF(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    {
+        return Arguments[0].GetType<MBUtility::StreamReader>().EOFReached();
+    }
+    Value Evaluator::Stream_PeakByte(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    {
+        return String(1,Arguments[0].GetType<MBUtility::StreamReader>().PeekByte());
+    }
+    Value Evaluator::Stream_ReadByte(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    {
+        return String(1,Arguments[0].GetType<MBUtility::StreamReader>().ReadByte());
+    }
+    Value Evaluator::Stream_SkipWhitespace(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    {
+        AssociatedEvaluator.p_SkipWhiteSpace(Arguments[0].GetType<MBUtility::StreamReader>());
+        return false;
     }
     Value Evaluator::Index_List(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
     {
@@ -318,6 +339,38 @@ namespace MBLisp
             AssociatedValue.MakeRef();
         }
         return AssociatedValue;
+    }
+    Value Evaluator::Append_List(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    {
+        List& AssociatdList = Arguments[0].GetType<List>();
+        for(int i = 1; i < Arguments.size();i++)
+        {
+            AssociatdList.push_back(Arguments[i]);
+        }
+        return AssociatdList;
+    }
+    Value Evaluator::Len_List(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    {
+        return Arguments[0].GetType<List>().size();
+    }
+    Value Evaluator::Flatten_1(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    {
+        List ReturnValue;
+        for(auto& Argument : Arguments)
+        {
+            if(Argument.IsType<List>())
+            {
+                for(auto& SubArgument : Argument.GetType<List>())
+                {
+                    ReturnValue.push_back(std::move(SubArgument));
+                }
+            }
+            else
+            {
+                ReturnValue.push_back(std::move(Argument));
+            }
+        }
+        return ReturnValue;
     }
     Value Evaluator::Index_ClassInstance(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
     {
@@ -344,77 +397,26 @@ namespace MBLisp
         }
         return SymbolIt->second;
     }
-    Value Evaluator::p_Eval(std::shared_ptr<Scope> AssociatedScope,FunctionDefinition& FunctionToExecute,std::vector<Value> Arguments)
-    {
-        for(int i = 0; i <Arguments.size();i++)
-        {
-            AssociatedScope->SetVariable(FunctionToExecute.Arguments[i].ID,std::move(Arguments[i]));
-        }
-        return p_Eval(AssociatedScope,*FunctionToExecute.Instructions);
-    }
+    ///Value Evaluator::p_Eval(std::shared_ptr<Scope> AssociatedScope,FunctionDefinition& FunctionToExecute,std::vector<Value> Arguments)
+    ///{
+    ///    if(Arguments.size() < FunctionToExecute.Arguments.size())
+    ///    {
+    ///        throw std::runtime_error("To few arguments for function call");   
+    ///    }
+    ///    for(int i = 0; i <FunctionToExecute.Arguments.size();i++)
+    ///    {
+    ///        AssociatedScope->SetVariable(FunctionToExecute.Arguments[i].ID,std::move(Arguments[i]));
+    ///    }
+    ///    return p_Eval(AssociatedScope,*FunctionToExecute.Instructions);
+    ///}
     Value Evaluator::Eval(Value Callable,std::vector<Value> Arguments)
     {
         return p_Eval(std::move(Callable),std::move(Arguments));
     }
     Value Evaluator::p_Eval(Value Callable,std::vector<Value> Arguments)
     {
-        std::vector<StackFrame> CurrentCallStack;
-        if(Callable.IsType<Function>())
-        {
-            BuiltinFuncType AssociatedFunc = Callable.GetType<Function>().Func;
-            assert(AssociatedFunc != nullptr);
-            return AssociatedFunc(*this,Arguments);
-        }
-        else if(Callable.IsType<Lambda>())
-        {
-            Lambda& AssociatedLambda = Callable.GetType<Lambda>();
-            if(Arguments.size() < AssociatedLambda.Definition->Arguments.size())
-            {
-                throw std::runtime_error("To few arguments for function call");
-            }
-            else if(Arguments.size() > AssociatedLambda.Definition->Arguments.size())
-            {
-                throw std::runtime_error("To many arguments for function call");
-            }
-            StackFrame NewStackFrame(OpCodeExtractor(*AssociatedLambda.Definition->Instructions));
-            NewStackFrame.StackScope = std::make_shared<Scope>();
-            NewStackFrame.StackScope->SetParentScope(AssociatedLambda.AssociatedScope);
-            for(int i = 0; i < Arguments.size();i++)
-            {
-                NewStackFrame.StackScope->SetVariable(AssociatedLambda.Definition->Arguments[i].ID,Arguments[i]);   
-            }
-            CurrentCallStack.push_back(std::move(NewStackFrame));
-        }
-        else if(Callable.IsType<ClassDefinition>())
-        {
-            Ref<ClassInstance> NewInstance = std::make_shared<ClassInstance>();
-            NewInstance->AssociatedClass = Callable.GetRef<ClassDefinition>();
-
-            for(auto const& Slot : NewInstance->AssociatedClass->SlotDefinitions)
-            {
-                NewInstance->Slots.push_back(std::make_pair(Slot.Symbol,Value()));
-            }
-            StackFrame NewStackFrame(OpCodeExtractor(*NewInstance->AssociatedClass->SlotInitializers->Instructions));
-            NewStackFrame.StackScope = std::make_shared<Scope>();
-            NewStackFrame.StackScope->SetParentScope(m_GlobalScope);
-            Value NewValue = NewInstance;
-            NewStackFrame.StackScope->SetVariable(p_GetSymbolID("INIT"),NewValue);
-            CurrentCallStack.push_back(std::move(NewStackFrame));
-        }
-        else if(Callable.IsType<GenericFunction>())
-        {
-            GenericFunction& GenericToInvoke = Callable.GetType<GenericFunction>();
-            Value* Callable = GenericToInvoke.GetMethod(Arguments);
-            if(Callable == nullptr)
-            {
-                throw std::runtime_error("No method associated with the argumnet list");   
-            }
-            return p_Eval(*Callable,Arguments);
-        }
-        else
-        {
-            throw std::runtime_error("Cannot invoke object");   
-        }
+        std::vector<StackFrame> CurrentCallStack = {StackFrame(OpCodeExtractor())};
+        p_Invoke(Callable,Arguments,CurrentCallStack);
         return p_Eval(CurrentCallStack);
     }
     void Evaluator::p_Invoke(Value& ObjectToCall,std::vector<Value>& Arguments,std::vector<StackFrame>& CurrentCallStack)
@@ -432,16 +434,28 @@ namespace MBLisp
             {
                 throw std::runtime_error("To few arguments for function call");
             }
-            else if(Arguments.size() > AssociatedLambda.Definition->Arguments.size())
+            if(AssociatedLambda.Definition->RestParameter == 0)
             {
-                throw std::runtime_error("To many arguments for function call");
+                if(Arguments.size() > AssociatedLambda.Definition->Arguments.size())
+                {
+                    throw std::runtime_error("To many arguments for function call");
+                }
             }
             StackFrame NewStackFrame(OpCodeExtractor(*AssociatedLambda.Definition->Instructions));
             NewStackFrame.StackScope = std::make_shared<Scope>();
             NewStackFrame.StackScope->SetParentScope(AssociatedLambda.AssociatedScope);
-            for(int i = 0; i < Arguments.size();i++)
+            for(int i = 0; i < AssociatedLambda.Definition->Arguments.size();i++)
             {
                 NewStackFrame.StackScope->SetVariable(AssociatedLambda.Definition->Arguments[i].ID,Arguments[i]);   
+            }
+            if(AssociatedLambda.Definition->RestParameter != 0)
+            {
+                List RestList;
+                for(int i = AssociatedLambda.Definition->Arguments.size();i < Arguments.size();i++)
+                {
+                    RestList.push_back(Arguments[i]);
+                }
+                NewStackFrame.StackScope->SetVariable(AssociatedLambda.Definition->RestParameter,std::move(RestList));
             }
             CurrentCallStack.push_back(std::move(NewStackFrame));
         }
@@ -574,12 +588,8 @@ namespace MBLisp
                 assert(CurrentFrame.ArgumentStack.size() >= 1);
                 Value ValueToConvert = std::move(CurrentFrame.ArgumentStack.back());
                 CurrentFrame.ArgumentStack.pop_back();
-                if(!ValueToConvert.IsType<Lambda>())
-                {
-                    throw std::runtime_error("Can only make macro of function");   
-                }
                 Macro MacroToCreate;
-                MacroToCreate.AssociatedFunction = ValueToConvert.GetType<Lambda>().Definition;
+                MacroToCreate.Callable = std::make_shared<Value>(std::move(ValueToConvert));
                 CurrentFrame.ArgumentStack.push_back(std::move(MacroToCreate));
             }
             else if(CurrentCode.IsType<OpCode_Set>())
@@ -658,7 +668,7 @@ namespace MBLisp
                     {
                         Arguments.push_back(ListToExpand[i]);
                     }
-                    return p_Expand(ExpandScope,p_Eval(ExpandScope,*AssociatedMacro.AssociatedFunction,std::move(Arguments)));
+                    return p_Eval(*AssociatedMacro.Callable,std::move(Arguments));
                 }
             }
         }
@@ -709,7 +719,7 @@ namespace MBLisp
         std::string SymbolString = Content.ReadWhile([](char CharToRead)
                 {
                     return (CharToRead >= 'A' && CharToRead <= 'Z') || (CharToRead >= 'a' && CharToRead <= 'z') || CharToRead == '<' || CharToRead == '+' 
-                    || CharToRead == '-';
+                    || CharToRead == '-' || CharToRead == '&' || (CharToRead >= '0' && CharToRead <= '9');
                 });
         if (SymbolString == "")
         {
@@ -809,6 +819,10 @@ namespace MBLisp
         {
             ReturnValue = m_CurrentSymbolID;   
             m_CurrentSymbolID++;
+            if(SymbolString == "&rest")
+            {
+                ReturnValue |= RestSymbol;
+            }
             m_SymbolToString[ReturnValue] = SymbolString;
         }
         return ReturnValue;
@@ -844,6 +858,7 @@ namespace MBLisp
                     {"addmethod",AddMethod},
                     {"generic",Generic},
                     {"read-term",ReadTerm},
+                    {"flatten-1",Flatten_1},
                 })
         {
             Function NewBuiltin;
@@ -852,12 +867,20 @@ namespace MBLisp
         }
         m_PrimitiveSymbolMax = m_CurrentSymbolID;
 
-        //default generics
-        GenericFunction IndexGeneric = GenericFunction({p_GetSymbolID("container"),p_GetSymbolID("asdad")});
-        IndexGeneric.AddMethod({Value::GetBuiltinTypeID<List>()},Function(Index_List));
-        IndexGeneric.AddMethod({1u<<UserClassBit},Function(Index_ClassInstance));
+        //list
+        AddMethod<List>("append",Append_List);
+        AddMethod<List>("index",Index_List);
+        AddMethod<List>("len",Len_List);
+        //class
+        AddMethod<ClassInstance>("index",Index_ClassInstance);
 
-        m_GlobalScope->SetVariable(p_GetSymbolID("index"),Value(std::make_shared<GenericFunction>(std::move(IndexGeneric))));
+        //streams
+        AddMethod<MBUtility::StreamReader>("eof",Stream_EOF);
+        AddMethod<MBUtility::StreamReader>("peek-byte",Stream_PeakByte);
+        AddMethod<MBUtility::StreamReader>("read-byte",Stream_PeakByte);
+        AddMethod<MBUtility::StreamReader>("skip-whitespace",Stream_EOF);
+
+        
         m_GlobalScope->SetVariable(p_GetSymbolID("*READTABLE*"),Value::MakeExternal(ReadTable()));
     }
     Evaluator::Evaluator()
@@ -885,7 +908,7 @@ namespace MBLisp
             else
             {
                 List ListToEncode = {std::move(NewTerm)};
-                OpCodes.Append(NewTerm.GetType<List>());
+                OpCodes.Append(ListToEncode);
             }
             p_Eval(CurrentScope,OpCodes,InstructionToExecute);
         }

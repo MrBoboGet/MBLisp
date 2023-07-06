@@ -57,11 +57,21 @@ namespace MBLisp
         static Value Generic(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
 
 
-        static Value ReadTerm(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
 
         //builtin containers
+        //List
         static Value Index_List(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+        static Value Append_List(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+        static Value Len_List(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+        static Value Flatten_1(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+        //class instance
         static Value Index_ClassInstance(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+        //Streams
+        static Value ReadTerm(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+        static Value Stream_EOF(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+        static Value Stream_PeakByte(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+        static Value Stream_ReadByte(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+        static Value Stream_SkipWhitespace(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
 
 
         //READING
@@ -77,7 +87,7 @@ namespace MBLisp
         //The fundamental dispatch loop
         Value p_Eval(std::vector<StackFrame>& CurrentCallStack);
         Value p_Eval(std::shared_ptr<Scope> CurrentScope,OpCodeList& OpCodes,IPIndex  Offset = 0);
-        Value p_Eval(std::shared_ptr<Scope> AssociatedScope,FunctionDefinition& FunctionToExecute,std::vector<Value> Arguments);
+        //Value p_Eval(std::shared_ptr<Scope> AssociatedScope,FunctionDefinition& FunctionToExecute,std::vector<Value> Arguments);
         Value p_Eval(Value Callable,std::vector<Value> Arguments);
 
         void p_SkipWhiteSpace(MBUtility::StreamReader& Content);
@@ -98,9 +108,41 @@ namespace MBLisp
         
         bool p_SymbolIsPrimitive(SymbolID IDToCompare);
         void p_InternPrimitiveSymbols();
+
+
+
+        template<typename T>
+        void p_AddTypes(std::vector<ClassID>& Types)
+        {
+            Types.push_back(Value::GetTypeTypeID<T>());
+        }
+        template<typename T,typename U,typename... Extra>
+        void p_AddTypes(std::vector<ClassID>& Types)
+        {
+            Types.push_back(Value::GetTypeTypeID<T>());
+            Types.push_back(Value::GetTypeTypeID<U>());
+            p_AddTypes<Extra...>(Types);
+
+        }
     public:
         Evaluator();
 
+        
+        template<typename... ArgTypes>
+        void AddMethod(std::string const& MethodName,Value Callable)
+        {
+            std::vector<ClassID> Types;
+            p_AddTypes<ArgTypes...>(Types);
+            SymbolID GenericSymbol = p_GetSymbolID(MethodName);
+            if(m_GlobalScope->TryGet(GenericSymbol) == nullptr)
+            {
+                 m_GlobalScope->SetVariable(GenericSymbol,GenericFunction());
+            }
+            GenericFunction& AssociatedFunction = m_GlobalScope->FindVariable(GenericSymbol).GetType<GenericFunction>();
+            AssociatedFunction.AddMethod(std::move(Types),std::move(Callable));
+        }
+
+        
         //TEMP AF
         ReadTable& GetReadTable();
         SymbolID GetSymbolID(std::string const& SymbolString);

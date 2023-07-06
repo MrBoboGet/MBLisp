@@ -7,24 +7,24 @@ namespace MBLisp
     ClassID ClassIdentificator::m_CurrentID = 1<<ExternalClassBit;
 
 
-    GenericFunction::GenericFunction(std::vector<SymbolID> Arguments)
-    {
-        m_Arguments = std::move(Arguments);
-        for(int i = 0; i < m_Arguments.size();i++)
-        {
-            m_Specifications.push_back(std::vector<std::pair<ClassID,size_t>>());
-        }
-    }
+    //GenericFunction::GenericFunction(std::vector<SymbolID> Arguments)
+    //{
+    //    m_Arguments = std::move(Arguments);
+    //    for(int i = 0; i < m_Arguments.size();i++)
+    //    {
+    //        m_Specifications.push_back(std::vector<std::pair<ClassID,size_t>>());
+    //    }
+    //}
     void GenericFunction::AddMethod(std::vector<ClassID> OverridenTypes,Value Callable)
     {
-        if(OverridenTypes.size() > m_Arguments.size())
-        {
-            throw std::runtime_error("Cannot override more types than method contains");
-        }
         size_t NewIndex = m_Callables.size(); 
         m_Callables.push_back(Callable);
         for(int i = 0; i < OverridenTypes.size();i++)
         {
+            if(m_Specifications.size() <= i)
+            {
+                m_Specifications.emplace_back();   
+            }
             m_Specifications[i].push_back(std::make_pair(OverridenTypes[i],NewIndex));
             std::sort(m_Specifications[i].begin(),m_Specifications[i].end(),[](std::pair<ClassID,size_t> const& Lhs,std::pair<ClassID,size_t> const& Rhs)
                     {
@@ -37,7 +37,10 @@ namespace MBLisp
     bool GenericFunction::p_TypesAreSatisifed(std::vector<ClassID> const& Overrides,std::vector<std::vector<ClassID>> const& ArgumentsClasses)
     {
         bool ReturnValue = true;
-        assert(Overrides.size() <= ArgumentsClasses.size());
+        if(Overrides.size() > ArgumentsClasses.size())
+        {
+            return false;   
+        }
         for(int i = 0; i < Overrides.size();i++)
         {
             if(auto It = std::lower_bound(ArgumentsClasses[i].begin(),ArgumentsClasses[i].end(),Overrides[i]);
