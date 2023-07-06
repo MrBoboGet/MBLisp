@@ -92,23 +92,49 @@ namespace MBLisp
         }
         return  ReturnValue;
     }
+    void Evaluator::Print(Evaluator& AssociatedEvaluator,Value const& ValueToPrint)
+    {
+        if(ValueToPrint.IsType<String>())
+        {
+            std::cout<<'"'<<ValueToPrint.GetType<String>()<<'"';
+        }
+        else if(ValueToPrint.IsType<Int>())
+        {
+            std::cout<<ValueToPrint.GetType<Int>();
+        }
+        else if(ValueToPrint.IsType<bool>())
+        {
+            std::cout<<ValueToPrint.GetType<bool>();
+        }
+        else if(ValueToPrint.IsType<bool>())
+        {
+            std::cout<<bool(ValueToPrint.GetType<bool>());
+        }
+        else if(ValueToPrint.IsType<Symbol>())
+        {
+            std::cout<<AssociatedEvaluator.GetSymbolString(ValueToPrint.GetType<Symbol>().ID);
+        }
+        else if(ValueToPrint.IsType<List>())
+        {
+            std::cout<<"(";
+            auto const& ListToPrint = ValueToPrint.GetType<List>();
+            for(int i = 0; i < ListToPrint.size();i++)
+            {
+                Print(AssociatedEvaluator,ListToPrint[i]);
+                if(i + 1 < ListToPrint.size())
+                {
+                    std::cout<<" ";
+                }
+            }
+            std::cout<< ")";
+        }
+    }
     Value Evaluator::Print(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
     {
         Value ReturnValue;
         for(auto const& Argument : Arguments)
         {
-            if(Argument.IsType<String>())
-            {
-                std::cout<<'"'<<Argument.GetType<String>()<<'"';
-            }
-            else if(Argument.IsType<Int>())
-            {
-                std::cout<<Argument.GetType<Int>();
-            }
-            else if(Argument.IsType<bool>())
-            {
-                std::cout<<Argument.GetType<bool>();
-            }
+            Print(AssociatedEvaluator,Argument);
         }
         std::cout<<std::endl;
         return ReturnValue;
@@ -547,47 +573,41 @@ namespace MBLisp
         return NewList;
     }
 
-    void Evaluator::p_SkipWhiteSpace(std::string_view& Content)
+    void Evaluator::p_SkipWhiteSpace(MBUtility::StreamReader& Content)
     {
-        if(Content.size() == 0)
-        {
-            return;   
-        }
-        size_t NextOffset = Content.find_first_not_of(" \r\t\n\v");
-        Content = Content.substr(std::min(NextOffset,Content.size()));
+        Content.SkipWhile([](char NextChar)
+                {
+                    return NextChar == ' ' || NextChar == '\r' || NextChar == '\t' || NextChar == '\n' || NextChar == '\v';
+                });
     }
     //TODO escaping
-    String Evaluator::p_ReadString(std::string_view& Content)
+    String Evaluator::p_ReadString(MBUtility::StreamReader& Content)
     {
         String ReturnValue;
-        Content = Content.substr(1);
+        Content.ReadByte();
         bool StringFinished = false;
-        while(Content.size() != 0)
+        ReturnValue = Content.ReadWhile([](char NextChar)
+                {
+                    return NextChar != '"';
+                });
+        if(Content.EOFReached())
         {
-            if(Content[0] == '"')
-            {
-                StringFinished = true;
-                Content = Content.substr(1);
-                break;
-            }
-            ReturnValue += Content[0];
-            Content = Content.substr(1);
+            throw std::runtime_error("missing \" for string literal");
         }
+        Content.ReadByte();
         return ReturnValue;
     }
-    Value Evaluator::p_ReadSymbol(std::string_view& Content)
+    Value Evaluator::p_ReadSymbol(MBUtility::StreamReader& Content)
     {
         Value ReturnValue;
-        std::string SymbolString;
-        while(Content.size() != 0 &&
-                ((Content[0] >= 'A' && Content[0] <= 'Z') || (Content[0] >= 'a' && Content[0] <= 'z') || Content[0] == '<' || Content[0] == '+'))
-        {
-            SymbolString += Content[0];
-            Content = Content.substr(1);
-        }
+        std::string SymbolString = Content.ReadWhile([](char CharToRead)
+                {
+                    return (CharToRead >= 'A' && CharToRead <= 'Z') || (CharToRead >= 'a' && CharToRead <= 'z') || CharToRead == '<' || CharToRead == '+' 
+                    || CharToRead == '-';
+                });
         if (SymbolString == "")
         {
-            throw std::runtime_error(std::string("Error reading symbol: first character invalid") + Content[0]);
+            throw std::runtime_error("Error reading symbol: first character invalid");
         }
         else if(SymbolString == "true")
         {
@@ -603,57 +623,55 @@ namespace MBLisp
         }
         return ReturnValue;
     }
-    Int Evaluator::p_ReadInteger(std::string_view& Content)
+    Int Evaluator::p_ReadInteger(MBUtility::StreamReader& Content)
     {
         Int ReturnValue;
-        std::string NumberString;
-        while(Content.size() != 0 && Content[0] >= '0' && Content[0] <= '9')
-        {
-            NumberString += Content[0];
-            Content = Content.substr(1);
-        }
+        std::string NumberString = Content.ReadWhile([](char NextChar)
+                {
+                    return NextChar >= '0' && NextChar <= '9';
+                });
         ReturnValue = std::stoi(NumberString);
         return ReturnValue;
     }
-    List Evaluator::p_ReadList(std::string_view& Content)
+    List Evaluator::p_ReadList(MBUtility::StreamReader& Content)
     {
         List ReturnValue;
-        Content = Content.substr(1);
+        Content.ReadByte();
         p_SkipWhiteSpace(Content);
-        if(Content.size() == 0)
+        if(Content.EOFReached())
         {
             throw std::runtime_error("Error reading list: no corresponding )");   
         }
-        while(Content.size() != 0)
+        while(!Content.EOFReached())
         {
-            if(Content[0] == ')')
+            if(Content.PeekByte() == ')')
             {
-                Content = Content.substr(1);   
+                Content.ReadByte();
                 break;
             }
             ReturnValue.push_back(p_ReadTerm(Content));
             p_SkipWhiteSpace(Content);
         }
-
         return ReturnValue;
     }
-    Value Evaluator::p_ReadTerm(std::string_view& Content)
+    Value Evaluator::p_ReadTerm(MBUtility::StreamReader& Content)
     {
         Value ReturnValue;
         p_SkipWhiteSpace(Content);
-        if(Content.size() == 0)
+        if(Content.EOFReached())
         {
             throw std::runtime_error("Error reading term: end of input");   
         }
-        if(Content[0] == '(')
+        char NextChar = Content.PeekByte();
+        if(Content.PeekByte() == '(')
         {
             ReturnValue = p_ReadList(Content);
         }
-        else if(Content[0] == '"')
+        else if(Content.PeekByte() == '"')
         {
             ReturnValue = p_ReadString(Content);
         }
-        else if( Content[0] >= '0' && Content[0] <= '9')
+        else if( NextChar >= '0' && NextChar <= '9')
         {
             ReturnValue = p_ReadInteger(Content);
         }
@@ -663,10 +681,10 @@ namespace MBLisp
         }
         return ReturnValue;
     }
-    List Evaluator::p_Read(std::string_view Content)
+    List Evaluator::p_Read(MBUtility::StreamReader& Content)
     {
         List ReturnValue;
-        while(Content.size() != 0)
+        while(!Content.EOFReached())
         {
             ReturnValue.push_back(p_ReadTerm(Content));
             p_SkipWhiteSpace(Content);
@@ -683,6 +701,10 @@ namespace MBLisp
             m_SymbolToString[ReturnValue] = SymbolString;
         }
         return ReturnValue;
+    }
+    std::string Evaluator::GetSymbolString(SymbolID SymbolToConvert)
+    {
+        return m_SymbolToString[SymbolToConvert];
     }
     SymbolID Evaluator::GetSymbolID(std::string const& SymbolString)
     {
@@ -730,11 +752,12 @@ namespace MBLisp
         std::shared_ptr<Scope> CurrentScope = std::make_shared<Scope>();
         CurrentScope->SetParentScope(m_GlobalScope);
         OpCodeList OpCodes;
-        while(Content.size() != 0)
+        MBUtility::StreamReader Reader = MBUtility::StreamReader(std::make_unique<MBUtility::IndeterminateStringStream>(Content));
+        while(!Reader.EOFReached())
         {
             IPIndex InstructionToExecute = OpCodes.Size();
-            Value NewTerm = p_Expand(CurrentScope,p_ReadTerm(Content));
-            p_SkipWhiteSpace(Content);
+            Value NewTerm = p_Expand(CurrentScope,p_ReadTerm(Reader));
+            p_SkipWhiteSpace(Reader);
             if(NewTerm.IsType<List>())
             {
                 OpCodes.Append(NewTerm.GetType<List>());
