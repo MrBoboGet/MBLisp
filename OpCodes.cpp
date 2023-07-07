@@ -237,6 +237,10 @@ namespace MBLisp
         {
             p_CreateFuncCall(ListToConvert, ListToAppend, CurrentState);
         }
+        else
+        {
+            assert(false && "Only symbol or list can be first position of s-expression");
+        }
     }
     void OpCodeList::p_WriteProgn(List const& ListToConvert,std::vector<OpCode>& ListToAppend,EncodingState& CurrentState,int Offset)
     {

@@ -247,7 +247,7 @@ namespace MBLisp
             {
                 return Index;
             } 
-            else if constexpr (std::is_same_v<std::variant_alternative_t<Index, VariantType>, T>) 
+            else if constexpr (std::is_same_v<std::variant_alternative_t<Index, VariantType>,T>) 
             {
                 return Index;
             } 
@@ -296,8 +296,11 @@ namespace MBLisp
             }
             if constexpr(IsBuiltin<T>())
             {
-                   
-                if constexpr(IsValueType<T>())
+                if constexpr (std::is_same_v<T, String>)
+                {
+                    return VariantIndex<DataStorage, MBUtility::Dynamic<String>>();
+                }
+                else if constexpr(IsValueType<T>())
                 {
                     return VariantIndex<DataStorage,T>();
                 }

@@ -73,6 +73,8 @@ namespace MBLisp
         static Value Stream_ReadByte(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
         static Value Stream_SkipWhitespace(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
 
+        //Various
+        static Value Eq_String(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
 
         //READING
         
@@ -94,7 +96,7 @@ namespace MBLisp
         
 
         Value p_Expand(std::shared_ptr<Scope> ExpandScope,Value ValueToExpand);
-        Value p_Expand(std::shared_ptr<Scope> ExpandScope,List ListToExpand);
+        Value p_Expand(std::shared_ptr<Scope> ExpandScope,List& ListToExpand);
 
         //reading
         String p_ReadString(MBUtility::StreamReader& Content);
@@ -111,18 +113,14 @@ namespace MBLisp
 
 
 
-        template<typename T>
+        template<typename T,typename... Extra>
         void p_AddTypes(std::vector<ClassID>& Types)
         {
             Types.push_back(Value::GetTypeTypeID<T>());
-        }
-        template<typename T,typename U,typename... Extra>
-        void p_AddTypes(std::vector<ClassID>& Types)
-        {
-            Types.push_back(Value::GetTypeTypeID<T>());
-            Types.push_back(Value::GetTypeTypeID<U>());
-            p_AddTypes<Extra...>(Types);
-
+            if constexpr(sizeof...(Extra) > 0)
+            {
+                p_AddTypes<Extra...>(Types);
+            }
         }
     public:
         Evaluator();

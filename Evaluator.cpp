@@ -135,6 +135,7 @@ namespace MBLisp
         for(auto const& Argument : Arguments)
         {
             Print(AssociatedEvaluator,Argument);
+            std::cout<<" ";
         }
         std::cout<<std::endl;
         if(Arguments.size() != 0)
@@ -371,6 +372,10 @@ namespace MBLisp
             }
         }
         return ReturnValue;
+    }
+    Value Evaluator::Eq_String(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    {
+        return Arguments[0].GetType<String>() == Arguments[1].GetType<String>();
     }
     Value Evaluator::Index_ClassInstance(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
     {
@@ -644,11 +649,11 @@ namespace MBLisp
     {
         if(ValueToExpand.IsType<List>())
         {
-            return  p_Expand(ExpandScope,std::move(ValueToExpand.GetType<List>()));
+            return  p_Expand(ExpandScope,ValueToExpand.GetType<List>());
         }
         return ValueToExpand;
     }
-    Value Evaluator::p_Expand(std::shared_ptr<Scope> ExpandScope,List ListToExpand)
+    Value Evaluator::p_Expand(std::shared_ptr<Scope> ExpandScope,List& ListToExpand)
     {
         Value ReturnValue;
         if(ListToExpand.size() == 0)
@@ -668,7 +673,7 @@ namespace MBLisp
                     {
                         Arguments.push_back(ListToExpand[i]);
                     }
-                    return p_Eval(*AssociatedMacro.Callable,std::move(Arguments));
+                    return p_Expand(ExpandScope,p_Eval(*AssociatedMacro.Callable,std::move(Arguments)));
                 }
             }
         }
@@ -679,7 +684,7 @@ namespace MBLisp
         {
             if(ListToExpand[i].IsType<List>())
             {
-                NewList.push_back(p_Expand(ExpandScope,std::move(ListToExpand[i].GetType<List>())));
+                NewList.push_back(p_Expand(ExpandScope,ListToExpand[i].GetType<List>()));
             }
             else
             {
@@ -874,11 +879,14 @@ namespace MBLisp
         //class
         AddMethod<ClassInstance>("index",Index_ClassInstance);
 
+        //comparisons
+        AddMethod<String,String>("eq",Eq_String);
+
         //streams
         AddMethod<MBUtility::StreamReader>("eof",Stream_EOF);
         AddMethod<MBUtility::StreamReader>("peek-byte",Stream_PeakByte);
-        AddMethod<MBUtility::StreamReader>("read-byte",Stream_PeakByte);
-        AddMethod<MBUtility::StreamReader>("skip-whitespace",Stream_EOF);
+        AddMethod<MBUtility::StreamReader>("read-byte",Stream_ReadByte);
+        AddMethod<MBUtility::StreamReader>("skip-whitespace",Stream_SkipWhitespace);
 
         
         m_GlobalScope->SetVariable(p_GetSymbolID("*READTABLE*"),Value::MakeExternal(ReadTable()));
