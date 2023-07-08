@@ -66,6 +66,10 @@ namespace MBLisp
     Value* GenericFunction::GetMethod(std::vector<Value>& Arguments)
     {
         Value* ReturnValue = nullptr;
+        if(m_Specifications.size() == 0)
+        {
+            return ReturnValue;   
+        }
         std::vector<std::vector<ClassID>> ArgumentClasses;
         for(auto const& Argument : Arguments)
         {

@@ -22,6 +22,11 @@ namespace MBLisp
 
     struct StackFrame
     {
+        //TODO MEGA HACKY 
+        //added so that ad hoc invocation of constructors can pop
+        //uneccesary arguments and can have the first argument be 
+        //the constructed value...
+        int PopExtra = 0;
         std::shared_ptr<Scope> StackScope;
         OpCodeExtractor ExecutionPosition;
         std::vector<Value> ArgumentStack;
@@ -75,6 +80,9 @@ namespace MBLisp
 
         //Various
         static Value Eq_String(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+        static Value Eq_Symbol(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+        static Value Eq_Int(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+        static Value GenSym(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
 
         //READING
         
@@ -139,7 +147,7 @@ namespace MBLisp
             GenericFunction& AssociatedFunction = m_GlobalScope->FindVariable(GenericSymbol).GetType<GenericFunction>();
             AssociatedFunction.AddMethod(std::move(Types),std::move(Callable));
         }
-
+        SymbolID GenerateSymbol();
         
         //TEMP AF
         ReadTable& GetReadTable();

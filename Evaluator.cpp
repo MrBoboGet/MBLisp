@@ -171,9 +171,9 @@ namespace MBLisp
         Value ReturnValue;
         if(Arguments.size() < 2)
         {
-            throw std::runtime_error("to few arguments for class: class requires exactly 2 argument, a list of overrides, and a list of slots");
+            throw std::runtime_error("to few arguments for class: class requires atleast 2 argument, a list of overrides, and a list of slots");
         }
-        if(Arguments.size() > 2)
+        if(Arguments.size() > 3)
         {
             throw std::runtime_error("to many arguments for class: class requires exactly 2 argument, a list of overrides, and a list of slots");
         }
@@ -188,6 +188,10 @@ namespace MBLisp
             if(!Value.IsType<ClassDefinition>())
             {
                 throw std::runtime_error("non-ClassDefinition object in list of parent classes in second argument to class");
+            }
+            if(Value::TypeIsBuiltin(Value.GetType<ClassDefinition>().ID))
+            {
+                throw std::runtime_error("cannot inherit from builtin class");
             }
             Parents.push_back(Value.GetRef<ClassDefinition>().get());
         }
@@ -216,6 +220,12 @@ namespace MBLisp
         }
         Parents.push_back(&TemporaryClass);
         p_MergeClasses(Parents,NewClass);
+
+        if(Arguments.size() == 3)
+        {
+            NewClass.Constructor = std::make_shared<Value>(Arguments[2]);   
+        }
+        
         Ref<FunctionDefinition> SlotInitializers = std::make_shared<FunctionDefinition>();
         SlotInitializers->Arguments = {AssociatedEvaluator.GetSymbolID("INIT")};
         SlotInitializers->Instructions = std::make_shared<OpCodeList>(OpCodeList(AssociatedEvaluator.GetSymbolID("INIT"),AssociatedEvaluator.GetSymbolID("index"),
@@ -262,30 +272,7 @@ namespace MBLisp
     }
     Value Evaluator::Generic(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
     {
-        Value ReturnValue;
-        if(Arguments.size() < 1)
-        {
-            throw std::runtime_error("to few arguments sfor generic: exactly one argument is required, a list of symbols");
-        }
-        if(Arguments.size() < 1)
-        {
-            throw std::runtime_error("to emany arguments for generic: exactly one argument is required, a list of symbols");
-        }
-        if (!Arguments[0].IsType<List>())
-        {
-            throw std::runtime_error("argument to generic has to be a list of symbols");
-        }
-        std::vector<SymbolID> GenericArgs;
-        for(auto const& Argument : Arguments[0].GetType<List>())
-        {
-            if(!Argument.IsType<Symbol>())
-            {
-                throw std::runtime_error("non-symbol in list of symbols supplied to generic");   
-            }
-            GenericArgs.push_back(Argument.GetType<Symbol>().ID);
-        }
-        ReturnValue = std::move(GenericFunction());
-        return ReturnValue;
+        return GenericFunction();
     }
     Value Evaluator::ReadTerm(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
     {
@@ -376,6 +363,31 @@ namespace MBLisp
     Value Evaluator::Eq_String(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
     {
         return Arguments[0].GetType<String>() == Arguments[1].GetType<String>();
+    }
+    Value Evaluator::Eq_Symbol(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    {
+        return Arguments[0].GetType<Symbol>().ID == Arguments[1].GetType<Symbol>().ID;
+    }
+    Value Evaluator::Eq_Int(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    {
+        return Arguments[0].GetType<Int>() == Arguments[1].GetType<Int>();
+    }
+    Value Evaluator::GenSym(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    {
+        return Symbol(AssociatedEvaluator.GenerateSymbol());
+    }
+    SymbolID Evaluator::GenerateSymbol()
+    {
+        SymbolID NewSymbol = m_CurrentSymbolID;
+        m_CurrentSymbolID++;
+        std::string SymbolString = "g:"+std::to_string(NewSymbol);
+        while(m_InternedSymbols.find(SymbolString) != m_InternedSymbols.end())
+        {
+            SymbolString += "_";
+        }
+        m_SymbolToString[NewSymbol] = SymbolString;
+        m_InternedSymbols[SymbolString] = NewSymbol;
+        return NewSymbol;
     }
     Value Evaluator::Index_ClassInstance(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
     {
@@ -478,6 +490,16 @@ namespace MBLisp
             NewStackFrame.StackScope->SetParentScope(m_GlobalScope);
             Value NewValue = NewInstance;
             NewStackFrame.StackScope->SetVariable(p_GetSymbolID("INIT"),NewValue);
+            if(NewInstance->AssociatedClass->Constructor != nullptr)
+            {
+                std::vector<Value> Args = {NewValue};
+                for(auto& Arg : Arguments)
+                {
+                    Args.push_back(Arg);
+                }
+                p_Invoke(*NewInstance->AssociatedClass->Constructor,Args,CurrentCallStack);
+                CurrentCallStack.back().PopExtra = 1;
+            }
             CurrentCallStack.push_back(std::move(NewStackFrame));
         }
         else if(ObjectToCall.IsType<GenericFunction>())
@@ -515,6 +537,15 @@ namespace MBLisp
                     return ReturnValue;   
                 }
                 continue;
+            }
+            if(CurrentFrame.PopExtra != 0)
+            {
+                assert(CurrentFrame.ArgumentStack.size() >= CurrentFrame.PopExtra);
+                for(int i = 0; i < CurrentFrame.PopExtra;i++)
+                {
+                    CurrentFrame.ArgumentStack.pop_back();
+                }
+                CurrentFrame.PopExtra = 0;
             }
             OpCode& CurrentCode = CurrentFrame.ExecutionPosition.GetCurrentCode();
             CurrentFrame.ExecutionPosition.Pop();
@@ -721,10 +752,11 @@ namespace MBLisp
     Value Evaluator::p_ReadSymbol(MBUtility::StreamReader& Content)
     {
         Value ReturnValue;
+        //TODO improve...
         std::string SymbolString = Content.ReadWhile([](char CharToRead)
                 {
                     return (CharToRead >= 'A' && CharToRead <= 'Z') || (CharToRead >= 'a' && CharToRead <= 'z') || CharToRead == '<' || CharToRead == '+' 
-                    || CharToRead == '-' || CharToRead == '&' || (CharToRead >= '0' && CharToRead <= '9');
+                    || CharToRead == '-' || CharToRead == '&' || (CharToRead >= '0' && CharToRead <= '9') || CharToRead=='_' || CharToRead == '|';
                 });
         if (SymbolString == "")
         {
@@ -749,7 +781,7 @@ namespace MBLisp
         Int ReturnValue;
         std::string NumberString = Content.ReadWhile([](char NextChar)
                 {
-                    return NextChar >= '0' && NextChar <= '9';
+                    return (NextChar >= '0' && NextChar <= '9') || NextChar == '-';
                 });
         ReturnValue = std::stoi(NumberString);
         return ReturnValue;
@@ -792,7 +824,7 @@ namespace MBLisp
         {
             ReturnValue = p_ReadString(Content);
         }
-        else if( NextChar >= '0' && NextChar <= '9')
+        else if( (NextChar >= '0' && NextChar <= '9') || NextChar == '-')
         {
             ReturnValue = p_ReadInteger(Content);
         }
@@ -864,6 +896,7 @@ namespace MBLisp
                     {"generic",Generic},
                     {"read-term",ReadTerm},
                     {"flatten-1",Flatten_1},
+                    {"gensym",GenSym},
                 })
         {
             Function NewBuiltin;
@@ -872,6 +905,12 @@ namespace MBLisp
         }
         m_PrimitiveSymbolMax = m_CurrentSymbolID;
 
+        //primitive types
+        m_GlobalScope->SetVariable(p_GetSymbolID("list_t"),ClassDefinition(Value::GetTypeTypeID<List>()));
+        m_GlobalScope->SetVariable(p_GetSymbolID("int_t"),ClassDefinition(Value::GetTypeTypeID<Int>()));
+        m_GlobalScope->SetVariable(p_GetSymbolID("float_t"),ClassDefinition(Value::GetTypeTypeID<Float>()));
+        m_GlobalScope->SetVariable(p_GetSymbolID("symbol_t"),ClassDefinition(Value::GetTypeTypeID<Symbol>()));
+        
         //list
         AddMethod<List>("append",Append_List);
         AddMethod<List>("index",Index_List);
@@ -881,6 +920,8 @@ namespace MBLisp
 
         //comparisons
         AddMethod<String,String>("eq",Eq_String);
+        AddMethod<Symbol,Symbol>("eq",Eq_Symbol);
+        AddMethod<Int,Int>("eq",Eq_Int);
 
         //streams
         AddMethod<MBUtility::StreamReader>("eof",Stream_EOF);

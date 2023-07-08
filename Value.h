@@ -286,7 +286,11 @@ namespace MBLisp
             *StorageToAssign = PointerToCopy->m_Data;
             return *this;
         }
-       
+      
+        static constexpr bool TypeIsBuiltin(ClassID IDToInspect)
+        {
+            return IDToInspect <= std::variant_size_v<DataStorage>;
+        } 
         template<typename T> 
         static constexpr ClassID GetTypeTypeID()
         {
@@ -496,13 +500,19 @@ namespace MBLisp
     class ClassDefinition
     {
         public:
+        ClassDefinition() = default;
+
+        explicit ClassDefinition(ClassID NewID)
+        {
+            ID = NewID;
+        }
         ClassID ID = 0;
         std::vector<ClassID> Types;
         //expression to compile
         std::vector<SlotDefinition> SlotDefinitions;
         Ref<FunctionDefinition> SlotInitializers;
         //constructor is optionally run after slot initializers, which are always run
-        Ref<FunctionDefinition> Constructor;
+        std::shared_ptr<Value> Constructor;
     };
     class ClassInstance
     {
