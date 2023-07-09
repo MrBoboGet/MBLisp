@@ -936,9 +936,8 @@ namespace MBLisp
     {
         p_InternPrimitiveSymbols();
     }
-    void Evaluator::Eval(std::string_view Content)
+    void Evaluator::Eval(std::shared_ptr<Scope>& CurrentScope,std::string_view Content)
     {
-        std::shared_ptr<Scope> CurrentScope = std::make_shared<Scope>();
         CurrentScope->SetParentScope(m_GlobalScope);
         OpCodeList OpCodes;
         Value ReaderValue = Value::MakeExternal(MBUtility::StreamReader(std::make_unique<MBUtility::IndeterminateStringStream>(Content)));
@@ -961,5 +960,11 @@ namespace MBLisp
             }
             p_Eval(CurrentScope,OpCodes,InstructionToExecute);
         }
+
+    }
+    void Evaluator::Eval(std::string_view Content)
+    {
+        std::shared_ptr<Scope> CurrentScope = std::make_shared<Scope>();
+        Eval(CurrentScope,Content);
     }
 }

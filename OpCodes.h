@@ -55,6 +55,11 @@ namespace MBLisp
     {
         IPIndex NewIP;
     };
+    class OpCode;
+    struct OpCode_HandleSignal
+    {
+        std::shared_ptr<std::vector<OpCode>> SignalCode;
+    };
     struct OpCode_CallFunc
     {
         //determines the amount of vales to take from the stack when calling the function
@@ -64,6 +69,34 @@ namespace MBLisp
         {
             ArgumentCount = ArgCount;   
         }
+    };
+    //signals and unwind stuff
+    struct OpCode_Unwind
+    {
+        IPIndex HandlersEnd = -1;
+    };
+    struct OpCode_Signal
+    {
+    };
+    //as many values on the stack, denoting type, as signal handlers pushed here
+    struct OpCode_AddSignalHandlers
+    {
+        IPIndex HandlersEnd = -1;
+        std::vector<IPIndex> HandlersBegin;
+    };
+    struct OpCode_SignalHandler_Done
+    {
+    };
+    struct OpCode_RemoveSignalHandlers
+    {
+           
+    };
+    struct OpCode_UnwindProtect_Add
+    {
+        IPIndex UnwindBegin = -1;
+    };
+    struct OpCode_UnwindProtect_Pop
+    {
     };
     enum class PrimitiveForms
     {
@@ -76,7 +109,12 @@ namespace MBLisp
         quote,
         macro,//should probably replace with function call semantics
         setreader,
-        LAST
+        //
+        signal_handlers,
+        signal,
+        unwind,
+        unwind_protect,
+        LAST,
     };
     struct OpCode
     {
@@ -125,6 +163,8 @@ namespace MBLisp
         struct EncodingState
         {
             std::vector<std::pair<SymbolID,IPIndex>> UnResolvedGotos;
+            int InSignalHandler = 0;
+            std::vector<IPIndex> UnResolvedUnwinds;
         };
         void p_CreateOpCodes(Value const& ValueToEncode,std::vector<OpCode>& ListToAppend,EncodingState& CurrentState);
         void p_CreateFuncCall(List const& ValueToEncode,std::vector<OpCode>& OutCodes,EncodingState& CurrentState);

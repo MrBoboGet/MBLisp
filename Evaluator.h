@@ -20,6 +20,16 @@ namespace MBLisp
         Value* TryGet(SymbolID Variable);
     };
 
+    struct SignalHandler
+    {
+        ClassID HandledType = -1;
+        SymbolID BoundValue = 0;
+        IPIndex SignalBegin = -1;
+    };
+    struct UnwindProtector
+    {
+        IPIndex UnwindBegin = -1;
+    };
     struct StackFrame
     {
         //TODO MEGA HACKY 
@@ -27,13 +37,28 @@ namespace MBLisp
         //uneccesary arguments and can have the first argument be 
         //the constructed value...
         int PopExtra = 0;
+
+
         std::shared_ptr<Scope> StackScope;
         OpCodeExtractor ExecutionPosition;
         std::vector<Value> ArgumentStack;
 
+        std::vector<SignalHandler> ActiveSignalHandlers;
+        std::vector<UnwindProtector> ActiveUnwindProtectors;
+
+
         StackFrame(OpCodeExtractor Extractor) : ExecutionPosition(std::move(Extractor))
         {
         }
+    };
+    struct ExecutionState
+    {
+        //-1 means last
+        int CurrentFrame = -1;
+        //needed because of signal handlers emitting signals
+        std::vector<int> NextStackFrame;
+        bool UnwindingStack = false;
+        std::vector<StackFrame> StackFrames;
     };
    
 
@@ -133,7 +158,6 @@ namespace MBLisp
     public:
         Evaluator();
 
-        
         template<typename... ArgTypes>
         void AddMethod(std::string const& MethodName,Value Callable)
         {
@@ -151,9 +175,11 @@ namespace MBLisp
         
         //TEMP AF
         ReadTable& GetReadTable();
+
         SymbolID GetSymbolID(std::string const& SymbolString);
         std::string GetSymbolString(SymbolID SymbolToConvert);
         void Eval(std::string_view Content);
+        void Eval(std::shared_ptr<Scope>& CurrentScope,std::string_view Content);
         Value Eval(Value Callable,std::vector<Value> Arguments);
     };
 }

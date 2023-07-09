@@ -223,6 +223,85 @@ namespace MBLisp
                     p_CreateOpCodes(ListToConvert[2],ListToAppend,CurrentState);
                     ListToAppend.push_back(OpCode_SetReader());
                 }
+                else if(CurrentSymbol == SymbolID(PrimitiveForms::signal))
+                {
+                    if(ListToConvert.size() != 2)
+                    {
+                        throw std::runtime_error("signal requires exactly 1 argument, the value to signal");   
+                    }
+                    p_CreateOpCodes(ListToConvert[1], ListToAppend, CurrentState);
+                    ListToAppend.push_back(OpCode_Signal());
+                }
+                else if(CurrentSymbol == SymbolID(PrimitiveForms::signal))
+                {
+                    if(ListToConvert.size() != 1)
+                    {
+                        throw std::runtime_error("unwind special forms takes no arguments");   
+                    }
+                    p_CreateOpCodes(ListToConvert[1], ListToAppend, CurrentState);
+                    ListToAppend.push_back(OpCode_Signal());
+                }
+                else if(CurrentSymbol == SymbolID(PrimitiveForms::unwind_protect))
+                {
+                    if(ListToConvert.size() != 3)
+                    {
+                        throw std::runtime_error("signal requires exactly 2 arguments, the protected form, and the form when unwinding");   
+                    }
+                    IPIndex AddProtectIndex = ListToAppend.size();
+                    ListToAppend.push_back(OpCode_UnwindProtect_Add());
+                    p_CreateOpCodes(ListToConvert[1], ListToAppend, CurrentState);
+                    ListToAppend[AddProtectIndex].GetType<OpCode_UnwindProtect_Add>().UnwindBegin = ListToAppend.size();
+                    p_CreateOpCodes(ListToConvert[2],ListToAppend,CurrentState);
+                    ListToAppend.push_back(OpCode_UnwindProtect_Pop());
+                }
+                else if(CurrentSymbol == SymbolID(PrimitiveForms::unwind))
+                {
+                    if(CurrentState.InSignalHandler == 0)
+                    {
+                        throw std::runtime_error("unwind special can only occur within a signal handler");
+                    }
+                    if(ListToConvert.size() != 1)
+                    {
+                        throw std::runtime_error("unwind special from takes no arguments");   
+                    }
+                    CurrentState.UnResolvedUnwinds.push_back(ListToAppend.size());
+                    ListToAppend.push_back(OpCode_Unwind());
+                }
+                else if(CurrentSymbol == SymbolID(PrimitiveForms::signal_handlers))
+                {
+                    if((ListToConvert.size() & 1) != 1)
+                    {
+                        throw std::runtime_error("signal requires exactly an even amount of arguments: the form to execute, and pairs of handlers");
+                    }
+                    int CurrentIndex = 1;
+                    while(CurrentIndex < ListToConvert.size())
+                    {
+                        p_CreateOpCodes(ListToConvert[CurrentIndex],ListToAppend,CurrentState);
+                        CurrentIndex += 2;
+                    }
+                    IPIndex AddHandlersIndex = ListToAppend.size();
+                    ListToAppend.push_back(OpCode_AddSignalHandlers());
+                    std::vector<IPIndex> Begins;
+                    CurrentIndex = 1;
+                    CurrentState.InSignalHandler += 1;
+                    while(CurrentIndex < ListToConvert.size())
+                    {
+                        Begins.push_back(ListToAppend.size());
+                        p_CreateOpCodes(ListToConvert[CurrentIndex+1],ListToAppend,CurrentState);
+                        ListToAppend.push_back(OpCode_SignalHandler_Done());
+                        CurrentIndex += 2;
+                    }
+                    CurrentState.InSignalHandler += -1;
+                    IPIndex HandlersEnd = ListToAppend.size();
+                    for(IPIndex& UnwindIndexes : CurrentState.UnResolvedUnwinds)
+                    {
+                        ListToAppend[UnwindIndexes].GetType<OpCode_Unwind>().HandlersEnd = HandlersEnd;
+                    }
+                    ListToAppend.push_back(OpCode_RemoveSignalHandlers());
+                    OpCode_AddSignalHandlers& SignalOpCode = ListToAppend[AddHandlersIndex].GetType<OpCode_AddSignalHandlers>();
+                    SignalOpCode.HandlersEnd = HandlersEnd;
+                    SignalOpCode.HandlersBegin = std::move(Begins);
+                }
                 else
                 {
                     assert(false && "OpCode list doesn't cover all cases");   
@@ -239,7 +318,7 @@ namespace MBLisp
         }
         else
         {
-            assert(false && "Only symbol or list can be first position of s-expression");
+            throw std::runtime_error("Only symbol or list can be first position of s-expression");
         }
     }
     void OpCodeList::p_WriteProgn(List const& ListToConvert,std::vector<OpCode>& ListToAppend,EncodingState& CurrentState,int Offset)

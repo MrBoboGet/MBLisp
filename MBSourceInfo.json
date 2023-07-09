@@ -1,7 +1,9 @@
 {
     "Dependancies": 
     [
-        "MBUtility"
+        "MBUtility",
+        "MBSystem",
+        "MBUnicode"
     ],
     "ExtraIncludes": 
     [
