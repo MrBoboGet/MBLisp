@@ -269,15 +269,15 @@ namespace MBLisp
                 }
                 else if(CurrentSymbol == SymbolID(PrimitiveForms::signal_handlers))
                 {
-                    if((ListToConvert.size() & 1) != 1)
+                    if((ListToConvert.size() & 1) != 0)
                     {
                         throw std::runtime_error("signal requires exactly an even amount of arguments: the form to execute, and pairs of handlers");
                     }
-                    int CurrentIndex = 1;
+                    int CurrentIndex = 2;
                     std::vector<OpCode_AddSignalHandlers::SignalHandler> Handlers;
                     while(CurrentIndex < ListToConvert.size())
                     {
-                        if(ListToConvert[CurrentIndex].IsType<List>())
+                        if(!ListToConvert[CurrentIndex].IsType<List>())
                         {
                             throw std::runtime_error("first part of signal handlers has to be a list, containing form evaluating to a type, and symbol");
                         }
@@ -286,19 +286,25 @@ namespace MBLisp
                         {
                             throw std::runtime_error("first part of signal handlers has to be a list, containing form evaluating to a type, and symbol");
                         }
-                        if(HandlerList[1].IsType<Symbol>())
+                        if(!HandlerList[1].IsType<Symbol>())
                         {
                             throw std::runtime_error("second part of list to signal handler has to be a symbol");
                         }
                         OpCode_AddSignalHandlers::SignalHandler NewHandler;
                         NewHandler.BoundVariable = HandlerList[1].GetType<Symbol>().ID;
+                        Handlers.push_back(NewHandler);
                         p_CreateOpCodes(HandlerList[0],ListToAppend,CurrentState);
                         CurrentIndex += 2;
                     }
                     IPIndex AddHandlersIndex = ListToAppend.size();
                     ListToAppend.push_back(OpCode_AddSignalHandlers());
-                    CurrentIndex = 1;
+                    CurrentIndex = 2;
                     CurrentState.InSignalHandler += 1;
+
+                    //Add opcdoes for thing to actually execute
+                    p_CreateOpCodes(ListToConvert[1],ListToAppend,CurrentState);
+                    IPIndex JumpEndIndex = ListToAppend.size();
+                    ListToAppend.push_back(OpCode_Goto());
                     while(CurrentIndex < ListToConvert.size())
                     {
                         Handlers[(CurrentIndex-1)/2].HandlerBegin = ListToAppend.size();
@@ -316,6 +322,9 @@ namespace MBLisp
                     OpCode_AddSignalHandlers& SignalOpCode = ListToAppend[AddHandlersIndex].GetType<OpCode_AddSignalHandlers>();
                     SignalOpCode.HandlersEnd = HandlersEnd;
                     SignalOpCode.Handlers = std::move(Handlers);
+                    OpCode_Goto&  GotoEnd = ListToAppend[JumpEndIndex].GetType<OpCode_Goto>();
+                    GotoEnd.NewIP = HandlersEnd;
+                    GotoEnd.ResetStack = false;
                 }
                 else
                 {
@@ -426,5 +435,12 @@ namespace MBLisp
     bool OpCodeExtractor::Finished() const
     {
         return m_AssociatedList == nullptr || m_IP >= m_AssociatedList->m_OpCodes.size();
+    }
+    void OpCodeExtractor::SetEnd()
+    {
+        if(!Finished())
+        {
+            m_IP = m_AssociatedList->m_OpCodes.size();
+        }
     }
 }

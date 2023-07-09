@@ -45,8 +45,8 @@ namespace MBLisp
 
 
         //signal/unwind stuff
-        IPIndex BeforeSignalIndex = -1;
-        int SignalStackFrameIndex = -1;
+        int SignalFrameIndex = -1;
+        bool Unwinding = false;
         std::vector<SignalHandler> ActiveSignalHandlers;
         std::vector<int> SignalHandlerBunchSize;
         std::vector<IPIndex> ActiveUnwindProtectorsBegin;
@@ -59,7 +59,7 @@ namespace MBLisp
     struct ExecutionState
     {
         //-1 means last, other value entails being in a signal
-        int CurrentFrame = -1;
+        int FrameTarget = -1;
         bool UnwindingStack = false;
         std::vector<StackFrame> StackFrames;
     };

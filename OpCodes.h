@@ -221,6 +221,7 @@ namespace MBLisp
         IPIndex GetIP();
         void Pop();
         bool Finished() const;
+        void SetEnd();
     };
 }
 

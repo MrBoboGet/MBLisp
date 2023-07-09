@@ -533,26 +533,34 @@ namespace MBLisp
             if(CurrentState.UnwindingStack)
             {
                 assert(CurrentState.StackFrames.size() > 0);
-                if(CurrentState.CurrentFrame == StackFrames.size() -1)
+                if(CurrentState.FrameTarget == StackFrames.size() -1)
                 {
                     CurrentState.UnwindingStack = false;
-                    CurrentState.CurrentFrame = -1; 
+                    CurrentState.FrameTarget = -1; 
                 }
                 else
                 {
-                    if(CurrentState.StackFrames.back().ActiveUnwindProtectorsBegin.size() == 0)
+                    if (CurrentState.StackFrames.back().ActiveUnwindProtectorsBegin.size() == 0)
                     {
                         CurrentState.StackFrames.pop_back();
+                        continue;
+                    }
+                    else if (CurrentState.StackFrames.back().Unwinding == false)
+                    {
+                        CurrentState.StackFrames.back().ExecutionPosition.SetIP(CurrentState.StackFrames.back().ActiveUnwindProtectorsBegin.back());
+                        CurrentState.StackFrames.back().Unwinding = true;
                     }
                 }
             }
 
 
-            StackFrame& CurrentFrame = CurrentState.CurrentFrame == -1 ? CurrentState.StackFrames.back() : 
-                CurrentState.StackFrames[CurrentState.CurrentFrame];
+            StackFrame& CurrentFrame = CurrentState.StackFrames.back();
             if(CurrentFrame.ExecutionPosition.Finished())
             {
                 assert(CurrentFrame.ArgumentStack.size() == 1);
+                assert(CurrentFrame.ActiveSignalHandlers.size() == 0);
+                assert(CurrentFrame.ActiveUnwindProtectorsBegin.size() == 0);
+                assert(CurrentFrame.SignalHandlerBunchSize.size() == 0);
                 ReturnValue = std::move(CurrentFrame.ArgumentStack.back());
                 StackFrames.pop_back();
                 if(StackFrames.size() != 0)
@@ -699,45 +707,37 @@ namespace MBLisp
                 Value SignalValue = std::move(CurrentFrame.ArgumentStack.back());
                 CurrentFrame.ArgumentStack.pop_back();
                 //the signal form returns a value in the current frame, which
-                CurrentFrame.ArgumentStack.push_back(false);
-                int CurrentFrameIndex = CurrentState.CurrentFrame;
-                if(CurrentFrameIndex == -1)
-                {
-                    CurrentFrameIndex = CurrentState.StackFrames.size()-1;
-                }
+                int CurrentFrameIndex = CurrentState.StackFrames.size()-1;
+                bool SignalFound = false;
                 for(int i = CurrentFrameIndex; i >= 0; i--)
                 {
+                    if (SignalFound) break;
                     auto& CandidateFrame = CurrentState.StackFrames[i];
                     for(int j = int(CandidateFrame.ActiveSignalHandlers.size())-1;j >= 0;j--)
                     {
                         auto const& Handler = CandidateFrame.ActiveSignalHandlers[j];
                         if(p_ValueIsType(Handler.HandledType,SignalValue))
                         {
-                            CandidateFrame.BeforeSignalIndex = CurrentFrame.ExecutionPosition.GetIP();
-                            CandidateFrame.SignalStackFrameIndex = CurrentFrameIndex;
-                            CurrentState.CurrentFrame = i;
-
-                            CandidateFrame.StackScope->SetVariable(Handler.BoundValue,std::move(SignalValue));
-                            CandidateFrame.ExecutionPosition.SetIP(Handler.SignalBegin);
+                            //add frame to stack
+                            StackFrame NewFrame = StackFrame(CandidateFrame.ExecutionPosition);
+                            NewFrame.StackScope = CandidateFrame.StackScope;
+                            NewFrame.ExecutionPosition.SetIP(Handler.SignalBegin);
+                            NewFrame.SignalFrameIndex = i;
+                            NewFrame.StackScope->SetVariable(Handler.BoundValue,std::move(SignalValue));
+                            StackFrames.push_back(std::move(NewFrame));
+                            SignalFound = true;
+                            break;
                         }
                     }
+                }
+                if(!SignalFound)
+                {
+                    CurrentFrame.ArgumentStack.push_back(false);
                 }
             }
             else if(CurrentCode.IsType<OpCode_SignalHandler_Done>())
             {
-                //go back to the position where the signal was invoked, and
-                //restore the current frames previous IP state
-                assert(CurrentFrame.BeforeSignalIndex != -1);
-                assert(CurrentFrame.SignalStackFrameIndex != -1);
-                CurrentFrame.ExecutionPosition.SetIP(CurrentFrame.BeforeSignalIndex); 
-                CurrentFrame.BeforeSignalIndex = -1;
-                CurrentState.CurrentFrame = CurrentFrame.SignalStackFrameIndex;
-                if(CurrentState.CurrentFrame == CurrentState.StackFrames.size() -1)
-                {
-                    CurrentState.CurrentFrame = -1;   
-                }
-                CurrentFrame.SignalStackFrameIndex = -1;
-
+                CurrentFrame.ExecutionPosition.SetEnd();
             } 
             else if(CurrentCode.IsType<OpCode_AddSignalHandlers>())
             {
@@ -755,6 +755,7 @@ namespace MBLisp
                     NewSignalHandler.HandledType = TypeValue.GetType<ClassDefinition>().ID;
                     NewSignalHandler.BoundValue = NewHandler.BoundVariable;
                     NewSignalHandler.SignalBegin = NewHandler.HandlerBegin;
+                    CurrentFrame.ActiveSignalHandlers.push_back(NewSignalHandler);
                     StackOffset++;
                 }
                 CurrentFrame.ArgumentStack.resize(CurrentFrame.ArgumentStack.size() - AddSignalsCode.Handlers.size());
@@ -784,14 +785,15 @@ namespace MBLisp
                         CurrentFrame.ExecutionPosition.SetIP(CurrentFrame.ActiveUnwindProtectorsBegin.back());
                     }
                 }
+                CurrentFrame.Unwinding = false;
             }
             else if(CurrentCode.IsType<OpCode_Unwind>())
             {
-                assert(CurrentFrame.ActiveSignalHandlers.size() > 0);
-                CurrentFrame.ExecutionPosition.SetIP(CurrentCode.GetType<OpCode_Unwind>().HandlersEnd);
+                assert(CurrentFrame.SignalFrameIndex != -1);
                 CurrentState.UnwindingStack = true;
-                CurrentFrame.BeforeSignalIndex = -1;
-                CurrentFrame.SignalStackFrameIndex = -1;
+                CurrentState.FrameTarget = CurrentFrame.SignalFrameIndex;
+                StackFrames[CurrentFrame.SignalFrameIndex].ExecutionPosition.SetIP(CurrentCode.GetType<OpCode_Unwind>().HandlersEnd);
+                StackFrames[CurrentFrame.SignalFrameIndex].ArgumentStack.push_back(false);
             }
             else
             {
@@ -815,7 +817,7 @@ namespace MBLisp
         }
         else
         {
-            return TypeValue = ValueToInspect.GetTypeID();
+            return TypeValue == ValueToInspect.GetTypeID();
         }
         return ReturnValue;
     }
@@ -1073,6 +1075,7 @@ namespace MBLisp
         m_GlobalScope->SetVariable(p_GetSymbolID("int_t"),ClassDefinition(Value::GetTypeTypeID<Int>()));
         m_GlobalScope->SetVariable(p_GetSymbolID("float_t"),ClassDefinition(Value::GetTypeTypeID<Float>()));
         m_GlobalScope->SetVariable(p_GetSymbolID("symbol_t"),ClassDefinition(Value::GetTypeTypeID<Symbol>()));
+        m_GlobalScope->SetVariable(p_GetSymbolID("string_t"),ClassDefinition(Value::GetTypeTypeID<String>()));
         
         //list
         AddMethod<List>("append",Append_List);
