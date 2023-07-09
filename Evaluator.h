@@ -43,8 +43,13 @@ namespace MBLisp
         OpCodeExtractor ExecutionPosition;
         std::vector<Value> ArgumentStack;
 
+
+        //signal/unwind stuff
+        IPIndex BeforeSignalIndex = -1;
+        int SignalStackFrameIndex = -1;
         std::vector<SignalHandler> ActiveSignalHandlers;
-        std::vector<UnwindProtector> ActiveUnwindProtectors;
+        std::vector<int> SignalHandlerBunchSize;
+        std::vector<IPIndex> ActiveUnwindProtectorsBegin;
 
 
         StackFrame(OpCodeExtractor Extractor) : ExecutionPosition(std::move(Extractor))
@@ -53,10 +58,8 @@ namespace MBLisp
     };
     struct ExecutionState
     {
-        //-1 means last
+        //-1 means last, other value entails being in a signal
         int CurrentFrame = -1;
-        //needed because of signal handlers emitting signals
-        std::vector<int> NextStackFrame;
         bool UnwindingStack = false;
         std::vector<StackFrame> StackFrames;
     };
@@ -116,11 +119,12 @@ namespace MBLisp
         std::shared_ptr<Scope> m_GlobalScope = std::make_shared<Scope>();
         //easiest possible testable variant
 
-
+        bool p_ValueIsType(ClassID TypeValue,Value const& ValueToInspect);
 
         void p_Invoke(Value& ObjectToCall,std::vector<Value>& Arguments,std::vector<StackFrame>& CurrentCallStack);
         //The fundamental dispatch loop
-        Value p_Eval(std::vector<StackFrame>& CurrentCallStack);
+        Value p_Eval(ExecutionState& CurrentState);
+        Value p_Eval(std::vector<StackFrame> CurrentCallStack);
         Value p_Eval(std::shared_ptr<Scope> CurrentScope,OpCodeList& OpCodes,IPIndex  Offset = 0);
         //Value p_Eval(std::shared_ptr<Scope> AssociatedScope,FunctionDefinition& FunctionToExecute,std::vector<Value> Arguments);
         Value p_Eval(Value Callable,std::vector<Value> Arguments);

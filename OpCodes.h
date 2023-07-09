@@ -82,7 +82,12 @@ namespace MBLisp
     struct OpCode_AddSignalHandlers
     {
         IPIndex HandlersEnd = -1;
-        std::vector<IPIndex> HandlersBegin;
+        struct SignalHandler
+        {
+            SymbolID BoundVariable = -1;
+            IPIndex HandlerBegin = -1;
+        };
+        std::vector<SignalHandler> Handlers;
     };
     struct OpCode_SignalHandler_Done
     {
@@ -118,8 +123,26 @@ namespace MBLisp
     };
     struct OpCode
     {
-        std::variant<OpCode_PushVar,OpCode_Macro,OpCode_Set,OpCode_PushLiteral,OpCode_Pop,OpCode_Goto,OpCode_JumpNotTrue,OpCode_Jump,OpCode_CallFunc,
-            OpCode_SetReader> m_Data;
+        std::variant<
+            OpCode_PushVar,
+            OpCode_Macro,
+            OpCode_Set,
+            OpCode_PushLiteral,
+            OpCode_Pop,
+            OpCode_Goto,
+            OpCode_JumpNotTrue,
+            OpCode_Jump,
+            OpCode_CallFunc,
+            OpCode_SetReader,
+            //
+            OpCode_Unwind,
+            OpCode_Signal,
+            OpCode_AddSignalHandlers,
+            OpCode_SignalHandler_Done,
+            OpCode_RemoveSignalHandlers,
+            OpCode_UnwindProtect_Add,
+            OpCode_UnwindProtect_Pop
+                > m_Data;
     public:
         OpCode() = default;
         OpCode(OpCode const&) = default;

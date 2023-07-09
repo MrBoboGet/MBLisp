@@ -434,7 +434,7 @@ namespace MBLisp
     {
         std::vector<StackFrame> CurrentCallStack = {StackFrame(OpCodeExtractor())};
         p_Invoke(Callable,Arguments,CurrentCallStack);
-        return p_Eval(CurrentCallStack);
+        return p_Eval(std::move(CurrentCallStack));
     }
     void Evaluator::p_Invoke(Value& ObjectToCall,std::vector<Value>& Arguments,std::vector<StackFrame>& CurrentCallStack)
     {
@@ -517,12 +517,39 @@ namespace MBLisp
             throw std::runtime_error("Cannot invoke object");   
         }
     }
-    Value Evaluator::p_Eval(std::vector<StackFrame>& StackFrames)
+    Value Evaluator::p_Eval(std::vector<StackFrame> CurrentCallStack)
+    {
+        ExecutionState NewState;
+        NewState.StackFrames = std::move(CurrentCallStack);
+        return p_Eval(NewState);
+    }
+    Value Evaluator::p_Eval(ExecutionState& CurrentState)
     {
         Value ReturnValue;
+        auto& StackFrames = CurrentState.StackFrames;
         while(StackFrames.size() != 0)
         {
-            StackFrame& CurrentFrame = StackFrames.back();
+
+            if(CurrentState.UnwindingStack)
+            {
+                assert(CurrentState.StackFrames.size() > 0);
+                if(CurrentState.CurrentFrame == StackFrames.size() -1)
+                {
+                    CurrentState.UnwindingStack = false;
+                    CurrentState.CurrentFrame = -1; 
+                }
+                else
+                {
+                    if(CurrentState.StackFrames.back().ActiveUnwindProtectorsBegin.size() == 0)
+                    {
+                        CurrentState.StackFrames.pop_back();
+                    }
+                }
+            }
+
+
+            StackFrame& CurrentFrame = CurrentState.CurrentFrame == -1 ? CurrentState.StackFrames.back() : 
+                CurrentState.StackFrames[CurrentState.CurrentFrame];
             if(CurrentFrame.ExecutionPosition.Finished())
             {
                 assert(CurrentFrame.ArgumentStack.size() == 1);
@@ -665,16 +692,139 @@ namespace MBLisp
                 Table.Mappings[CharacterToDispatch] = AssociatedFunction;
                 CurrentFrame.ArgumentStack.push_back(AssociatedFunction);
             }
+            else if(CurrentCode.IsType<OpCode_Signal>())
+            {
+                //should probably not allow signals when unwinding stack...
+                assert(CurrentFrame.ArgumentStack.size() > 0);
+                Value SignalValue = std::move(CurrentFrame.ArgumentStack.back());
+                CurrentFrame.ArgumentStack.pop_back();
+                //the signal form returns a value in the current frame, which
+                CurrentFrame.ArgumentStack.push_back(false);
+                int CurrentFrameIndex = CurrentState.CurrentFrame;
+                if(CurrentFrameIndex == -1)
+                {
+                    CurrentFrameIndex = CurrentState.StackFrames.size()-1;
+                }
+                for(int i = CurrentFrameIndex; i >= 0; i--)
+                {
+                    auto& CandidateFrame = CurrentState.StackFrames[i];
+                    for(int j = int(CandidateFrame.ActiveSignalHandlers.size())-1;j >= 0;j--)
+                    {
+                        auto const& Handler = CandidateFrame.ActiveSignalHandlers[j];
+                        if(p_ValueIsType(Handler.HandledType,SignalValue))
+                        {
+                            CandidateFrame.BeforeSignalIndex = CurrentFrame.ExecutionPosition.GetIP();
+                            CandidateFrame.SignalStackFrameIndex = CurrentFrameIndex;
+                            CurrentState.CurrentFrame = i;
+
+                            CandidateFrame.StackScope->SetVariable(Handler.BoundValue,std::move(SignalValue));
+                            CandidateFrame.ExecutionPosition.SetIP(Handler.SignalBegin);
+                        }
+                    }
+                }
+            }
+            else if(CurrentCode.IsType<OpCode_SignalHandler_Done>())
+            {
+                //go back to the position where the signal was invoked, and
+                //restore the current frames previous IP state
+                assert(CurrentFrame.BeforeSignalIndex != -1);
+                assert(CurrentFrame.SignalStackFrameIndex != -1);
+                CurrentFrame.ExecutionPosition.SetIP(CurrentFrame.BeforeSignalIndex); 
+                CurrentFrame.BeforeSignalIndex = -1;
+                CurrentState.CurrentFrame = CurrentFrame.SignalStackFrameIndex;
+                if(CurrentState.CurrentFrame == CurrentState.StackFrames.size() -1)
+                {
+                    CurrentState.CurrentFrame = -1;   
+                }
+                CurrentFrame.SignalStackFrameIndex = -1;
+
+            } 
+            else if(CurrentCode.IsType<OpCode_AddSignalHandlers>())
+            {
+                OpCode_AddSignalHandlers const& AddSignalsCode = CurrentCode.GetType<OpCode_AddSignalHandlers>();
+                assert(CurrentFrame.ArgumentStack.size() >= AddSignalsCode.Handlers.size());
+                int StackOffset = CurrentFrame.ArgumentStack.size()-AddSignalsCode.Handlers.size();
+                for(auto const& NewHandler : AddSignalsCode.Handlers)
+                {
+                    Value const& TypeValue = CurrentFrame.ArgumentStack[StackOffset];
+                    if(!TypeValue.IsType<ClassDefinition>())
+                    {
+                        throw std::runtime_error("signal handler value specifier evaluated to non class type");
+                    }
+                    SignalHandler NewSignalHandler;
+                    NewSignalHandler.HandledType = TypeValue.GetType<ClassDefinition>().ID;
+                    NewSignalHandler.BoundValue = NewHandler.BoundVariable;
+                    NewSignalHandler.SignalBegin = NewHandler.HandlerBegin;
+                    StackOffset++;
+                }
+                CurrentFrame.ArgumentStack.resize(CurrentFrame.ArgumentStack.size() - AddSignalsCode.Handlers.size());
+                CurrentFrame.SignalHandlerBunchSize.push_back(AddSignalsCode.Handlers.size());
+            }
+            else if(CurrentCode.IsType<OpCode_RemoveSignalHandlers>())
+            {
+                assert(CurrentFrame.SignalHandlerBunchSize.size() > 0);
+                assert(CurrentFrame.ActiveSignalHandlers.size() > 0);
+                int SignalsToRemove = CurrentFrame.SignalHandlerBunchSize.back();
+                CurrentFrame.SignalHandlerBunchSize.pop_back();
+                CurrentFrame.ActiveSignalHandlers.resize(CurrentFrame.ActiveSignalHandlers.size()-SignalsToRemove);
+                assert(CurrentFrame.SignalHandlerBunchSize.size() > 0 || CurrentFrame.ActiveSignalHandlers.size() == 0);
+            }
+            else if(CurrentCode.IsType<OpCode_UnwindProtect_Add>())
+            {
+                CurrentFrame.ActiveUnwindProtectorsBegin.push_back(CurrentCode.GetType<OpCode_UnwindProtect_Add>().UnwindBegin);
+            }
+            else if(CurrentCode.IsType<OpCode_UnwindProtect_Pop>())
+            {
+                assert(CurrentFrame.ActiveUnwindProtectorsBegin.size() > 0);
+                CurrentFrame.ActiveUnwindProtectorsBegin.pop_back();
+                if(CurrentState.UnwindingStack)
+                {
+                    if(CurrentFrame.ActiveUnwindProtectorsBegin.size() > 0)
+                    {
+                        CurrentFrame.ExecutionPosition.SetIP(CurrentFrame.ActiveUnwindProtectorsBegin.back());
+                    }
+                }
+            }
+            else if(CurrentCode.IsType<OpCode_Unwind>())
+            {
+                assert(CurrentFrame.ActiveSignalHandlers.size() > 0);
+                CurrentFrame.ExecutionPosition.SetIP(CurrentCode.GetType<OpCode_Unwind>().HandlersEnd);
+                CurrentState.UnwindingStack = true;
+                CurrentFrame.BeforeSignalIndex = -1;
+                CurrentFrame.SignalStackFrameIndex = -1;
+            }
+            else
+            {
+                assert(false && "p_Eval doesnt cover all opcode cases");
+            }
         }
         return ReturnValue;
 
+    }
+    bool Evaluator::p_ValueIsType(ClassID TypeValue,Value const& ValueToInspect)
+    {
+        bool ReturnValue = false;
+        if(ValueToInspect.IsType<ClassInstance>())
+        {
+            std::vector<ClassID> const& Types = ValueToInspect.GetType<ClassInstance>().AssociatedClass->Types;
+            auto TypeIt = std::lower_bound(Types.begin(),Types.end(),TypeValue);
+            if(TypeIt != Types.end() && *TypeIt == TypeValue)
+            {
+                return true;
+            }
+        }
+        else
+        {
+            return TypeValue = ValueToInspect.GetTypeID();
+        }
+        return ReturnValue;
     }
     Value Evaluator::p_Eval(std::shared_ptr<Scope> CurrentScope,OpCodeList& OpCodes,IPIndex Offset)
     {
         std::vector<StackFrame> StackFrames = {StackFrame(OpCodeExtractor(OpCodes))};
         StackFrames.back().ExecutionPosition.SetIP(Offset);
         StackFrames.back().StackScope = CurrentScope;
-        return p_Eval(StackFrames);
+        return p_Eval(std::move(StackFrames));
     }
     Value Evaluator::p_Expand(std::shared_ptr<Scope> ExpandScope,Value ValueToExpand)
     {
@@ -882,7 +1032,20 @@ namespace MBLisp
     }
     void Evaluator::p_InternPrimitiveSymbols()
     {
-        for(auto const& String : {"cond","tagbody","go","set","lambda","progn","quote","macro","set-reader"})
+        for(auto const& String : {"cond",
+                                  "tagbody",
+                                  "go",
+                                  "set",
+                                  "lambda",
+                                  "progn",
+                                  "quote",
+                                  "macro",
+                                  "set-reader",
+                                  "signal-handlers",
+                                  "signal",
+                                  "unwind",
+                                  "unwind-protect",
+                                  })
         {
             p_GetSymbolID(String);
         }
