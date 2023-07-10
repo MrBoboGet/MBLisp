@@ -2,5 +2,6 @@
 	"PacketName":"MBLisp",
     "PacketType":"C++",
 	"Attributes":[],
+    "SubPackets":["/libs/std"],
     "Dependancies":["MBUtility","MBSystem","MBUnicode"]
 }

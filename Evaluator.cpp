@@ -34,6 +34,18 @@ namespace MBLisp
     }
     void Scope::SetVariable(SymbolID Variable,Value NewValue)
     {
+        if(m_ParentScope != nullptr)
+        {
+            if(auto It = m_ParentScope->TryGet(Variable); It != nullptr)
+            {
+                *It = std::move(NewValue);
+                return;
+            }
+        }
+        m_Variables[Variable] = std::move(NewValue);
+    }
+    void Scope::OverrideVariable(SymbolID Variable,Value NewValue)
+    {
         m_Variables[Variable] = std::move(NewValue);
     }
     //END Scope
@@ -463,7 +475,7 @@ namespace MBLisp
             NewStackFrame.StackScope->SetParentScope(AssociatedLambda.AssociatedScope);
             for(int i = 0; i < AssociatedLambda.Definition->Arguments.size();i++)
             {
-                NewStackFrame.StackScope->SetVariable(AssociatedLambda.Definition->Arguments[i].ID,Arguments[i]);   
+                NewStackFrame.StackScope->OverrideVariable(AssociatedLambda.Definition->Arguments[i].ID,Arguments[i]);   
             }
             if(AssociatedLambda.Definition->RestParameter != 0)
             {
@@ -472,7 +484,7 @@ namespace MBLisp
                 {
                     RestList.push_back(Arguments[i]);
                 }
-                NewStackFrame.StackScope->SetVariable(AssociatedLambda.Definition->RestParameter,std::move(RestList));
+                NewStackFrame.StackScope->OverrideVariable(AssociatedLambda.Definition->RestParameter,std::move(RestList));
             }
             CurrentCallStack.push_back(std::move(NewStackFrame));
         }
@@ -489,7 +501,7 @@ namespace MBLisp
             NewStackFrame.StackScope = std::make_shared<Scope>();
             NewStackFrame.StackScope->SetParentScope(m_GlobalScope);
             Value NewValue = NewInstance;
-            NewStackFrame.StackScope->SetVariable(p_GetSymbolID("INIT"),NewValue);
+            NewStackFrame.StackScope->OverrideVariable(p_GetSymbolID("INIT"),NewValue);
             if(NewInstance->AssociatedClass->Constructor != nullptr)
             {
                 std::vector<Value> Args = {NewValue};
@@ -723,7 +735,7 @@ namespace MBLisp
                             NewFrame.StackScope = CandidateFrame.StackScope;
                             NewFrame.ExecutionPosition.SetIP(Handler.SignalBegin);
                             NewFrame.SignalFrameIndex = i;
-                            NewFrame.StackScope->SetVariable(Handler.BoundValue,std::move(SignalValue));
+                            NewFrame.StackScope->OverrideVariable(Handler.BoundValue,std::move(SignalValue));
                             StackFrames.push_back(std::move(NewFrame));
                             SignalFound = true;
                             break;
@@ -907,8 +919,7 @@ namespace MBLisp
         //TODO improve...
         std::string SymbolString = Content.ReadWhile([](char CharToRead)
                 {
-                    return (CharToRead >= 'A' && CharToRead <= 'Z') || (CharToRead >= 'a' && CharToRead <= 'z') || CharToRead == '<' || CharToRead == '+' 
-                    || CharToRead == '-' || CharToRead == '&' || (CharToRead >= '0' && CharToRead <= '9') || CharToRead=='_' || CharToRead == '|';
+                    return (CharToRead > ' ' && CharToRead < 0x7f) && CharToRead != '"' && CharToRead != '(' && CharToRead != ')';
                 });
         if (SymbolString == "")
         {

@@ -83,7 +83,7 @@
 (defgeneric iterator)
 (defgeneric next)
 (defgeneric current)
-(defmacro slot (object index) `(index ,object (quote ,index)))
+(defmacro slot (object accessor) `(index ,object (quote ,accessor)))
 
 (defclass list-iterator () 
   (it-list false)
@@ -153,10 +153,9 @@
 
 (defclass exception () (what "") (constructor (lambda (e message) (set (slot e what) message))))
 
-(defmacro error (error-signal)
+(defun error (error-signal)
   (signal error-signal)
-  (print (+ "Un-handled error: " (str error-signal)))
-  (exit)
+  (print (+ "Un-handled error: " error-signal))
 )
 
 (defun foldl (iterable callable)
@@ -176,8 +175,9 @@
           (set in-top-curry false)
           (set curry-term (read-term stream))
           (set in-top-curry true)
-          `(lambda (,@curry-args) curry-term)
+          (set ret-value `(lambda (,@curry-args) ,curry-term))
           (set curry-args (list))
+          ret-value
         )
         (progn
           (set new-symbol (gensym))
