@@ -326,6 +326,36 @@ namespace MBLisp
                     GotoEnd.NewIP = HandlersEnd;
                     GotoEnd.ResetStack = false;
                 }
+                else if(CurrentSymbol == SymbolID(PrimitiveForms::bind_dynamic))
+                {
+                    if(ListToConvert.size() != 3)
+                    {
+                        throw std::runtime_error("bind-dynamic requires exactly 2 arguments: list of binding triplets, form to execute in new binding");
+                    }
+                    if(!ListToConvert[1].IsType<List>())
+                    {
+                        throw std::runtime_error("second argument to bind-dynamic has to be a list of binding triplets");
+                    }
+                    for(auto const& Triplet : ListToConvert[1].GetType<List>())
+                    {
+                        if(!Triplet.IsType<List>() || Triplet.GetType<List>().size() != 3)
+                        {
+                            throw std::runtime_error("second argument to bind-dynamic has to be a list of binding triplets");   
+                        }
+                        for(auto const& TripletValue : Triplet.GetType<List>())
+                        {
+                            p_CreateOpCodes(TripletValue,ListToAppend,CurrentState);
+                        }
+                    }
+                    ListToAppend.push_back(OpCode_PushBindings(ListToConvert[1].GetType<List>().size()));
+                    IPIndex UnwindIndex = ListToAppend.size();
+                    ListToAppend.push_back(OpCode_UnwindProtect_Add());
+                    p_CreateOpCodes(ListToConvert[2],ListToAppend,CurrentState);
+                    IPIndex UnwindBegin = ListToAppend.size();
+                    ListToAppend.push_back(OpCode_PopBindings());
+                    ListToAppend.push_back(OpCode_UnwindProtect_Pop());
+                    ListToAppend[UnwindIndex].GetType<OpCode_UnwindProtect_Add>().UnwindBegin = UnwindBegin;
+                }
                 else
                 {
                     assert(false && "OpCode list doesn't cover all cases");   

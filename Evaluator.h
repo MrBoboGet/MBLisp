@@ -8,18 +8,6 @@ namespace MBLisp
 {
    
 
-    class Evaluator;
-    class Scope
-    {
-        std::shared_ptr<Scope> m_ParentScope = nullptr;
-        std::unordered_map<SymbolID,Value> m_Variables;
-    public:
-        void SetParentScope(std::shared_ptr<Scope> ParentScope);
-        Value FindVariable(SymbolID Variable);
-        void SetVariable(SymbolID Variable,Value NewValue);
-        void OverrideVariable(SymbolID Variable,Value NewValue);
-        Value* TryGet(SymbolID Variable);
-    };
 
     struct SignalHandler
     {
@@ -63,6 +51,8 @@ namespace MBLisp
         int FrameTarget = -1;
         bool UnwindingStack = false;
         std::vector<StackFrame> StackFrames;
+        std::unordered_map<DynamicVarID,std::vector<Value>> DynamicBindings;
+        std::vector<std::vector<DynamicVarID>> BindingStack;
     };
    
 
@@ -70,49 +60,57 @@ namespace MBLisp
     {
         std::unordered_map<char,Value> Mappings;
     };
-    
+   
+
+    //TODO kinda hacky, should be temporary, but much more convenient when
+    //iterating and prototyping
+#define BUILTIN_ARGLIST (Evaluator& AssociatedEvaluator,Ref<Scope> CurrentScope,std::vector<Value>& Arguments)
     class Evaluator
     {
-        friend class Scope;
         SymbolID m_CurrentSymbolID = 1;
         SymbolID m_PrimitiveSymbolMax = 0;
 
         static void Print(Evaluator& AssociatedEvaluator,Value const& ValueToPrint);
-        static Value Print(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
-        static Value Less(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
-        static Value Plus(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
-        static Value CreateList(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+        static Value Print BUILTIN_ARGLIST;
+        static Value Less BUILTIN_ARGLIST;
+        static Value Plus  BUILTIN_ARGLIST;
+        static Value CreateList BUILTIN_ARGLIST;
 
 
         //classes and generics
         static void p_MergeClasses(std::vector<ClassDefinition*> const& ClassesToMerge,ClassDefinition& NewClass);
-        static Value Class(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
-        static Value AddMethod(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
-        static Value Generic(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+        static Value Class BUILTIN_ARGLIST;
+        static Value AddMethod BUILTIN_ARGLIST;
+        static Value Generic BUILTIN_ARGLIST;
+        static Value Dynamic BUILTIN_ARGLIST;
 
 
 
         //builtin containers
         //List
-        static Value Index_List(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
-        static Value Append_List(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
-        static Value Len_List(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
-        static Value Flatten_1(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+        static Value Index_List BUILTIN_ARGLIST;
+        static Value Append_List BUILTIN_ARGLIST;
+        static Value Len_List BUILTIN_ARGLIST;
+        static Value Flatten_1 BUILTIN_ARGLIST;
         //class instance
-        static Value Index_ClassInstance(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+        static Value Index_ClassInstance BUILTIN_ARGLIST;
         //Streams
-        static Value ReadTerm(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
-        static Value Stream_EOF(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
-        static Value Stream_PeakByte(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
-        static Value Stream_ReadByte(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
-        static Value Stream_SkipWhitespace(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+        static Value ReadTerm BUILTIN_ARGLIST;
+        static Value Stream_EOF BUILTIN_ARGLIST;
+        static Value Stream_PeakByte BUILTIN_ARGLIST;
+        static Value Stream_ReadByte BUILTIN_ARGLIST;
+        static Value Stream_SkipWhitespace BUILTIN_ARGLIST;
 
         //Various
-        static Value Eq_String(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
-        static Value Eq_Symbol(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
-        static Value Eq_Int(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
-        static Value GenSym(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments);
+        static Value Eq_String BUILTIN_ARGLIST;
+        static Value Eq_Symbol BUILTIN_ARGLIST;
+        static Value Eq_Int BUILTIN_ARGLIST;
+        static Value GenSym BUILTIN_ARGLIST;
 
+
+        //Environment
+        static Value Environment BUILTIN_ARGLIST;
+        
         //READING
         
         std::unordered_map<std::string,SymbolID> m_InternedSymbols;

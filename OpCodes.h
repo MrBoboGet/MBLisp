@@ -47,10 +47,6 @@ namespace MBLisp
         IPIndex NewIP = -1;
         bool ResetStack = true;
     };
-    struct OpCode_Jump
-    {
-        IPIndex NewIP;
-    };
     struct OpCode_JumpNotTrue
     {
         IPIndex NewIP;
@@ -94,13 +90,26 @@ namespace MBLisp
     };
     struct OpCode_RemoveSignalHandlers
     {
-           
     };
     struct OpCode_UnwindProtect_Add
     {
         IPIndex UnwindBegin = -1;
     };
     struct OpCode_UnwindProtect_Pop
+    {
+    };
+    //let stuff
+    //BindCount amount of triples, oscope, symbol and value
+    struct OpCode_PushBindings
+    {
+        int BindCount = 0;
+        OpCode_PushBindings() = default;
+        OpCode_PushBindings(int NewBindCount)
+        {
+            BindCount = NewBindCount;
+        }
+    };
+    struct OpCode_PopBindings
     {
     };
     enum class PrimitiveForms
@@ -119,6 +128,7 @@ namespace MBLisp
         signal,
         unwind,
         unwind_protect,
+        bind_dynamic,
         LAST,
     };
     struct OpCode
@@ -131,7 +141,6 @@ namespace MBLisp
             OpCode_Pop,
             OpCode_Goto,
             OpCode_JumpNotTrue,
-            OpCode_Jump,
             OpCode_CallFunc,
             OpCode_SetReader,
             //
@@ -141,7 +150,10 @@ namespace MBLisp
             OpCode_SignalHandler_Done,
             OpCode_RemoveSignalHandlers,
             OpCode_UnwindProtect_Add,
-            OpCode_UnwindProtect_Pop
+            OpCode_UnwindProtect_Pop,
+            //let stuff
+            OpCode_PushBindings,
+            OpCode_PopBindings
                 > m_Data;
     public:
         OpCode() = default;

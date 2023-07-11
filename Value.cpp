@@ -4,6 +4,50 @@
 namespace MBLisp
 {
        
+    //Begin Scope
+    void Scope::SetParentScope(std::shared_ptr<Scope> ParentScope)
+    {
+        m_ParentScope = ParentScope;
+    }
+    Value Scope::FindVariable(SymbolID Variable)
+    {
+        Value* ReturnValue = TryGet(Variable);
+        if(ReturnValue == nullptr)
+        {
+            throw std::runtime_error("Couldn't find variable in current scope");
+        }
+        return *ReturnValue;
+    }
+    Value* Scope::TryGet(SymbolID Variable)
+    {
+        Value* ReturnValue = nullptr;
+        if(auto VarIt = m_Variables.find(Variable); VarIt != m_Variables.end())
+        {
+            return &VarIt->second;
+        }
+        else if(m_ParentScope != nullptr)
+        {
+            ReturnValue = m_ParentScope->TryGet(Variable);
+        }
+        return ReturnValue;
+    }
+    void Scope::SetVariable(SymbolID Variable,Value NewValue)
+    {
+        if(m_ParentScope != nullptr)
+        {
+            if(auto It = m_ParentScope->TryGet(Variable); It != nullptr)
+            {
+                *It = std::move(NewValue);
+                return;
+            }
+        }
+        m_Variables[Variable] = std::move(NewValue);
+    }
+    void Scope::OverrideVariable(SymbolID Variable,Value NewValue)
+    {
+        m_Variables[Variable] = std::move(NewValue);
+    }
+    //END Scope
     ClassID ClassIdentificator::m_CurrentID = 1<<ExternalClassBit;
 
 

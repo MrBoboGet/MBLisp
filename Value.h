@@ -15,6 +15,7 @@ namespace MBLisp
     typedef int FunctionID;
     typedef int MacroID;
     typedef uint_least32_t ClassID;
+    typedef uint_least32_t DynamicVarID;
     typedef std::string String;
     class Value;
     typedef std::vector<Value> List;
@@ -63,7 +64,7 @@ namespace MBLisp
         std::shared_ptr<Scope> AssociatedScope;
     };
     class Evaluator;
-    typedef Value (*BuiltinFuncType)(Evaluator&,std::vector<Value>&);
+    typedef Value (*BuiltinFuncType)(Evaluator&,Ref<Scope>,std::vector<Value>&);
     struct Function
     {
         BuiltinFuncType Func;
@@ -110,7 +111,7 @@ namespace MBLisp
     }
 
 
-
+    class DynamicVariable;
 
     class ExternalValue
     {
@@ -183,6 +184,8 @@ namespace MBLisp
             Ref<ClassDefinition>,
             Ref<ClassInstance>,
             Ref<Value>,
+            Ref<DynamicVariable>,
+            Ref<Scope>,
             Ref<ExternalValue>> DataStorage;
         DataStorage m_Data;
 
@@ -195,7 +198,7 @@ namespace MBLisp
         template<typename T>
         static constexpr bool IsReferenceType()
         {
-            return TypeIn<T,ClassDefinition,Lambda,GenericFunction,ClassInstance,List,Value>;
+            return TypeIn<T,ClassDefinition,DynamicVariable,Lambda,GenericFunction,ClassInstance,List,Value,Scope>;
         }
         template<typename T>
         static constexpr bool IsBuiltin()
@@ -541,6 +544,14 @@ namespace MBLisp
         Value* GetMethod(std::vector<Value>& Arguments);
     };
 
+    class DynamicVariable
+    {
+        public:
+        Value DefaultValue;
+        DynamicVarID ID = 0;
+    };
+
+
 
 
 
@@ -565,4 +576,15 @@ namespace MBLisp
         }
         return ReturnValue;
     }
+    class Scope
+    {
+        std::shared_ptr<Scope> m_ParentScope = nullptr;
+        std::unordered_map<SymbolID,Value> m_Variables;
+    public:
+        void SetParentScope(std::shared_ptr<Scope> ParentScope);
+        Value FindVariable(SymbolID Variable);
+        void SetVariable(SymbolID Variable,Value NewValue);
+        void OverrideVariable(SymbolID Variable,Value NewValue);
+        Value* TryGet(SymbolID Variable);
+    };
 };

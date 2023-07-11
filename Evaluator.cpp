@@ -3,59 +3,16 @@
 #include <MBParsing/MBParsing.h>
 
 #include  <iostream>
+#include <iterator>
 namespace MBLisp
 {
-    //Begin Scope
-    void Scope::SetParentScope(std::shared_ptr<Scope> ParentScope)
-    {
-        m_ParentScope = ParentScope;
-    }
-    Value Scope::FindVariable(SymbolID Variable)
-    {
-        Value* ReturnValue = TryGet(Variable);
-        if(ReturnValue == nullptr)
-        {
-            throw std::runtime_error("Couldn't find variable in current scope");
-        }
-        return *ReturnValue;
-    }
-    Value* Scope::TryGet(SymbolID Variable)
-    {
-        Value* ReturnValue = nullptr;
-        if(auto VarIt = m_Variables.find(Variable); VarIt != m_Variables.end())
-        {
-            return &VarIt->second;
-        }
-        else if(m_ParentScope != nullptr)
-        {
-            ReturnValue = m_ParentScope->TryGet(Variable);
-        }
-        return ReturnValue;
-    }
-    void Scope::SetVariable(SymbolID Variable,Value NewValue)
-    {
-        if(m_ParentScope != nullptr)
-        {
-            if(auto It = m_ParentScope->TryGet(Variable); It != nullptr)
-            {
-                *It = std::move(NewValue);
-                return;
-            }
-        }
-        m_Variables[Variable] = std::move(NewValue);
-    }
-    void Scope::OverrideVariable(SymbolID Variable,Value NewValue)
-    {
-        m_Variables[Variable] = std::move(NewValue);
-    }
-    //END Scope
 
 
 
     
 
 
-    Value Evaluator::Less(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    Value Evaluator::Less BUILTIN_ARGLIST
     {
         Value ReturnValue;
         if(Arguments.size() != 2)
@@ -77,12 +34,12 @@ namespace MBLisp
         }
         return  ReturnValue;
     }
-    Value Evaluator::CreateList(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    Value Evaluator::CreateList BUILTIN_ARGLIST
     {
         Value ReturnValue = List(std::move(Arguments));
         return  ReturnValue;
     }
-    Value Evaluator::Plus(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    Value Evaluator::Plus BUILTIN_ARGLIST
     {
         Value ReturnValue;
         if(Arguments.size() != 2)
@@ -141,7 +98,7 @@ namespace MBLisp
             std::cout<< ")";
         }
     }
-    Value Evaluator::Print(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    Value Evaluator::Print BUILTIN_ARGLIST
     {
         Value ReturnValue;
         for(auto const& Argument : Arguments)
@@ -178,7 +135,7 @@ namespace MBLisp
 
     //TODO MEGA temporary
     ClassID i___CurrentClassID = 1u<<UserClassBit;
-    Value Evaluator::Class(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    Value Evaluator::Class BUILTIN_ARGLIST
     {
         Value ReturnValue;
         if(Arguments.size() < 2)
@@ -248,7 +205,7 @@ namespace MBLisp
         NewClass.ID = i___CurrentClassID;
         return std::move(NewClass);
     }
-    Value Evaluator::AddMethod(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    Value Evaluator::AddMethod BUILTIN_ARGLIST
     {
         Value ReturnValue;
         if(Arguments.size() < 3)
@@ -282,11 +239,24 @@ namespace MBLisp
         GenericToModify.AddMethod(OverridenTypes,Arguments[2]);
         return ReturnValue;
     }
-    Value Evaluator::Generic(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    Value Evaluator::Generic BUILTIN_ARGLIST
     {
         return GenericFunction();
     }
-    Value Evaluator::ReadTerm(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    std::atomic<DynamicVarID> g__CurrentDynamicVarID{1};
+    Value Evaluator::Dynamic BUILTIN_ARGLIST
+    {
+        DynamicVariable ReturnValue;
+        if(Arguments.size() != 1)
+        {
+            throw std::runtime_error("dynamic requires exacty 1 argument, the initial value for the dynamic variable");   
+        }
+        ReturnValue.DefaultValue = std::move(Arguments[0]);
+        ReturnValue.ID = g__CurrentDynamicVarID.load();
+        g__CurrentDynamicVarID.fetch_add(1);
+        return ReturnValue;
+    }
+    Value Evaluator::ReadTerm BUILTIN_ARGLIST
     {
         Value ReturnValue;
         if(Arguments.size() != 1)
@@ -299,28 +269,28 @@ namespace MBLisp
         }
         MBUtility::StreamReader& Reader = Arguments[0].GetType<MBUtility::StreamReader>();
         ReadTable& Table = AssociatedEvaluator.GetReadTable();
-        std::shared_ptr<Scope> CurrentScope = std::make_shared<Scope>();
-        ReturnValue = AssociatedEvaluator.p_ReadTerm(CurrentScope,Table,Reader,Arguments[0]);
+        std::shared_ptr<Scope> NewScope = std::make_shared<Scope>();
+        ReturnValue = AssociatedEvaluator.p_ReadTerm(NewScope,Table,Reader,Arguments[0]);
         return ReturnValue;
     }
-    Value Evaluator::Stream_EOF(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    Value Evaluator::Stream_EOF BUILTIN_ARGLIST
     {
         return Arguments[0].GetType<MBUtility::StreamReader>().EOFReached();
     }
-    Value Evaluator::Stream_PeakByte(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    Value Evaluator::Stream_PeakByte BUILTIN_ARGLIST
     {
         return String(1,Arguments[0].GetType<MBUtility::StreamReader>().PeekByte());
     }
-    Value Evaluator::Stream_ReadByte(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    Value Evaluator::Stream_ReadByte BUILTIN_ARGLIST
     {
         return String(1,Arguments[0].GetType<MBUtility::StreamReader>().ReadByte());
     }
-    Value Evaluator::Stream_SkipWhitespace(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    Value Evaluator::Stream_SkipWhitespace BUILTIN_ARGLIST
     {
         AssociatedEvaluator.p_SkipWhiteSpace(Arguments[0].GetType<MBUtility::StreamReader>());
         return false;
     }
-    Value Evaluator::Index_List(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    Value Evaluator::Index_List BUILTIN_ARGLIST
     {
         assert(Arguments.size() >= 2 && Arguments[0].IsType<List>());
         List& AssociatedList = Arguments[0].GetType<List>();
@@ -340,7 +310,7 @@ namespace MBLisp
         }
         return AssociatedValue;
     }
-    Value Evaluator::Append_List(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    Value Evaluator::Append_List BUILTIN_ARGLIST
     {
         List& AssociatdList = Arguments[0].GetType<List>();
         for(int i = 1; i < Arguments.size();i++)
@@ -349,11 +319,11 @@ namespace MBLisp
         }
         return AssociatdList;
     }
-    Value Evaluator::Len_List(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    Value Evaluator::Len_List BUILTIN_ARGLIST
     {
         return Arguments[0].GetType<List>().size();
     }
-    Value Evaluator::Flatten_1(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    Value Evaluator::Flatten_1 BUILTIN_ARGLIST
     {
         List ReturnValue;
         for(auto& Argument : Arguments)
@@ -372,21 +342,25 @@ namespace MBLisp
         }
         return ReturnValue;
     }
-    Value Evaluator::Eq_String(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    Value Evaluator::Eq_String BUILTIN_ARGLIST
     {
         return Arguments[0].GetType<String>() == Arguments[1].GetType<String>();
     }
-    Value Evaluator::Eq_Symbol(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    Value Evaluator::Eq_Symbol BUILTIN_ARGLIST
     {
         return Arguments[0].GetType<Symbol>().ID == Arguments[1].GetType<Symbol>().ID;
     }
-    Value Evaluator::Eq_Int(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    Value Evaluator::Eq_Int BUILTIN_ARGLIST
     {
         return Arguments[0].GetType<Int>() == Arguments[1].GetType<Int>();
     }
-    Value Evaluator::GenSym(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    Value Evaluator::GenSym BUILTIN_ARGLIST
     {
         return Symbol(AssociatedEvaluator.GenerateSymbol());
+    }
+    Value Evaluator::Environment BUILTIN_ARGLIST
+    {
+        return CurrentScope;
     }
     SymbolID Evaluator::GenerateSymbol()
     {
@@ -401,7 +375,7 @@ namespace MBLisp
         m_InternedSymbols[SymbolString] = NewSymbol;
         return NewSymbol;
     }
-    Value Evaluator::Index_ClassInstance(Evaluator& AssociatedEvaluator,std::vector<Value>& Arguments)
+    Value Evaluator::Index_ClassInstance BUILTIN_ARGLIST
     {
         Value ReturnValue;
         assert(Arguments.size() >= 2 && Arguments[0].IsType<ClassInstance>());
@@ -454,7 +428,7 @@ namespace MBLisp
         {
             BuiltinFuncType AssociatedFunc = ObjectToCall.GetType<Function>().Func;
             assert(AssociatedFunc != nullptr);
-            CurrentCallStack.back().ArgumentStack.push_back(AssociatedFunc(*this,Arguments));
+            CurrentCallStack.back().ArgumentStack.push_back(AssociatedFunc(*this,CurrentCallStack.back().StackScope,Arguments));
         }
         else if(ObjectToCall.IsType<Lambda>())
         {
@@ -604,7 +578,24 @@ namespace MBLisp
             else if(CurrentCode.IsType<OpCode_PushVar>())
             {
                 OpCode_PushVar& PushCode = CurrentCode.GetType<OpCode_PushVar>();
-                CurrentFrame.ArgumentStack.push_back(CurrentFrame.StackScope->FindVariable(PushCode.ID));
+                Value VarToPush = CurrentFrame.StackScope->FindVariable(PushCode.ID);
+                if(!VarToPush.IsType<DynamicVariable>())
+                {
+                    CurrentFrame.ArgumentStack.push_back(std::move(VarToPush));
+                }
+                else
+                {
+                    DynamicVariable const& DynamicToPush = VarToPush.GetType<DynamicVariable>();
+                    VarToPush = DynamicToPush.DefaultValue;
+                    if(auto DynIt = CurrentState.DynamicBindings.find(DynamicToPush.ID); DynIt != CurrentState.DynamicBindings.end())
+                    {
+                        if(DynIt->second.size() > 0)
+                        {
+                            VarToPush = DynIt->second.back();
+                        }
+                    }
+                    CurrentFrame.ArgumentStack.push_back(std::move(VarToPush));
+                }
             }
             else if(CurrentCode.IsType<OpCode_PushLiteral>())
             {
@@ -625,11 +616,6 @@ namespace MBLisp
                 {
                     CurrentFrame.ArgumentStack.clear();
                 }
-            }
-            else if(CurrentCode.IsType<OpCode_Jump>())
-            {
-                //examine the top of the stack, if true, jump
-                CurrentFrame.ExecutionPosition.SetIP(CurrentCode.GetType<OpCode_Jump>().NewIP);
             }
             else if(CurrentCode.IsType<OpCode_JumpNotTrue>())
             {
@@ -686,6 +672,19 @@ namespace MBLisp
                 if(SymbolToAssign.IsType<Symbol>())
                 {
                     CurrentFrame.StackScope->SetVariable(SymbolToAssign.GetType<Symbol>().ID,AssignedValue);
+                }
+                else if(SymbolToAssign.IsType<DynamicVariable>())
+                {
+                    DynamicVariable& AssociatedVariable = SymbolToAssign.GetType<DynamicVariable>();
+                    if(auto It = CurrentState.DynamicBindings.find(AssociatedVariable.ID); It != CurrentState.DynamicBindings.end()
+                            && It->second.size() != 0)
+                    {
+                        It->second.back() = std::move(AssignedValue);
+                    }
+                    else
+                    {
+                        AssociatedVariable.DefaultValue = std::move(AssignedValue);   
+                    }
                 }
                 else
                 {
@@ -806,6 +805,59 @@ namespace MBLisp
                 CurrentState.FrameTarget = CurrentFrame.SignalFrameIndex;
                 StackFrames[CurrentFrame.SignalFrameIndex].ExecutionPosition.SetIP(CurrentCode.GetType<OpCode_Unwind>().HandlersEnd);
                 StackFrames[CurrentFrame.SignalFrameIndex].ArgumentStack.push_back(false);
+            }
+            else if(CurrentCode.IsType<OpCode_PushBindings>())
+            {
+                OpCode_PushBindings const& PushBindings = CurrentCode.GetType<OpCode_PushBindings>();
+                assert(CurrentFrame.ArgumentStack.size() >= PushBindings.BindCount);
+                std::vector<Value> Arguments;
+                Arguments.insert(Arguments.end(),std::make_move_iterator(CurrentFrame.ArgumentStack.end()-PushBindings.BindCount*3),
+                    std::make_move_iterator(CurrentFrame.ArgumentStack.end()));
+                CurrentFrame.ArgumentStack.resize(CurrentFrame.ArgumentStack.size()-PushBindings.BindCount*3);
+                std::vector<DynamicVarID> ModifiedBindings;
+                std::vector<Value> NewValues;
+                for(int i = 0; i < PushBindings.BindCount;i++)
+                {
+                    if(!Arguments[i].IsType<Scope>())
+                    {
+                        //TODO make this signal  instead
+                        throw std::runtime_error("first part of binding triplet has to be a scope");
+                    }   
+                    Scope& ScopeToModify = Arguments[i].GetType<Scope>();
+                    if(!Arguments[i+1].IsType<Symbol>())
+                    {
+                        //TODO make this signal  instead
+                        throw std::runtime_error("second part of binding triplet has to be a symbol");
+                    }   
+                    SymbolID IDToModify = Arguments[i+1].GetType<Symbol>().ID;
+                    Value* VariableToInspect = ScopeToModify.TryGet(IDToModify);
+                    if(VariableToInspect == nullptr)
+                    {
+                        throw std::runtime_error("couldn't find dynamic variable  in scope");
+                    }
+                    if(!VariableToInspect->IsType<DynamicVariable>())
+                    {
+                        throw std::runtime_error("variable was not a dynamic variable");
+                    }
+                    ModifiedBindings.push_back(VariableToInspect->GetType<DynamicVariable>().ID);
+                    NewValues.push_back(std::move(Arguments[i+2]));
+                }
+                for(int i = 0; i < ModifiedBindings.size();i++)
+                {
+                    CurrentState.DynamicBindings[ModifiedBindings[i]].push_back(std::move(NewValues[i]));
+                }
+                CurrentState.BindingStack.push_back(std::move(ModifiedBindings));
+            }
+            else if(CurrentCode.IsType<OpCode_PopBindings>())
+            {
+                assert(CurrentState.BindingStack.size()  != 0);
+                auto BindingsToPop = std::move(CurrentState.BindingStack.back());
+                CurrentState.BindingStack.pop_back();
+                for(auto ID : BindingsToPop)
+                {
+                    assert(CurrentState.DynamicBindings[ID].size() !=  0);
+                    CurrentState.DynamicBindings[ID].pop_back();
+                }
             }
             else
             {
@@ -1058,6 +1110,7 @@ namespace MBLisp
                                   "signal",
                                   "unwind",
                                   "unwind-protect",
+                                  "bind-dynamic",
                                   })
         {
             p_GetSymbolID(String);
@@ -1073,6 +1126,8 @@ namespace MBLisp
                     {"read-term",ReadTerm},
                     {"flatten-1",Flatten_1},
                     {"gensym",GenSym},
+                    {"dynamic",Dynamic},
+                    {"environment",Environment},
                 })
         {
             Function NewBuiltin;
