@@ -385,6 +385,55 @@ namespace MBLisp
         }
         return *ReturnValue;
     }
+    Value Evaluator::AddReaderCharacter BUILTIN_ARGLIST
+    {
+        if(Arguments.size() != 3)
+        {
+            throw std::runtime_error("add-reader-character requires exactly 3 arguments");   
+        }
+        if(!Arguments[1].IsType<String>() || Arguments[1].GetType<String>().size() != 1)
+        {
+            throw std::runtime_error("second argument to add-reader-character must be string of size exactly 1");   
+        }
+        Value ReturnValue = false;
+        ReadTable& TableToModify = Arguments[0].GetType<ReadTable>();
+        TableToModify.Mappings[Arguments[1].GetType<String>()[0]] = std::move(Arguments[2]);
+        return ReturnValue;
+    }
+    Value Evaluator::RemoveReaderCharacter BUILTIN_ARGLIST
+    {
+        if(Arguments.size() != 2)
+        {
+            throw std::runtime_error("remove-reader-character requires exactly 2 arguments");   
+        }
+        if(!Arguments[1].IsType<String>() || Arguments[1].GetType<String>().size() != 1)
+        {
+            throw std::runtime_error("second argument to remove-reader-character must be string of size exactly 1");   
+        }
+        Value ReturnValue = false;
+        ReadTable& TableToModify = Arguments[0].GetType<ReadTable>();
+        TableToModify.Mappings.erase(TableToModify.Mappings.find(Arguments[1].GetType<String>()[0]));
+        return ReturnValue;
+    }
+    Value Evaluator::AddCharacterExpander BUILTIN_ARGLIST
+    {
+        if(Arguments.size() != 3)
+        {
+            throw std::runtime_error("add-reader-character requires exactly 3 arguments");   
+        }
+
+
+        return false;
+    }
+    Value Evaluator::RemoveCharacterExpander BUILTIN_ARGLIST
+    {
+        if(Arguments.size() != 3)
+        {
+            throw std::runtime_error("add-reader-character requires exactly 3 arguments");   
+        }
+
+        return false;
+    }
     SymbolID Evaluator::GenerateSymbol()
     {
         SymbolID NewSymbol = m_CurrentSymbolID;
@@ -711,25 +760,6 @@ namespace MBLisp
                     SymbolToAssign = AssignedValue;   
                 }
                 CurrentFrame.ArgumentStack.push_back(AssignedValue);
-            }
-            else if(CurrentCode.IsType<OpCode_SetReader>())
-            {
-                //first value of stack is symbol, second is value
-                assert(CurrentFrame.ArgumentStack.size() >= 2);
-                Value Character = std::move(*(CurrentFrame.ArgumentStack.end()-2));
-                Value AssociatedFunction = std::move(*(CurrentFrame.ArgumentStack.end()-1));
-                CurrentFrame.ArgumentStack.pop_back();
-                CurrentFrame.ArgumentStack.pop_back();
-
-
-                ReadTable& Table = CurrentFrame.StackScope->FindVariable(p_GetSymbolID("*READTABLE*")).GetType<ReadTable>();
-                if(!Character.IsType<String>() || Character.GetType<String>().size() != 1)
-                {
-                    throw std::runtime_error("Can only assign a string of size 1 with set-reader");
-                }
-                char CharacterToDispatch = Character.GetType<String>()[0];
-                Table.Mappings[CharacterToDispatch] = AssociatedFunction;
-                CurrentFrame.ArgumentStack.push_back(AssociatedFunction);
             }
             else if(CurrentCode.IsType<OpCode_Signal>())
             {
@@ -1144,7 +1174,6 @@ namespace MBLisp
                                   "progn",
                                   "quote",
                                   "macro",
-                                  "set-reader",
                                   "signal-handlers",
                                   "signal",
                                   "unwind",
@@ -1206,12 +1235,17 @@ namespace MBLisp
 
         
         m_GlobalScope->SetVariable(p_GetSymbolID("*READTABLE*"),Value::MakeExternal(ReadTable()));
+        //Readtables
+        AddMethod<ReadTable,String>("add-reader-character",AddReaderCharacter);
+        AddMethod<ReadTable,String>("remove-reader-character",RemoveReaderCharacter);
+        AddMethod<ReadTable,String>("add-character-expander",AddCharacterExpander);
+        AddMethod<ReadTable,String>("remove-character-expander",RemoveCharacterExpander);
     }
     Evaluator::Evaluator()
     {
         p_InternPrimitiveSymbols();
     }
-    void Evaluator::Eval(std::shared_ptr<Scope>& CurrentScope,std::string_view Content)
+    void Evaluator::Eval(std::shared_ptr<Scope> CurrentScope,std::string_view Content)
     {
         Ref<OpCodeList> OpCodes = std::make_shared<OpCodeList>();
         Value ReaderValue = Value::MakeExternal(MBUtility::StreamReader(std::make_unique<MBUtility::IndeterminateStringStream>(Content)));

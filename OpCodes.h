@@ -31,9 +31,6 @@ namespace MBLisp
     struct OpCode_Set
     {
     };
-    struct OpCode_SetReader
-    {
-    };
     struct OpCode_Pop
     {
            
@@ -132,7 +129,6 @@ namespace MBLisp
         progn,
         quote,
         macro,//should probably replace with function call semantics
-        setreader,
         //
         signal_handlers,
         signal,
@@ -153,7 +149,6 @@ namespace MBLisp
             OpCode_Goto,
             OpCode_JumpNotTrue,
             OpCode_CallFunc,
-            OpCode_SetReader,
             //
             OpCode_Unwind,
             OpCode_Signal,

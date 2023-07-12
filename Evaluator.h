@@ -112,7 +112,15 @@ namespace MBLisp
         static Value Environment BUILTIN_ARGLIST;
         static Value NewEnvironment BUILTIN_ARGLIST;
         static Value Index_Environment BUILTIN_ARGLIST;
-        
+       
+        //Readtable
+        static Value AddReaderCharacter BUILTIN_ARGLIST;
+        static Value RemoveReaderCharacter BUILTIN_ARGLIST;
+        static Value AddCharacterExpander BUILTIN_ARGLIST;
+        static Value RemoveCharacterExpander BUILTIN_ARGLIST;
+       
+        //
+        static Value Load BUILTIN_ARGLIST;
         //READING
         
         std::unordered_map<std::string,SymbolID> m_InternedSymbols;
@@ -182,6 +190,6 @@ namespace MBLisp
         SymbolID GetSymbolID(std::string const& SymbolString);
         std::string GetSymbolString(SymbolID SymbolToConvert);
         void Eval(std::string_view Content);
-        void Eval(std::shared_ptr<Scope>& CurrentScope,std::string_view Content);
+        void Eval(std::shared_ptr<Scope> CurrentScope,std::string_view Content);
     };
 }
