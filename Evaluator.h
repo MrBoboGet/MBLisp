@@ -110,6 +110,8 @@ namespace MBLisp
 
         //Environment
         static Value Environment BUILTIN_ARGLIST;
+        static Value NewEnvironment BUILTIN_ARGLIST;
+        static Value Index_Environment BUILTIN_ARGLIST;
         
         //READING
         
@@ -124,9 +126,9 @@ namespace MBLisp
         //The fundamental dispatch loop
         Value p_Eval(ExecutionState& CurrentState);
         Value p_Eval(std::vector<StackFrame> CurrentCallStack);
-        Value p_Eval(std::shared_ptr<Scope> CurrentScope,OpCodeList& OpCodes,IPIndex  Offset = 0);
+        Value p_Eval(std::shared_ptr<Scope> CurrentScope,Ref<OpCodeList> OpCodes,IPIndex  Offset = 0);
         //Value p_Eval(std::shared_ptr<Scope> AssociatedScope,FunctionDefinition& FunctionToExecute,std::vector<Value> Arguments);
-        Value p_Eval(Value Callable,std::vector<Value> Arguments);
+        Value p_Eval(Ref<Scope> CurrentScope,Value Callable,std::vector<Value> Arguments);
 
         void p_SkipWhiteSpace(MBUtility::StreamReader& Content);
         
@@ -161,6 +163,7 @@ namespace MBLisp
     public:
         Evaluator();
 
+        Ref<Scope> CreateDefaultScope();
         template<typename... ArgTypes>
         void AddMethod(std::string const& MethodName,Value Callable)
         {
@@ -175,14 +178,10 @@ namespace MBLisp
             AssociatedFunction.AddMethod(std::move(Types),std::move(Callable));
         }
         SymbolID GenerateSymbol();
-        
-        //TEMP AF
-        ReadTable& GetReadTable();
 
         SymbolID GetSymbolID(std::string const& SymbolString);
         std::string GetSymbolString(SymbolID SymbolToConvert);
         void Eval(std::string_view Content);
         void Eval(std::shared_ptr<Scope>& CurrentScope,std::string_view Content);
-        Value Eval(Value Callable,std::vector<Value> Arguments);
     };
 }

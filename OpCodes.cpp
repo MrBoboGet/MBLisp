@@ -356,6 +356,19 @@ namespace MBLisp
                     ListToAppend.push_back(OpCode_UnwindProtect_Pop());
                     ListToAppend[UnwindIndex].GetType<OpCode_UnwindProtect_Add>().UnwindBegin = UnwindBegin;
                 }
+                else if(CurrentSymbol == SymbolID(PrimitiveForms::eval))
+                {
+                    if(!(ListToConvert.size() == 2 || ListToConvert.size() == 3))
+                    {
+                        throw std::runtime_error("eval requires either 1 or 2 arguments");
+                    }
+                    p_CreateOpCodes(ListToConvert[1],ListToAppend,CurrentState);
+                    if(ListToConvert.size() == 3)
+                    {
+                        p_CreateOpCodes(ListToConvert[2],ListToAppend,CurrentState);
+                    }
+                    ListToAppend.push_back(OpCode_Eval(ListToConvert.size()-1));
+                }
                 else
                 {
                     assert(false && "OpCode list doesn't cover all cases");   
@@ -384,6 +397,15 @@ namespace MBLisp
             {
                 ListToAppend.push_back(OpCode_Pop());   
             }
+        }
+    }
+    OpCodeList::OpCodeList(Value const& ValueToEncode)
+    {
+        EncodingState CurrentState;
+        p_CreateOpCodes(ValueToEncode,m_OpCodes,CurrentState);
+        if(CurrentState.UnResolvedGotos.size() != 0)
+        {
+            throw std::runtime_error("go's to tags without corresponding label detected");
         }
     }
     OpCodeList::OpCodeList(List const& ListToConvert)
@@ -442,9 +464,9 @@ namespace MBLisp
         m_OpCodes.push_back(OpCode_PushVar(ArgID));
     }
 
-    OpCodeExtractor::OpCodeExtractor(OpCodeList& OpCodes)
+    OpCodeExtractor::OpCodeExtractor(Ref<OpCodeList> OpCodes)
     {
-        m_AssociatedList = &OpCodes;
+        m_AssociatedList = OpCodes;
     }
     OpCode& OpCodeExtractor::GetCurrentCode()
     {

@@ -12,7 +12,7 @@ int main(int argc,const char** argv)
     }
     std::string FileContent = MBUtility::ReadWholeFile(argv[1]);
     MBLisp::Evaluator Evaluator;
-    std::shared_ptr<MBLisp::Scope> EvalScope = std::make_shared<MBLisp::Scope>();
+    std::shared_ptr<MBLisp::Scope> EvalScope = Evaluator.CreateDefaultScope();
     //source standard library if it exists
     if(std::filesystem::exists(MBSystem::GetUserHomeDirectory()/".mblisp/libs/std/index.lisp"))
     {

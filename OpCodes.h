@@ -112,6 +112,16 @@ namespace MBLisp
     struct OpCode_PopBindings
     {
     };
+    //eval
+    struct OpCode_Eval
+    {
+        OpCode_Eval() = default;
+        int ArgCount = 1;
+        OpCode_Eval(int Arguments)
+        {
+            ArgCount = Arguments;   
+        }
+    };
     enum class PrimitiveForms
     {
         cond = 1,
@@ -129,6 +139,7 @@ namespace MBLisp
         unwind,
         unwind_protect,
         bind_dynamic,
+        eval,
         LAST,
     };
     struct OpCode
@@ -153,7 +164,8 @@ namespace MBLisp
             OpCode_UnwindProtect_Pop,
             //let stuff
             OpCode_PushBindings,
-            OpCode_PopBindings
+            OpCode_PopBindings,
+            OpCode_Eval
                 > m_Data;
     public:
         OpCode() = default;
@@ -208,6 +220,7 @@ namespace MBLisp
         void p_WriteProgn(List const& ListToConvert,std::vector<OpCode>& ListToAppend,EncodingState& CurrentState,int Offset);
         public:
         OpCodeList();
+        OpCodeList(Value const& ValueToEncode);
         OpCodeList(List const& ListToConvert);
         OpCodeList(List const& ListToConvert,int Offset);
         OpCodeList(SymbolID ArgID,SymbolID IndexFunc,std::vector<SlotDefinition> const& Initializers);
@@ -220,14 +233,14 @@ namespace MBLisp
     };
     class OpCodeExtractor
     {
-        OpCodeList* m_AssociatedList = nullptr;
+        Ref<OpCodeList> m_AssociatedList = nullptr;
         IPIndex m_IP = 0;
     public:
         OpCodeExtractor()
         {
                
         }
-        OpCodeExtractor(OpCodeList& OpCodes);
+        OpCodeExtractor(Ref<OpCodeList> OpCodes);
         OpCode& GetCurrentCode();
         void SetIP(IPIndex NewIP);
         IPIndex GetIP();
