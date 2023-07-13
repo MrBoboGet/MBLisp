@@ -14,7 +14,7 @@ namespace MBLisp
         Value* ReturnValue = TryGet(Variable);
         if(ReturnValue == nullptr)
         {
-            throw std::runtime_error("Couldn't find variable in current scope");
+            throw LookupError(Variable);
         }
         return *ReturnValue;
     }
@@ -87,6 +87,10 @@ namespace MBLisp
         }
         for(int i = 0; i < Overrides.size();i++)
         {
+            if(Overrides[i] == 0)
+            {
+                continue;   
+            }
             if(auto It = std::lower_bound(ArgumentsClasses[i].begin(),ArgumentsClasses[i].end(),Overrides[i]);
                     !(It != ArgumentsClasses[i].end() && *It == Overrides[i]))
             {

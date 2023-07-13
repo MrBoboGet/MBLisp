@@ -42,7 +42,8 @@ namespace MBLisp
     struct OpCode_Goto
     {
         IPIndex NewIP = -1;
-        bool ResetStack = true;
+        int NewStackSize =  -1;
+        bool ReturnTop = false;
     };
     struct OpCode_JumpNotTrue
     {
@@ -136,6 +137,7 @@ namespace MBLisp
         unwind_protect,
         bind_dynamic,
         eval,
+        Return,
         LAST,
     };
     struct OpCode
@@ -206,7 +208,10 @@ namespace MBLisp
         {
             std::vector<std::pair<SymbolID,IPIndex>> UnResolvedGotos;
             int InSignalHandler = 0;
+            int ArgumentStackCount = 0;
+            bool InLambda = 0;
             std::vector<IPIndex> UnResolvedUnwinds;
+            std::vector<IPIndex> UnresolvedReturns;
         };
         void p_CreateOpCodes(Value const& ValueToEncode,std::vector<OpCode>& ListToAppend,EncodingState& CurrentState);
         void p_CreateFuncCall(List const& ValueToEncode,std::vector<OpCode>& OutCodes,EncodingState& CurrentState);
@@ -217,7 +222,7 @@ namespace MBLisp
         OpCodeList();
         OpCodeList(Value const& ValueToEncode);
         OpCodeList(List const& ListToConvert);
-        OpCodeList(List const& ListToConvert,int Offset);
+        OpCodeList(List const& ListToConvert,int Offset,bool InLambda);
         OpCodeList(SymbolID ArgID,SymbolID IndexFunc,std::vector<SlotDefinition> const& Initializers);
         void Append(List const& ListToConvert);
         void Append(Value const& ListToConvert);

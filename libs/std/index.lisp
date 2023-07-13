@@ -26,7 +26,7 @@
                            (append return-value (list 'list (list 'quote (read-term stream)))))
                )
         )
-        (set return-value return-value)
+        return-value
      ))
 (set backtick-reader
      (lambda (stream) 
@@ -99,6 +99,34 @@
 (defmethod current ((it list-iterator))
   (index (slot it it-list) (slot it current-offset)))
 
+
+(defclass range ()
+    (start 0)
+    (end -1)
+    (constructor 
+      (lambda (it &rest args)
+        (cond (eq (len args) 1)
+              (set (slot it end) (index args 0))
+              (progn 
+                (set (slot it start) (minus (index args 0) 1))
+                (set (slot it end) (index args 1))
+              )
+        )
+        it
+      ))
+)
+(defmethod iterator ((it range))
+    it
+)
+(defmethod current ((it range))
+  (slot it start)
+)
+(defmethod next ((it range))
+  (incr (slot it start) 1)
+  (< (slot it start) (slot it end))
+)
+
+
 (defmacro doit (boundvar iterable &rest body)
   (set it-var (gensym))
   `(progn (set ,it-var (iterator ,iterable))
@@ -127,7 +155,7 @@
 (defmacro || (&rest forms)
     (expand-|| forms 0))
 
-(defun map (iterable callable)
+(defun map (callable iterable)
     (set return-value (list))
     (doit v iterable
         (append return-value (callable v))
@@ -143,7 +171,7 @@
     )
     return-value
 )
-(defun filter (iterable callable)
+(defun filter (callable iterable)
     (set return-value (list))
     (doit v iterable
         (cond (callable v) (append return-value v) false)
@@ -186,7 +214,42 @@
         )
   )
 )
+(defun sublist (current-list offset)
+  (set return-value (list))
+  (doit i (range offset (len current-list))
+    (append return-value (index current-list i))
+  )
+  return-value
+)
+(defun if-func (forms)
+  (set clause (index forms 0))
+  (set if-body (list))
+  (set else-body (list))
+  (doit i (range 1 (len forms))
+    (set current-form (index forms i))
+    (cond (eq current-form 'else)
+        (cond (&& (< (+ i 1) (len forms)) (eq (index forms (+ i 1)) 'if))
+            (progn (set else-body (if-func (sublist forms (+ i 2))))  (break))
+            (progn (set else-body (sublist forms (+ i 1))) (break))
+        )
+        (append if-body current-form)
+    )
+  )
+  (cond (eq (len if-body) 0)
+        (progn (print  "empty if body:") (print forms) (print (eq (index forms 0) 'else)))
+        false
+  )
+  (cond (eq (len else-body) 0)
+      `(cond ,clause (progn ,@if-body) false)
+      `(cond ,clause (progn ,@if-body) (progn ,@else-body))
+  )
+)
+(defmacro if (&rest forms)
+  (if-func forms) 
+)
+
 (add-reader-character *READTABLE* "_" curry-reader)
 (defun . (&rest args)
   (foldl args _(index _ _))
 )
+(load (+ (parent-path load-filepath) "/import.lisp"))

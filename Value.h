@@ -21,7 +21,7 @@ namespace MBLisp
     typedef std::vector<Value> List;
     template<typename T>
     using Ref = std::shared_ptr<T>;
-      
+    struct Any{};
     
     inline constexpr uint_least32_t RestSymbol = 1<<30;
     
@@ -289,7 +289,11 @@ namespace MBLisp
             *StorageToAssign = PointerToCopy->m_Data;
             return *this;
         }
-      
+     
+        bool IsBuiltin()
+        {
+            return TypeIsBuiltin(GetTypeID());
+        } 
         static constexpr bool TypeIsBuiltin(ClassID IDToInspect)
         {
             return IDToInspect <= std::variant_size_v<DataStorage>;
@@ -305,15 +309,15 @@ namespace MBLisp
             {
                 if constexpr (std::is_same_v<T, String>)
                 {
-                    return VariantIndex<DataStorage, MBUtility::Dynamic<String>>();
+                    return VariantIndex<DataStorage, MBUtility::Dynamic<String>>()+1;
                 }
                 else if constexpr(IsValueType<T>())
                 {
-                    return VariantIndex<DataStorage,T>();
+                    return VariantIndex<DataStorage,T>()+1;
                 }
                 else
                 {
-                    return VariantIndex<DataStorage,Ref<T>>();
+                    return VariantIndex<DataStorage,Ref<T>>()+1;
                 }
 
             }
@@ -572,10 +576,29 @@ namespace MBLisp
         }
         else
         {
-            return m_Data.index();
+            return m_Data.index()+1;
         }
         return ReturnValue;
     }
+    class LookupError : public std::exception
+    {
+        std::string m_ErrorString = "Couldn't find variable in current scope";
+        SymbolID m_Symbol = -1;
+    public:
+        LookupError(SymbolID LookedUpSymbol)
+        {
+            m_Symbol = LookedUpSymbol;   
+        }
+        SymbolID GetSymbol() const
+        {
+            return m_Symbol;
+        }
+        const char* what() const override
+        {
+            return m_ErrorString.c_str();
+        }
+    };
+
     class Scope
     {
         std::shared_ptr<Scope> m_ParentScope = nullptr;

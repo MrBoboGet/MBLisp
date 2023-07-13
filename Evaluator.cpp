@@ -4,6 +4,11 @@
 
 #include  <iostream>
 #include <iterator>
+
+#include <MBUtility/MBFiles.h>
+#include <MBSystem/MBSystem.h>
+#include <MBUnicode/MBUnicode.h>
+#include <MBUtility/MBStrings.h>
 namespace MBLisp
 {
 
@@ -183,6 +188,7 @@ namespace MBLisp
             NewSlot.Symbol = Slot.GetType<List>()[0].GetType<Symbol>().ID;
             TemporaryClass.SlotDefinitions.push_back(NewSlot);
         }
+        std::sort(TemporaryClass.SlotDefinitions.begin(), TemporaryClass.SlotDefinitions.end());
         if (Parents.size() == 0)
         {
             TemporaryClass.Types.push_back(1u << UserClassBit);
@@ -354,6 +360,40 @@ namespace MBLisp
     {
         return Arguments[0].GetType<Int>() == Arguments[1].GetType<Int>();
     }
+    Value Evaluator::Eq_Type BUILTIN_ARGLIST
+    {
+        return Arguments[0].GetType<ClassDefinition>().ID == Arguments[1].GetType<ClassDefinition>().ID;
+    }
+    Value Evaluator::Eq_Any BUILTIN_ARGLIST
+    {
+        return false;
+    }
+    Value Evaluator::Minus_Int BUILTIN_ARGLIST
+    {
+        return Arguments[0].GetType<Int>()-Arguments[1].GetType<Int>();
+    }
+    Value Evaluator::Split_String BUILTIN_ARGLIST
+    {
+        auto Result = MBUtility::Split(Arguments[0].GetType<String>(),Arguments[1].GetType<String>());
+        List ReturnValue;
+        for(auto const& String : Result)
+        {
+            ReturnValue.push_back(String);
+        }
+        return ReturnValue;
+    }
+    Value Evaluator::In_String BUILTIN_ARGLIST
+    {
+        return Arguments[0].GetType<String>().find(Arguments[0].GetType<String>()) != std::string::npos;
+    }
+    Value Evaluator::Str_Symbol BUILTIN_ARGLIST
+    {
+        return AssociatedEvaluator.GetSymbolString(Arguments[0].GetType<Symbol>().ID);
+    }
+    Value Evaluator::Symbol_String BUILTIN_ARGLIST
+    {
+        return Symbol(AssociatedEvaluator.GetSymbolID(Arguments[0].GetType<String>()));
+    }
     Value Evaluator::GenSym BUILTIN_ARGLIST
     {
         return Symbol(AssociatedEvaluator.GenerateSymbol());
@@ -419,10 +459,15 @@ namespace MBLisp
     {
         if(Arguments.size() != 3)
         {
-            throw std::runtime_error("add-reader-character requires exactly 3 arguments");   
+            throw std::runtime_error("add-character-expander requires exactly 3 arguments");   
         }
-
-
+        if (!Arguments[1].IsType<String>() || Arguments[1].GetType<String>().size() != 1)
+        {
+            throw std::runtime_error("second argument to add-character-expander must be string of size exactly 1");
+        }
+        Value ReturnValue = false;
+        ReadTable& TableToModify = Arguments[0].GetType<ReadTable>();
+        TableToModify.ExpandMappings.push_back(std::make_pair(Arguments[1].GetType<String>()[0],std::move(Arguments[2])));
         return false;
     }
     Value Evaluator::RemoveCharacterExpander BUILTIN_ARGLIST
@@ -563,7 +608,7 @@ namespace MBLisp
             Value* Callable = GenericToInvoke.GetMethod(Arguments);
             if(Callable == nullptr)
             {
-                throw std::runtime_error("No method associated with the argumnet list");   
+                throw std::runtime_error("No method associated with the argument list");   
             }
             p_Invoke(*Callable,Arguments,CurrentCallStack);
         }
@@ -681,9 +726,20 @@ namespace MBLisp
             {
                 OpCode_Goto& GotoCode = CurrentCode.GetType<OpCode_Goto>();
                 CurrentFrame.ExecutionPosition.SetIP(GotoCode.NewIP);
-                if(GotoCode.ResetStack)
+                Value ValueToReturn;
+                if(GotoCode.ReturnTop)
                 {
-                    CurrentFrame.ArgumentStack.clear();
+                    assert(CurrentFrame.ArgumentStack.size() != 0);
+                    ValueToReturn = CurrentFrame.ArgumentStack.back();
+                }
+                if(GotoCode.NewStackSize != -1)
+                {
+                    assert(CurrentFrame.ArgumentStack.size() >= GotoCode.NewStackSize);
+                    CurrentFrame.ArgumentStack.resize(GotoCode.NewStackSize);
+                }
+                if(GotoCode.ReturnTop)
+                {
+                    CurrentFrame.ArgumentStack.push_back(std::move(ValueToReturn));
                 }
             }
             else if(CurrentCode.IsType<OpCode_JumpNotTrue>())
@@ -1038,7 +1094,7 @@ namespace MBLisp
         Content.ReadByte();
         return ReturnValue;
     }
-    Value Evaluator::p_ReadSymbol(MBUtility::StreamReader& Content)
+    Value Evaluator::p_ReadSymbol(Ref<Scope> ReadScope,ReadTable const& Table,MBUtility::StreamReader& Content)
     {
         Value ReturnValue;
         //TODO improve...
@@ -1061,6 +1117,14 @@ namespace MBLisp
         else
         {
             ReturnValue = Symbol(p_GetSymbolID(SymbolString));
+            for(auto const& ExpandPairs : Table.ExpandMappings)
+            {
+                if(SymbolString.find(ExpandPairs.first) != std::string::npos)
+                {
+                    ReturnValue = p_Eval(ReadScope,ExpandPairs.second,{ReturnValue});
+                    break;
+                }
+            }
         }
         return ReturnValue;
     }
@@ -1123,7 +1187,7 @@ namespace MBLisp
         }
         else
         {
-            ReturnValue = p_ReadSymbol(Content);
+            ReturnValue = p_ReadSymbol(AssociatedScope,Table,Content);
         }
         return ReturnValue;
     }
@@ -1164,6 +1228,27 @@ namespace MBLisp
     {
         return IDToCompare < m_PrimitiveSymbolMax;
     }
+    Value Evaluator::Type BUILTIN_ARGLIST
+    {
+        if(Arguments.size() != 1)
+        {
+            throw std::runtime_error("type requires exactly 1 argument: value to return the type of");   
+        }
+        Value ReturnValue;
+        if(!(Arguments[0].IsType<ClassDefinition>() && Arguments[0].IsType<ClassInstance>()))
+        {
+            return ClassDefinition(Arguments[0].GetTypeID());
+        }
+        else if(Arguments[0].IsType<ClassDefinition>())
+        {
+            return Arguments[0];   
+        }
+        else if(Arguments[0].IsType<ClassInstance>())
+        {
+            return Arguments[0].GetType<ClassInstance>().AssociatedClass;
+        }
+        return ReturnValue;
+    }
     void Evaluator::p_InternPrimitiveSymbols()
     {
         for(auto const& String : {"cond",
@@ -1180,6 +1265,7 @@ namespace MBLisp
                                   "unwind-protect",
                                   "bind-dynamic",
                                   "eval",
+                                  "return",
                                   })
         {
             p_GetSymbolID(String);
@@ -1198,6 +1284,19 @@ namespace MBLisp
                     {"dynamic",Dynamic},
                     {"environment",Environment},
                     {"new-environment",NewEnvironment},
+                    {"type",Type},
+                    {"load",Load},
+
+                    //fs stuff, should probably make this into a module
+                    {"is-directory",IsDirectory},
+                    {"exists",Exists},
+                    {"cwd",Cwd},
+                    {"parent-path",ParentPath},
+                    {"user-home-dir",UserHomeDir},
+                    {"list-dir",ListDir},
+                    {"is-directory",IsDirectory},
+                    //
+                    {"symbol",Symbol_String},
                 })
         {
             Function NewBuiltin;
@@ -1226,6 +1325,9 @@ namespace MBLisp
         AddMethod<String,String>("eq",Eq_String);
         AddMethod<Symbol,Symbol>("eq",Eq_Symbol);
         AddMethod<Int,Int>("eq",Eq_Int);
+        AddMethod<ClassDefinition,ClassDefinition>("eq",Eq_Type);
+        AddMethod<Any,Any>("eq",Eq_Any);
+        AddMethod<Int,Int>("minus",Minus_Int);
 
         //streams
         AddMethod<MBUtility::StreamReader>("eof",Stream_EOF);
@@ -1233,6 +1335,11 @@ namespace MBLisp
         AddMethod<MBUtility::StreamReader>("read-byte",Stream_ReadByte);
         AddMethod<MBUtility::StreamReader>("skip-whitespace",Stream_SkipWhitespace);
 
+
+        //Strings
+        AddMethod<String,String>("split",Split_String);
+        AddMethod<String,String>("in",In_String);
+        AddMethod<Symbol>("str",Str_Symbol);
         
         m_GlobalScope->SetVariable(p_GetSymbolID("*READTABLE*"),Value::MakeExternal(ReadTable()));
         //Readtables
@@ -1245,9 +1352,98 @@ namespace MBLisp
     {
         p_InternPrimitiveSymbols();
     }
-    void Evaluator::Eval(std::shared_ptr<Scope> CurrentScope,std::string_view Content)
+    Value Evaluator::Load BUILTIN_ARGLIST
+    {
+        Value ReturnValue = false;
+        if(Arguments.size() !=  1)
+        {
+            throw std::runtime_error("Load requires exactly 1 argument, the filepath to a source file to be evaluated");   
+        }
+        if(!Arguments[0].IsType<String>())
+        {
+            throw  std::runtime_error("Load requires first argument to be a string");   
+        }
+        std::filesystem::path SourceFilepath = Arguments[0].GetType<String>();
+        SymbolID LoadFilepathSymbol = AssociatedEvaluator.GetSymbolID("load-filepath");
+        Value* CurrentLoadFilepath = CurrentScope->TryGet(AssociatedEvaluator.GetSymbolID("load-filepath"));
+        Value ValueToRestore = std::string("");
+        if(CurrentLoadFilepath != nullptr)
+        {
+            ValueToRestore = *CurrentLoadFilepath;
+        }
+        try
+        {
+            AssociatedEvaluator.p_LoadFile(CurrentScope,SourceFilepath);
+        }
+        catch(LookupError const& e)
+        {
+            CurrentScope->SetVariable(LoadFilepathSymbol,std::move(ValueToRestore));
+            throw std::runtime_error(e.what() + ( ": " + AssociatedEvaluator.GetSymbolString(e.GetSymbol())));
+        }
+        catch(...)
+        {
+            CurrentScope->SetVariable(LoadFilepathSymbol,std::move(ValueToRestore));
+            throw;
+        }
+        return  ReturnValue;
+    }
+    //FSStuff
+    Value Evaluator::Exists BUILTIN_ARGLIST
+    {
+        if(Arguments.size() != 1 ||  !Arguments[0].IsType<String>())
+        {
+            throw std::runtime_error("exists requires exactly 1 argument of type string");
+        }
+        return std::filesystem::exists(Arguments[0].GetType<String>());
+    }
+    Value Evaluator::Cwd BUILTIN_ARGLIST
+    {
+        return MBUnicode::PathToUTF8(std::filesystem::current_path());
+    }
+    Value Evaluator::ParentPath BUILTIN_ARGLIST
+    {
+        if(Arguments.size() != 1 ||  !Arguments[0].IsType<String>())
+        {
+            throw std::runtime_error("parent-path requires exactly 1 argument of type string");
+        }
+        return MBUnicode::PathToUTF8(std::filesystem::path(Arguments[0].GetType<String>()).parent_path());
+    }
+    Value Evaluator::UserHomeDir BUILTIN_ARGLIST
+    {
+        return MBUnicode::PathToUTF8(MBSystem::GetUserHomeDirectory());
+    }
+    Value Evaluator::ListDir BUILTIN_ARGLIST
+    {
+        if(Arguments.size() != 1 ||  !Arguments[0].IsType<String>())
+        {
+            throw std::runtime_error("list-dir requires exactly 1 argument of type string");
+        }
+        List ReturnValue;
+        for(auto const& Entry : std::filesystem::directory_iterator(Arguments[0].GetType<String>()))
+        {
+            ReturnValue.push_back( MBUnicode::PathToUTF8(Entry.path().filename()));
+        }
+        return ReturnValue;
+    }
+    Value Evaluator::IsDirectory BUILTIN_ARGLIST
+    {
+        if(Arguments.size() != 1 ||  !Arguments[0].IsType<String>())
+        {
+            throw std::runtime_error("list-dir requires exactly 1 argument of type string");
+        }
+        return std::filesystem::is_directory(Arguments[0].GetType<String>());
+    }
+    //
+    void Evaluator::p_LoadFile(Ref<Scope> CurrentScope,std::filesystem::path const& LoadFilePath)
     {
         Ref<OpCodeList> OpCodes = std::make_shared<OpCodeList>();
+        if(!std::filesystem::exists(LoadFilePath))
+        {
+            throw std::runtime_error("Source file \"" +LoadFilePath.generic_string() +"\" doesn't exist");
+        }
+        //updates  the load-filepath
+        CurrentScope->SetVariable(p_GetSymbolID("load-filepath"),LoadFilePath.generic_string());
+        std::string Content = MBUtility::ReadWholeFile(LoadFilePath.generic_string());
         Value ReaderValue = Value::MakeExternal(MBUtility::StreamReader(std::make_unique<MBUtility::IndeterminateStringStream>(Content)));
         MBUtility::StreamReader& Reader = ReaderValue.GetType<MBUtility::StreamReader>();
         assert(ReaderValue.IsType<MBUtility::StreamReader>());
@@ -1268,12 +1464,30 @@ namespace MBLisp
             }
             p_Eval(CurrentScope,OpCodes,InstructionToExecute);
         }
-
     }
-    void Evaluator::Eval(std::string_view Content)
+    void Evaluator::LoadStd()
     {
-        std::shared_ptr<Scope> CurrentScope = CreateDefaultScope();
-        Eval(CurrentScope,Content);
+        if(std::filesystem::exists(MBSystem::GetUserHomeDirectory()/".mblisp/libs/std/index.lisp"))
+        {
+            try
+            {
+                p_LoadFile(m_GlobalScope,MBSystem::GetUserHomeDirectory()/".mblisp/libs/std/index.lisp");
+            }
+            catch(std::exception const& e)
+            {
+                throw std::runtime_error("Failed loading standard library: "+std::string(e.what()));
+            }
+        }
+        else
+        {
+            throw std::runtime_error("Failed loading standard library: file not present on default location ~/.mblisp/std/index.lisp");   
+        }
+    }
+    void Evaluator::Eval(std::filesystem::path const& SourcePath)
+    {
+        Ref<Scope> CurrentScope = CreateDefaultScope();
+        //set load path
+        p_LoadFile(CurrentScope,SourcePath);
     }
     Ref<Scope> Evaluator::CreateDefaultScope()
     {

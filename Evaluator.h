@@ -4,6 +4,7 @@
 #include <unordered_map>
 
 #include <MBUtility/StreamReader.h>
+#include <MBUtility/MBInterfaces.h>
 namespace MBLisp
 {
    
@@ -59,6 +60,7 @@ namespace MBLisp
     struct ReadTable
     {
         std::unordered_map<char,Value> Mappings;
+        std::vector<std::pair<char,Value>> ExpandMappings;
     };
    
 
@@ -105,8 +107,17 @@ namespace MBLisp
         static Value Eq_String BUILTIN_ARGLIST;
         static Value Eq_Symbol BUILTIN_ARGLIST;
         static Value Eq_Int BUILTIN_ARGLIST;
+        static Value Eq_Type BUILTIN_ARGLIST;
+        static Value Eq_Any BUILTIN_ARGLIST;
+        static Value Minus_Int BUILTIN_ARGLIST;
+
+        static Value In_String BUILTIN_ARGLIST;
+        static Value Str_Symbol BUILTIN_ARGLIST;
+        static Value Symbol_String BUILTIN_ARGLIST;
         static Value GenSym BUILTIN_ARGLIST;
 
+        //String manip
+        static Value Split_String BUILTIN_ARGLIST;
 
         //Environment
         static Value Environment BUILTIN_ARGLIST;
@@ -121,6 +132,15 @@ namespace MBLisp
        
         //
         static Value Load BUILTIN_ARGLIST;
+        static Value Type BUILTIN_ARGLIST;
+
+        //filesystem stuff
+        static Value Exists BUILTIN_ARGLIST;
+        static Value Cwd BUILTIN_ARGLIST;
+        static Value ParentPath BUILTIN_ARGLIST;
+        static Value UserHomeDir BUILTIN_ARGLIST;
+        static Value ListDir BUILTIN_ARGLIST;
+        static Value IsDirectory BUILTIN_ARGLIST;
         //READING
         
         std::unordered_map<std::string,SymbolID> m_InternedSymbols;
@@ -146,7 +166,7 @@ namespace MBLisp
 
         //reading
         String p_ReadString(MBUtility::StreamReader& Content);
-        Value p_ReadSymbol(MBUtility::StreamReader& Content);
+        Value p_ReadSymbol(Ref<Scope> ReadScope,ReadTable const& Table,MBUtility::StreamReader& Content);
         Int p_ReadInteger(MBUtility::StreamReader& Content);
         List p_ReadList(std::shared_ptr<Scope> AssociatedScope,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
         Value p_ReadTerm(std::shared_ptr<Scope> AssociatedScope,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
@@ -162,12 +182,22 @@ namespace MBLisp
         template<typename T,typename... Extra>
         void p_AddTypes(std::vector<ClassID>& Types)
         {
-            Types.push_back(Value::GetTypeTypeID<T>());
+            if constexpr(std::is_same_v<T,Any>)
+            {
+                Types.push_back(0);
+            }
+            else
+            {
+                Types.push_back(Value::GetTypeTypeID<T>());
+            }
             if constexpr(sizeof...(Extra) > 0)
             {
                 p_AddTypes<Extra...>(Types);
             }
         }
+
+
+        void p_LoadFile(Ref<Scope> AssocatedScope,std::filesystem::path const& LoadFilePath);
     public:
         Evaluator();
 
@@ -189,7 +219,8 @@ namespace MBLisp
 
         SymbolID GetSymbolID(std::string const& SymbolString);
         std::string GetSymbolString(SymbolID SymbolToConvert);
-        void Eval(std::string_view Content);
-        void Eval(std::shared_ptr<Scope> CurrentScope,std::string_view Content);
+
+        void LoadStd();
+        void Eval(std::filesystem::path const& SourceFile);
     };
 }

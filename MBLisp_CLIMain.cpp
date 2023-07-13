@@ -2,7 +2,6 @@
 #include "MBUtility/MBFiles.h"
 #include <filesystem>
 #include <iostream>
-#include <MBSystem/MBSystem.h>
 #include <MBUnicode/MBUnicode.h>
 int main(int argc,const char** argv)
 {
@@ -10,15 +9,19 @@ int main(int argc,const char** argv)
     {
         return 0;   
     }
-    std::string FileContent = MBUtility::ReadWholeFile(argv[1]);
+    std::string FileContent = argv[1];
     MBLisp::Evaluator Evaluator;
-    std::shared_ptr<MBLisp::Scope> EvalScope = Evaluator.CreateDefaultScope();
-    //source standard library if it exists
-    if(std::filesystem::exists(MBSystem::GetUserHomeDirectory()/".mblisp/libs/std/index.lisp"))
+    try
     {
-        std::string StandardLibrary = MBUtility::ReadWholeFile(
-                MBUnicode::PathToUTF8(MBSystem::GetUserHomeDirectory()/".mblisp/libs/std/index.lisp"));
-        Evaluator.Eval(EvalScope,StandardLibrary);
+        Evaluator.LoadStd();
+        Evaluator.Eval(FileContent);
     }
-    Evaluator.Eval(EvalScope,FileContent);
+    catch(MBLisp::LookupError const& e)
+    {
+        std::cout<<e.what()<<": "<<Evaluator.GetSymbolString(e.GetSymbol())<<std::endl;
+    }
+    catch(std::exception const& e)
+    {
+        std::cout<<e.what()<<std::endl;
+    }
 }

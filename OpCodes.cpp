@@ -35,8 +35,10 @@ namespace MBLisp
         for(int i = 1; i < ListToConvert.size();i++)
         {
             p_CreateOpCodes(ListToConvert[i],OutCodes,CurrentState);
+            CurrentState.ArgumentStackCount += 1;
         }
         p_CreateOpCodes(ListToConvert.front(),OutCodes,CurrentState);
+        CurrentState.ArgumentStackCount -= ListToConvert.size()-1;
         OpCode_CallFunc FunCall;
         FunCall.ArgumentCount = ListToConvert.size()-1;
         m_OpCodes.push_back(FunCall);
@@ -70,7 +72,6 @@ namespace MBLisp
                     IPIndex FalsePathEnd = ListToAppend.size();
                     ListToAppend[JumpToFalsePathPosition].GetType<OpCode_JumpNotTrue>().NewIP = FalsePathBegin;
                     ListToAppend[GotoFalseEndPosition].GetType<OpCode_Goto>().NewIP = FalsePathEnd;
-                    ListToAppend[GotoFalseEndPosition].GetType<OpCode_Goto>().ResetStack = false;
                 }
                 else if(CurrentSymbol == SymbolID(PrimitiveForms::tagbody))
                 {
@@ -120,7 +121,9 @@ namespace MBLisp
                     }
                     IPIndex GOIndex = ListToAppend.size();
                     SymbolID GoSymbol = ListToConvert[1].GetType<Symbol>().ID;
-                    ListToAppend.push_back(OpCode_Goto());
+                    OpCode_Goto NewOpcode;
+                    NewOpcode.NewStackSize = CurrentState.ArgumentStackCount;
+                    ListToAppend.push_back(NewOpcode);
                     CurrentState.UnResolvedGotos.push_back(std::make_pair(GoSymbol,GOIndex));
                 }
                 else if(CurrentSymbol == SymbolID(PrimitiveForms::progn))
@@ -166,7 +169,7 @@ namespace MBLisp
                             NewLambda.Definition->Arguments.push_back(Argument.GetType<Symbol>());
                         }
                     }
-                    NewLambda.Definition->Instructions = std::make_shared<OpCodeList>(ListToConvert,2);
+                    NewLambda.Definition->Instructions = std::make_shared<OpCodeList>(ListToConvert,2,true);
                     OpCode_PushLiteral NewCode;
                     NewCode.Literal = std::move(NewLambda);
                     ListToAppend.push_back(std::move(NewCode));
@@ -305,7 +308,7 @@ namespace MBLisp
                     SignalOpCode.Handlers = std::move(Handlers);
                     OpCode_Goto&  GotoEnd = ListToAppend[JumpEndIndex].GetType<OpCode_Goto>();
                     GotoEnd.NewIP = HandlersEnd;
-                    GotoEnd.ResetStack = false;
+                    GotoEnd.NewStackSize = -1;
                 }
                 else if(CurrentSymbol == SymbolID(PrimitiveForms::bind_dynamic))
                 {
@@ -349,6 +352,24 @@ namespace MBLisp
                         p_CreateOpCodes(ListToConvert[2],ListToAppend,CurrentState);
                     }
                     ListToAppend.push_back(OpCode_Eval(ListToConvert.size()-1));
+                }
+                else if(CurrentSymbol == SymbolID(PrimitiveForms::Return))
+                {
+                    if(CurrentState.InLambda == 0)
+                    {
+                        throw  std::runtime_error("return special can only appear within a lambda body");
+                    }
+                    if(ListToConvert.size() != 2)
+                    {
+                        throw std::runtime_error("return requires exatly  1 argument,  the value to return");
+                    }
+                    p_CreateOpCodes(ListToConvert[1],ListToAppend,CurrentState);
+                    IPIndex UnresolvedReturn = ListToAppend.size();
+                    OpCode_Goto NewOpCode;
+                    NewOpCode.NewStackSize = 0;
+                    NewOpCode.ReturnTop =  true;
+                    CurrentState.UnresolvedReturns.push_back(UnresolvedReturn);
+                    ListToAppend.push_back(NewOpCode);
                 }
                 else
                 {
@@ -420,10 +441,18 @@ namespace MBLisp
             throw std::runtime_error("go's to tags without corresponding label detected");
         }
     }
-    OpCodeList::OpCodeList(List const& ListToConvert,int Offset)
+    OpCodeList::OpCodeList(List const& ListToConvert,int Offset,bool  InLambda)
     {
         EncodingState CurrentState;
+        CurrentState.InLambda = InLambda;
         p_WriteProgn(ListToConvert,m_OpCodes,CurrentState,Offset);
+        if(InLambda)
+        {
+            for(auto UnresolvedReturn : CurrentState.UnresolvedReturns)
+            {
+                m_OpCodes[UnresolvedReturn].GetType<OpCode_Goto>().NewIP = m_OpCodes.size();
+            }
+        }
         if(CurrentState.UnResolvedGotos.size() != 0)
         {
             throw std::runtime_error("go's to tags without corresponding label detected");
