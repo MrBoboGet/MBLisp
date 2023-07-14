@@ -77,6 +77,7 @@ namespace MBLisp
         static Value Less BUILTIN_ARGLIST;
         static Value Plus  BUILTIN_ARGLIST;
         static Value CreateList BUILTIN_ARGLIST;
+        static Value CreateDict BUILTIN_ARGLIST;
 
 
         //classes and generics
@@ -113,9 +114,20 @@ namespace MBLisp
 
         static Value In_String BUILTIN_ARGLIST;
         static Value Str_Symbol BUILTIN_ARGLIST;
+        static Value Str_Int BUILTIN_ARGLIST;
+        static Value Str_Bool BUILTIN_ARGLIST;
+        static Value Str_Float BUILTIN_ARGLIST;
         static Value Symbol_String BUILTIN_ARGLIST;
         static Value GenSym BUILTIN_ARGLIST;
 
+
+        //Dict
+        static Value Index_Dict BUILTIN_ARGLIST;
+        static Value Keys_Dict BUILTIN_ARGLIST;
+        static Value In_Dict BUILTIN_ARGLIST;
+
+
+        
         //String manip
         static Value Split_String BUILTIN_ARGLIST;
 
@@ -141,7 +153,13 @@ namespace MBLisp
         static Value UserHomeDir BUILTIN_ARGLIST;
         static Value ListDir BUILTIN_ARGLIST;
         static Value IsDirectory BUILTIN_ARGLIST;
-        //READING
+        
+        //IO
+        static Value Write_OutStream BUILTIN_ARGLIST;
+        static Value Flush_OutStream BUILTIN_ARGLIST;
+        static Value OutStream_String BUILTIN_ARGLIST;
+
+
         
         std::unordered_map<std::string,SymbolID> m_InternedSymbols;
         std::unordered_map<SymbolID,std::string> m_SymbolToString;

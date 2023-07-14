@@ -7,6 +7,7 @@
 #include <variant>
 #include <MBUtility/Dynamic.h>
 #include <functional>
+
 namespace MBLisp
 {
     typedef int_least64_t Int;
@@ -19,6 +20,7 @@ namespace MBLisp
     typedef std::string String;
     class Value;
     typedef std::vector<Value> List;
+    //typedef std::unordered_map<Value,Value> Dict;
     template<typename T>
     using Ref = std::shared_ptr<T>;
     struct Any{};
@@ -177,9 +179,39 @@ namespace MBLisp
     inline constexpr bool TypeIn = i_TypeIn<TypeToCheck,OtherType...>::value;
     class Value
     {
+public:
+        struct Value_Hasher
+        {
+            std::size_t operator()(Value const& ValueToHash) const
+            {
+                std::size_t ReturnValue = 0;
+                if(ValueToHash.IsType<String>())
+                {
+                    ReturnValue = std::hash<std::string>()(ValueToHash.GetType<String>());
+                }
+                else if(ValueToHash.IsType<Int>())
+                {
+                    ReturnValue = std::hash<Int>()(ValueToHash.GetType<Int>());
+                }
+                else if(ValueToHash.IsType<bool>())
+                {
+                    ReturnValue = std::hash<bool>()(ValueToHash.GetType<bool>());
+                }
+                else if(ValueToHash.IsType<Symbol>())
+                {
+                    ReturnValue = std::hash<SymbolID>()(ValueToHash.GetType<Symbol>().ID);
+                }
+                else
+                {
+                    throw std::runtime_error("Can only hash value types");   
+                }
+                return ReturnValue;
+            };
+        };
         typedef std::variant<bool,Function,Macro,Int,Float,Symbol,MBUtility::Dynamic<String>,
             Ref<Lambda>,
             Ref<List>,
+            Ref<std::unordered_map<Value,Value,Value_Hasher>>,
             Ref<GenericFunction>,
             Ref<ClassDefinition>,
             Ref<ClassInstance>,
@@ -198,7 +230,8 @@ namespace MBLisp
         template<typename T>
         static constexpr bool IsReferenceType()
         {
-            return TypeIn<T,ClassDefinition,DynamicVariable,Lambda,GenericFunction,ClassInstance,List,Value,Scope>;
+            return TypeIn<T,ClassDefinition,DynamicVariable,Lambda,GenericFunction,ClassInstance,List,Value,Scope
+                ,std::unordered_map<Value,Value,Value_Hasher>>;
         }
         template<typename T>
         static constexpr bool IsBuiltin()
@@ -289,7 +322,46 @@ namespace MBLisp
             *StorageToAssign = PointerToCopy->m_Data;
             return *this;
         }
-     
+    
+
+        bool operator==(Value const& OtherValue) const
+        {
+            bool ReturnValue = false;
+            if(!IsSameType(OtherValue))
+            {
+                return false;
+            }
+            if(IsType<Float>())
+            {
+                return GetType<Float>() == OtherValue.GetType<Float>();
+            }
+            else if(IsType<Int>())
+            {
+                return GetType<Int>() == OtherValue.GetType<Int>();
+            }
+            else if(IsType<Symbol>())
+            {
+                return GetType<Symbol>().ID == OtherValue.GetType<Symbol>().ID;
+            }
+            else if(IsType<bool>())
+            {
+                return GetType<bool>() == OtherValue.GetType<bool>();
+            }
+            else if(IsType<String>())
+            {
+                return GetType<String>() == OtherValue.GetType<String>();
+            }
+            else if(IsType<ClassInstance>())
+            {
+                return GetRef<ClassInstance>().get() == OtherValue.GetRef<ClassInstance>().get();
+            }
+            else if(IsType<ClassDefinition>())
+            {
+                return GetRef<ClassDefinition>().get() == OtherValue.GetRef<ClassDefinition>().get();
+            }
+            return ReturnValue;
+        }
+        
         bool IsBuiltin()
         {
             return TypeIsBuiltin(GetTypeID());
@@ -407,6 +479,10 @@ namespace MBLisp
             {
                 m_Data = Function(Rhs);
             }
+            else if constexpr (std::is_same_v<T,const char*>)
+            {
+                m_Data = String(Rhs);
+            }
             else if constexpr(std::is_same_v<T,bool>)
             {
                 m_Data = Rhs;
@@ -493,6 +569,7 @@ namespace MBLisp
             return *this;
         }
     };
+    typedef std::unordered_map<Value,Value,Value::Value_Hasher> Dict;
     struct SlotDefinition
     {
         SymbolID Symbol = 0;
@@ -593,7 +670,7 @@ namespace MBLisp
         {
             return m_Symbol;
         }
-        const char* what() const override
+        const char* what() const noexcept override
         {
             return m_ErrorString.c_str();
         }
@@ -610,4 +687,5 @@ namespace MBLisp
         void OverrideVariable(SymbolID Variable,Value NewValue);
         Value* TryGet(SymbolID Variable);
     };
+
 };

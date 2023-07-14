@@ -9,6 +9,8 @@
 #include <MBSystem/MBSystem.h>
 #include <MBUnicode/MBUnicode.h>
 #include <MBUtility/MBStrings.h>
+
+#include <atomic>
 namespace MBLisp
 {
 
@@ -43,6 +45,32 @@ namespace MBLisp
     {
         Value ReturnValue = List(std::move(Arguments));
         return  ReturnValue;
+    }
+    Value Evaluator::CreateDict BUILTIN_ARGLIST
+    {
+        return Dict();
+    }
+    Value Evaluator::Index_Dict BUILTIN_ARGLIST
+    {
+        Value& AssociatedValue = Arguments[0].GetType<Dict>()[Arguments[1]];
+        if(!AssociatedValue.IsType<Value>())
+        {
+            AssociatedValue.MakeRef();
+        }
+        return AssociatedValue;
+    }
+    Value Evaluator::Keys_Dict BUILTIN_ARGLIST
+    {
+        List ReturnValue;
+        for(auto const& Pairs : Arguments[0].GetType<Dict>())
+        {
+            ReturnValue.push_back(Pairs.first);
+        }
+        return ReturnValue;
+    }
+    Value Evaluator::In_Dict BUILTIN_ARGLIST
+    {
+        return  Arguments[1].GetType<Dict>().find(Arguments[0]) != Arguments[1].GetType<Dict>().end();
     }
     Value Evaluator::Plus BUILTIN_ARGLIST
     {
@@ -362,7 +390,8 @@ namespace MBLisp
     }
     Value Evaluator::Eq_Type BUILTIN_ARGLIST
     {
-        return Arguments[0].GetType<ClassDefinition>().ID == Arguments[1].GetType<ClassDefinition>().ID;
+        return (Arguments[0].GetType<ClassDefinition>().ID == Arguments[1].GetType<ClassDefinition>().ID)
+            || Arguments[0].GetType<ClassDefinition>().ID == 0 || Arguments[1].GetType<ClassDefinition>().ID == 0;
     }
     Value Evaluator::Eq_Any BUILTIN_ARGLIST
     {
@@ -389,6 +418,25 @@ namespace MBLisp
     Value Evaluator::Str_Symbol BUILTIN_ARGLIST
     {
         return AssociatedEvaluator.GetSymbolString(Arguments[0].GetType<Symbol>().ID);
+    }
+    Value Evaluator::Str_Int BUILTIN_ARGLIST
+    {
+        return std::to_string(Arguments[0].GetType<Int>());
+    }
+    Value Evaluator::Str_Bool BUILTIN_ARGLIST
+    {
+        if(Arguments[0].GetType<bool>())
+        {
+            return "true";   
+        }
+        else 
+        {
+            return "false";   
+        }
+    }
+    Value Evaluator::Str_Float BUILTIN_ARGLIST
+    {
+        return std::to_string(Arguments[0].GetType<Float>());
     }
     Value Evaluator::Symbol_String BUILTIN_ARGLIST
     {
@@ -1077,21 +1125,56 @@ namespace MBLisp
                     return NextChar == ' ' || NextChar == '\r' || NextChar == '\t' || NextChar == '\n' || NextChar == '\v';
                 });
     }
-    //TODO escaping
+    int h_EscapeCount(std::string_view Content)
+    {
+        int EscapeCount = 0;
+        for(int i = int(Content.size())-1;i >= 0;i--)
+        {
+            if(Content[i] == '\\')
+            {
+                EscapeCount += 1;   
+            }
+            else
+            {
+                break;   
+            }
+        }
+        return EscapeCount;
+    }
     String Evaluator::p_ReadString(MBUtility::StreamReader& Content)
     {
         String ReturnValue;
         Content.ReadByte();
         bool StringFinished = false;
-        ReturnValue = Content.ReadWhile([](char NextChar)
-                {
-                    return NextChar != '"';
-                });
-        if(Content.EOFReached())
+        while(!StringFinished)
         {
-            throw std::runtime_error("missing \" for string literal");
+            ReturnValue += Content.ReadWhile([](char NextChar)
+                    {
+                        return NextChar != '"';
+                    });
+            if(Content.EOFReached())
+            {
+                throw std::runtime_error("missing \" for string literal");
+            }
+            if(int EscapeCount = h_EscapeCount(ReturnValue); EscapeCount != 0)
+            {
+                ReturnValue.resize(ReturnValue.size() - (EscapeCount-(EscapeCount/2)));
+                if(EscapeCount % 2 != 0)
+                {
+                    ReturnValue += Content.ReadByte();
+                }
+                else
+                {
+                    Content.ReadByte();
+                    break;
+                }
+            }
+            else
+            {
+                Content.ReadByte();
+                break;
+            }
         }
-        Content.ReadByte();
         return ReturnValue;
     }
     Value Evaluator::p_ReadSymbol(Ref<Scope> ReadScope,ReadTable const& Table,MBUtility::StreamReader& Content)
@@ -1297,6 +1380,7 @@ namespace MBLisp
                     {"is-directory",IsDirectory},
                     //
                     {"symbol",Symbol_String},
+                    {"dict",CreateDict},
                 })
         {
             Function NewBuiltin;
@@ -1311,6 +1395,9 @@ namespace MBLisp
         m_GlobalScope->SetVariable(p_GetSymbolID("float_t"),ClassDefinition(Value::GetTypeTypeID<Float>()));
         m_GlobalScope->SetVariable(p_GetSymbolID("symbol_t"),ClassDefinition(Value::GetTypeTypeID<Symbol>()));
         m_GlobalScope->SetVariable(p_GetSymbolID("string_t"),ClassDefinition(Value::GetTypeTypeID<String>()));
+        m_GlobalScope->SetVariable(p_GetSymbolID("bool_t"),ClassDefinition(Value::GetTypeTypeID<bool>()));
+        m_GlobalScope->SetVariable(p_GetSymbolID("dict_t"),ClassDefinition(Value::GetTypeTypeID<Dict>()));
+        m_GlobalScope->SetVariable(p_GetSymbolID("any_t"),ClassDefinition(0));
         
         //list
         AddMethod<List>("append",Append_List);
@@ -1320,7 +1407,7 @@ namespace MBLisp
         AddMethod<ClassInstance>("index",Index_ClassInstance);
 
         //scope
-        AddMethod<Scope>("index",Index_Environment);
+        AddMethod<Scope,Symbol>("index",Index_Environment);
         //comparisons
         AddMethod<String,String>("eq",Eq_String);
         AddMethod<Symbol,Symbol>("eq",Eq_Symbol);
@@ -1334,12 +1421,21 @@ namespace MBLisp
         AddMethod<MBUtility::StreamReader>("peek-byte",Stream_PeakByte);
         AddMethod<MBUtility::StreamReader>("read-byte",Stream_ReadByte);
         AddMethod<MBUtility::StreamReader>("skip-whitespace",Stream_SkipWhitespace);
+        AddMethod<String,std::unique_ptr<MBUtility::MBOctetOutputStream>>("write",Write_OutStream);
+        AddMethod<String>("out-stream",OutStream_String);
 
-
+        //Dict
+        AddMethod<Dict,Any>("index",Index_Dict);
+        AddMethod<Any,Dict>("in",In_Dict);
+        AddMethod<Dict>("keys",Keys_Dict);
+        
         //Strings
         AddMethod<String,String>("split",Split_String);
         AddMethod<String,String>("in",In_String);
         AddMethod<Symbol>("str",Str_Symbol);
+        AddMethod<bool>("str",Str_Bool);
+        AddMethod<Float>("str",Str_Float);
+        AddMethod<Int>("str",Str_Int);
         
         m_GlobalScope->SetVariable(p_GetSymbolID("*READTABLE*"),Value::MakeExternal(ReadTable()));
         //Readtables
@@ -1348,6 +1444,33 @@ namespace MBLisp
         AddMethod<ReadTable,String>("add-character-expander",AddCharacterExpander);
         AddMethod<ReadTable,String>("remove-character-expander",RemoveCharacterExpander);
     }
+
+    Value Evaluator::Write_OutStream BUILTIN_ARGLIST
+    {
+        Value ReturnValue;
+        std::unique_ptr<MBUtility::MBOctetOutputStream>& OutStream = Arguments[1].GetType<std::unique_ptr<MBUtility::MBOctetOutputStream>>();
+        String& StringToWrite = Arguments[0].GetType<String>();
+        OutStream->Write(StringToWrite.data(),StringToWrite.size());
+        return ReturnValue;
+    }
+    struct i_ValueStringStream : public MBUtility::MBOctetOutputStream
+    {
+        Value m_OutString;
+    public:
+        i_ValueStringStream(Value ValueToAppend) : m_OutString(std::move(ValueToAppend))
+        {
+        }
+		virtual size_t Write(const void* DataToWrite, size_t DataToWriteSize)
+        {
+            m_OutString.GetType<String>().insert(m_OutString.GetType<String>().end(),(const char*) DataToWrite,((const char*) DataToWrite)+DataToWriteSize);
+            return DataToWriteSize;
+        }
+    };
+    Value Evaluator::OutStream_String BUILTIN_ARGLIST
+    {
+        return Value::MakeExternal(std::unique_ptr<MBUtility::MBOctetOutputStream>(new i_ValueStringStream(Arguments[0])));
+    }
+
     Evaluator::Evaluator()
     {
         p_InternPrimitiveSymbols();
