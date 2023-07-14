@@ -1,4 +1,5 @@
 #include "Evaluator.h"
+#include "MBUtility/StreamReader.h"
 #include "assert.h"
 #include <MBParsing/MBParsing.h>
 
@@ -290,7 +291,7 @@ namespace MBLisp
         g__CurrentDynamicVarID.fetch_add(1);
         return ReturnValue;
     }
-    Value Evaluator::ReadTerm BUILTIN_ARGLIST
+    Value Evaluator::Stream_ReadTerm BUILTIN_ARGLIST
     {
         Value ReturnValue;
         if(Arguments.size() != 1)
@@ -306,6 +307,50 @@ namespace MBLisp
         std::shared_ptr<Scope> NewScope = std::make_shared<Scope>();
         ReturnValue = AssociatedEvaluator.p_ReadTerm(NewScope,Table,Reader,Arguments[0]);
         return ReturnValue;
+    }
+    Value Evaluator::Stream_ReadString BUILTIN_ARGLIST
+    {
+        return AssociatedEvaluator.p_ReadString(Arguments[0].GetType<MBUtility::StreamReader>());
+    }
+    Value Evaluator::Stream_ReadNumber BUILTIN_ARGLIST
+    {
+        Value ReturnValue;
+        std::string NumberString = Arguments[0].GetType<MBUtility::StreamReader>().ReadWhile([]
+                (char NextChar)
+                {
+                    return ((NextChar >= '0' && NextChar <= '9') || NextChar == '-');
+                });
+        return std::stoi(NumberString);
+    }
+    Value Evaluator::Stream_ReadBytes BUILTIN_ARGLIST
+    {
+        int BytesToRead = Arguments[1].GetType<Int>();
+        if(BytesToRead < 0)
+        {
+            throw std::runtime_error("Can only read a positive amount of bytes");   
+        }
+        int ReadBytes = 0;
+        std::string ReturnValue = Arguments[0].GetType<MBUtility::StreamReader>().ReadWhile([&](char NextByte)
+                {
+                    bool ReturnValue = ReadBytes < BytesToRead;
+                    ReadBytes += 1;
+                    return ReturnValue;
+                });
+        return std::move(ReturnValue);
+    }
+    Value Evaluator::Stream_ReadLine BUILTIN_ARGLIST
+    {
+        auto& Reader = Arguments[0].GetType<MBUtility::StreamReader>();
+        std::string ReturnValue = Reader.ReadWhile([]
+                (char NextByte)
+                {
+                    return NextByte != '\n';
+                });
+        if(!Reader.EOFReached())
+        {
+            Reader.ReadByte();
+        }
+        return std::move(ReturnValue);
     }
     Value Evaluator::Stream_EOF BUILTIN_ARGLIST
     {
@@ -433,6 +478,10 @@ namespace MBLisp
         {
             return "false";   
         }
+    }
+    Value Evaluator::Str_Null BUILTIN_ARGLIST
+    {
+        return "null";
     }
     Value Evaluator::Str_Float BUILTIN_ARGLIST
     {
@@ -1144,6 +1193,7 @@ namespace MBLisp
     String Evaluator::p_ReadString(MBUtility::StreamReader& Content)
     {
         String ReturnValue;
+        p_SkipWhiteSpace(Content);
         Content.ReadByte();
         bool StringFinished = false;
         while(!StringFinished)
@@ -1196,6 +1246,10 @@ namespace MBLisp
         else if(SymbolString == "false")
         {
             ReturnValue = false;
+        }
+        else if(SymbolString == "null")
+        {
+            ReturnValue = Null();
         }
         else
         {
@@ -1361,7 +1415,7 @@ namespace MBLisp
                     {"class",Class},
                     {"addmethod",AddMethod},
                     {"generic",Generic},
-                    {"read-term",ReadTerm},
+                    {"read-term",Stream_ReadTerm},
                     {"flatten-1",Flatten_1},
                     {"gensym",GenSym},
                     {"dynamic",Dynamic},
@@ -1397,6 +1451,7 @@ namespace MBLisp
         m_GlobalScope->SetVariable(p_GetSymbolID("string_t"),ClassDefinition(Value::GetTypeTypeID<String>()));
         m_GlobalScope->SetVariable(p_GetSymbolID("bool_t"),ClassDefinition(Value::GetTypeTypeID<bool>()));
         m_GlobalScope->SetVariable(p_GetSymbolID("dict_t"),ClassDefinition(Value::GetTypeTypeID<Dict>()));
+        m_GlobalScope->SetVariable(p_GetSymbolID("null_t"),ClassDefinition(Value::GetTypeTypeID<Null>()));
         m_GlobalScope->SetVariable(p_GetSymbolID("any_t"),ClassDefinition(0));
         
         //list
@@ -1421,8 +1476,13 @@ namespace MBLisp
         AddMethod<MBUtility::StreamReader>("peek-byte",Stream_PeakByte);
         AddMethod<MBUtility::StreamReader>("read-byte",Stream_ReadByte);
         AddMethod<MBUtility::StreamReader>("skip-whitespace",Stream_SkipWhitespace);
+        AddMethod<MBUtility::StreamReader,Int>("read-bytes",Stream_ReadBytes);
+        AddMethod<MBUtility::StreamReader>("read-string",Stream_ReadString);
+        AddMethod<MBUtility::StreamReader>("read-number",Stream_ReadNumber);
+        AddMethod<MBUtility::StreamReader>("read-line",Stream_ReadLine);
         AddMethod<String,std::unique_ptr<MBUtility::MBOctetOutputStream>>("write",Write_OutStream);
         AddMethod<String>("out-stream",OutStream_String);
+        AddMethod<String>("in-stream",InStream_String);
 
         //Dict
         AddMethod<Dict,Any>("index",Index_Dict);
@@ -1434,6 +1494,7 @@ namespace MBLisp
         AddMethod<String,String>("in",In_String);
         AddMethod<Symbol>("str",Str_Symbol);
         AddMethod<bool>("str",Str_Bool);
+        AddMethod<Null>("str",Str_Null);
         AddMethod<Float>("str",Str_Float);
         AddMethod<Int>("str",Str_Int);
         
@@ -1469,6 +1530,11 @@ namespace MBLisp
     Value Evaluator::OutStream_String BUILTIN_ARGLIST
     {
         return Value::MakeExternal(std::unique_ptr<MBUtility::MBOctetOutputStream>(new i_ValueStringStream(Arguments[0])));
+    }
+
+    Value Evaluator::InStream_String BUILTIN_ARGLIST
+    {
+        return Value::MakeExternal(MBUtility::StreamReader( std::make_unique<MBUtility::OwningStringStream>(Arguments[0].GetType<String>())));
     }
 
     Evaluator::Evaluator()

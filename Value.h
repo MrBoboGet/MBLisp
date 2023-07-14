@@ -175,6 +175,7 @@ namespace MBLisp
         }
     };
     
+    class Null { };
     template<typename TypeToCheck,typename... OtherType>
     inline constexpr bool TypeIn = i_TypeIn<TypeToCheck,OtherType...>::value;
     class Value
@@ -208,7 +209,7 @@ public:
                 return ReturnValue;
             };
         };
-        typedef std::variant<bool,Function,Macro,Int,Float,Symbol,MBUtility::Dynamic<String>,
+        typedef std::variant<Null,bool,Function,Macro,Int,Float,Symbol,MBUtility::Dynamic<String>,
             Ref<Lambda>,
             Ref<List>,
             Ref<std::unordered_map<Value,Value,Value_Hasher>>,
@@ -225,7 +226,7 @@ public:
         template<typename T>
         static constexpr bool IsValueType()
         {
-            return TypeIn<T,bool,Function,Int,Float,Symbol,Macro>;
+            return TypeIn<T,bool,Function,Int,Float,Symbol,Macro,Null>;
         }
         template<typename T>
         static constexpr bool IsReferenceType()

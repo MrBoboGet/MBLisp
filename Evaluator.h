@@ -98,7 +98,11 @@ namespace MBLisp
         //class instance
         static Value Index_ClassInstance BUILTIN_ARGLIST;
         //Streams
-        static Value ReadTerm BUILTIN_ARGLIST;
+        static Value Stream_ReadTerm BUILTIN_ARGLIST;
+        static Value Stream_ReadString BUILTIN_ARGLIST;
+        static Value Stream_ReadNumber BUILTIN_ARGLIST;
+        static Value Stream_ReadBytes BUILTIN_ARGLIST;
+        static Value Stream_ReadLine BUILTIN_ARGLIST;
         static Value Stream_EOF BUILTIN_ARGLIST;
         static Value Stream_PeakByte BUILTIN_ARGLIST;
         static Value Stream_ReadByte BUILTIN_ARGLIST;
@@ -116,6 +120,7 @@ namespace MBLisp
         static Value Str_Symbol BUILTIN_ARGLIST;
         static Value Str_Int BUILTIN_ARGLIST;
         static Value Str_Bool BUILTIN_ARGLIST;
+        static Value Str_Null BUILTIN_ARGLIST;
         static Value Str_Float BUILTIN_ARGLIST;
         static Value Symbol_String BUILTIN_ARGLIST;
         static Value GenSym BUILTIN_ARGLIST;
@@ -158,6 +163,7 @@ namespace MBLisp
         static Value Write_OutStream BUILTIN_ARGLIST;
         static Value Flush_OutStream BUILTIN_ARGLIST;
         static Value OutStream_String BUILTIN_ARGLIST;
+        static Value InStream_String BUILTIN_ARGLIST;
 
 
         
