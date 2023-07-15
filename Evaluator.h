@@ -64,6 +64,15 @@ namespace MBLisp
     };
    
 
+
+    class Evaluator;
+    class Module
+    {
+    public:
+        virtual Ref<Scope> GetModuleScope() =  0;
+        virtual void SetEvaluator(Evaluator* AssociatedEvaluator) = 0;
+    };
+
     //TODO kinda hacky, should be temporary, but much more convenient when
     //iterating and prototyping
 #define BUILTIN_ARGLIST (Evaluator& AssociatedEvaluator,Ref<Scope> CurrentScope,std::vector<Value>& Arguments)
@@ -166,6 +175,11 @@ namespace MBLisp
         static Value InStream_String BUILTIN_ARGLIST;
 
 
+        //special stuff
+        static Value GetInternalModule BUILTIN_ARGLIST;
+        static Value InternalModules BUILTIN_ARGLIST;
+
+        std::unordered_map<std::string,std::unique_ptr<Module>> m_BuiltinModules;
         
         std::unordered_map<std::string,SymbolID> m_InternedSymbols;
         std::unordered_map<SymbolID,std::string> m_SymbolToString;
@@ -200,6 +214,8 @@ namespace MBLisp
         
         bool p_SymbolIsPrimitive(SymbolID IDToCompare);
         void p_InternPrimitiveSymbols();
+        void p_LoadModules();
+
 
 
 

@@ -12,6 +12,8 @@
 #include <MBUtility/MBStrings.h>
 
 #include <atomic>
+
+#include "Modules/LSP/LSPModule.h"
 namespace MBLisp
 {
 
@@ -1435,6 +1437,9 @@ namespace MBLisp
                     //
                     {"symbol",Symbol_String},
                     {"dict",CreateDict},
+                    //
+                    {"get-internal-module",GetInternalModule},
+                    {"internal-modules",InternalModules},
                 })
         {
             Function NewBuiltin;
@@ -1536,10 +1541,43 @@ namespace MBLisp
     {
         return Value::MakeExternal(MBUtility::StreamReader( std::make_unique<MBUtility::OwningStringStream>(Arguments[0].GetType<String>())));
     }
+    Value Evaluator::GetInternalModule BUILTIN_ARGLIST
+    {
+        Value ReturnValue;
+        if(Arguments.size() != 1 || !Arguments[0].IsType<String>())
+        {
+            throw std::runtime_error("get-internal-module requires exactly 1 argument of type string");
+        }
+        String& AssociatedString = Arguments[0].GetType<String>();
+        if( auto It = AssociatedEvaluator.m_BuiltinModules.find(AssociatedString); It != AssociatedEvaluator.m_BuiltinModules.end())
+        {
+            ReturnValue = Value(It->second->GetModuleScope());
+        }
+        else
+        {
+            throw std::runtime_error("no internal module with name \""+AssociatedString+"\"");   
+        }
+        return ReturnValue;
+    }
+    Value Evaluator::InternalModules BUILTIN_ARGLIST
+    {
+        List ReturnValue;
 
+        for(auto const& Module : AssociatedEvaluator.m_BuiltinModules)
+        {
+            ReturnValue.push_back(Module.first);
+        }
+        return ReturnValue;
+    }
     Evaluator::Evaluator()
     {
         p_InternPrimitiveSymbols();
+        p_LoadModules();
+    }
+    void Evaluator::p_LoadModules()
+    {
+        m_BuiltinModules["lsp"] = std::make_unique<LSPModule>();
+        m_BuiltinModules["lsp"]->SetEvaluator(this);
     }
     Value Evaluator::Load BUILTIN_ARGLIST
     {
