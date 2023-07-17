@@ -3,7 +3,8 @@
     [
         "MBUtility",
         "MBSystem",
-        "MBUnicode"
+        "MBUnicode",
+        "MBLSP"
     ],
     "ExtraIncludes": 
     [
@@ -21,7 +22,8 @@
                 "/Evaluator.cpp",
                 "/Value.cpp",
                 "/OpCodes.cpp",
-                "/MBLisp_CLIMain.cpp"
+                "/MBLisp_CLIMain.cpp",
+                "/Modules/LSP/LSPModule.cpp"
             ],
             "TargetType": "Executable"
         },

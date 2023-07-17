@@ -4,5 +4,5 @@
 	"Attributes":[],
     "SubPackets":["/libs/std"],
     "SubPackets":["/libs/json"],
-    "Dependancies":["MBUtility","MBSystem","MBUnicode"]
+    "Dependancies":["MBUtility","MBSystem","MBUnicode","MBLSP"]
 }

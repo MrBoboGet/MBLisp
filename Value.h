@@ -13,6 +13,7 @@ namespace MBLisp
     typedef int_least64_t Int;
     typedef double Float;
     typedef uint_least32_t SymbolID;
+    typedef uint_least32_t PositionType;
     typedef int FunctionID;
     typedef int MacroID;
     typedef uint_least32_t ClassID;
@@ -38,6 +39,8 @@ namespace MBLisp
     struct Symbol
     {
         SymbolID ID;
+        PositionType Position = -1;
+
         Symbol() = default;
         Symbol(SymbolID  NewId)
         {

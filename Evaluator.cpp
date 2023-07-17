@@ -1,5 +1,5 @@
 #include "Evaluator.h"
-#include "MBUtility/StreamReader.h"
+#include <MBUtility/StreamReader.h>
 #include "assert.h"
 #include <MBParsing/MBParsing.h>
 
@@ -14,6 +14,8 @@
 #include <atomic>
 
 #include "Modules/LSP/LSPModule.h"
+
+#include <iostream>
 namespace MBLisp
 {
 
@@ -628,7 +630,7 @@ namespace MBLisp
     ///    }
     ///    return p_Eval(AssociatedScope,*FunctionToExecute.Instructions);
     ///}
-    Value Evaluator::p_Eval(Ref<Scope> CurrentScope,Value Callable,std::vector<Value> Arguments)
+    Value Evaluator::Eval(Ref<Scope> CurrentScope,Value Callable,std::vector<Value> Arguments)
     {
         std::vector<StackFrame> CurrentCallStack = {StackFrame(OpCodeExtractor())};
         CurrentCallStack.back().StackScope = CurrentScope;
@@ -1148,7 +1150,7 @@ namespace MBLisp
                     {
                         Arguments.push_back(ListToExpand[i]);
                     }
-                    return p_Expand(ExpandScope,p_Eval(ExpandScope,*AssociatedMacro.Callable,std::move(Arguments)));
+                    return p_Expand(ExpandScope,Eval(ExpandScope,*AssociatedMacro.Callable,std::move(Arguments)));
                 }
             }
         }
@@ -1255,12 +1257,14 @@ namespace MBLisp
         }
         else
         {
-            ReturnValue = Symbol(p_GetSymbolID(SymbolString));
+            Symbol NewSymbol = Symbol(p_GetSymbolID(SymbolString));
+            NewSymbol.Position = Content.Position();
+            ReturnValue = NewSymbol;
             for(auto const& ExpandPairs : Table.ExpandMappings)
             {
                 if(SymbolString.find(ExpandPairs.first) != std::string::npos)
                 {
-                    ReturnValue = p_Eval(ReadScope,ExpandPairs.second,{ReturnValue});
+                    ReturnValue = Eval(ReadScope,ExpandPairs.second,{ReturnValue});
                     break;
                 }
             }
@@ -1322,7 +1326,7 @@ namespace MBLisp
         else if(auto ReaderIt = Table.Mappings.find(NextChar); ReaderIt != Table.Mappings.end())
         {
             Content.ReadByte();
-            ReturnValue = p_Eval(AssociatedScope,ReaderIt->second,{StreamValue});
+            ReturnValue = Eval(AssociatedScope,ReaderIt->second,{StreamValue});
         }
         else
         {
@@ -1722,6 +1726,8 @@ namespace MBLisp
         ReturnValue->SetParentScope(m_GlobalScope);
         ReturnValue->SetVariable(p_GetSymbolID("*READTABLE*"),Value::MakeExternal(
                     ReadTable(m_GlobalScope->FindVariable(p_GetSymbolID("*READTABLE*")).GetType<ReadTable>())));
+        ReturnValue->SetVariable(p_GetSymbolID("*standard-input*"),Value::MakeExternal(MBUtility::StreamReader(std::make_unique<MBLSP::TerminalInput>(&std::cin))));
+        ReturnValue->SetVariable(p_GetSymbolID("*standard-output*"),Value::MakeExternal(std::make_unique<MBUtility::TerminalOutput>()));
         return ReturnValue;
     }
 }

@@ -194,7 +194,6 @@ namespace MBLisp
         Value p_Eval(std::vector<StackFrame> CurrentCallStack);
         Value p_Eval(std::shared_ptr<Scope> CurrentScope,Ref<OpCodeList> OpCodes,IPIndex  Offset = 0);
         //Value p_Eval(std::shared_ptr<Scope> AssociatedScope,FunctionDefinition& FunctionToExecute,std::vector<Value> Arguments);
-        Value p_Eval(Ref<Scope> CurrentScope,Value Callable,std::vector<Value> Arguments);
 
         void p_SkipWhiteSpace(MBUtility::StreamReader& Content);
         
@@ -242,18 +241,24 @@ namespace MBLisp
         Evaluator();
 
         Ref<Scope> CreateDefaultScope();
+
         template<typename... ArgTypes>
-        void AddMethod(std::string const& MethodName,Value Callable)
+        void AddMethod(Ref<Scope> ScopeToModify,std::string const& MethodName,Value Callable)
         {
             std::vector<ClassID> Types;
             p_AddTypes<ArgTypes...>(Types);
             SymbolID GenericSymbol = p_GetSymbolID(MethodName);
-            if(m_GlobalScope->TryGet(GenericSymbol) == nullptr)
+            if(ScopeToModify->TryGet(GenericSymbol) == nullptr)
             {
-                 m_GlobalScope->SetVariable(GenericSymbol,GenericFunction());
+                 ScopeToModify->SetVariable(GenericSymbol,GenericFunction());
             }
-            GenericFunction& AssociatedFunction = m_GlobalScope->FindVariable(GenericSymbol).GetType<GenericFunction>();
+            GenericFunction& AssociatedFunction = ScopeToModify->FindVariable(GenericSymbol).GetType<GenericFunction>();
             AssociatedFunction.AddMethod(std::move(Types),std::move(Callable));
+        }
+        template<typename... ArgTypes>
+        void AddMethod(std::string const& MethodName,Value Callable)
+        {
+            AddMethod<ArgTypes...>(m_GlobalScope,MethodName,std::move(Callable));
         }
         SymbolID GenerateSymbol();
 
@@ -262,5 +267,6 @@ namespace MBLisp
 
         void LoadStd();
         void Eval(std::filesystem::path const& SourceFile);
+        Value Eval(Ref<Scope> CurrentScope,Value Callable,std::vector<Value> Arguments);
     };
 }
