@@ -178,6 +178,10 @@ namespace MBLisp
         //special stuff
         static Value GetInternalModule BUILTIN_ARGLIST;
         static Value InternalModules BUILTIN_ARGLIST;
+        static Value SetName_Macro BUILTIN_ARGLIST;
+        static Value SetName_Lambda BUILTIN_ARGLIST;
+        static Value SetName_Generic BUILTIN_ARGLIST;
+
 
         std::unordered_map<std::string,std::unique_ptr<Module>> m_BuiltinModules;
         

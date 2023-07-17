@@ -1234,6 +1234,7 @@ namespace MBLisp
     Value Evaluator::p_ReadSymbol(Ref<Scope> ReadScope,ReadTable const& Table,MBUtility::StreamReader& Content)
     {
         Value ReturnValue;
+        size_t Position = Content.Position();
         //TODO improve...
         std::string SymbolString = Content.ReadWhile([](char CharToRead)
                 {
@@ -1258,7 +1259,7 @@ namespace MBLisp
         else
         {
             Symbol NewSymbol = Symbol(p_GetSymbolID(SymbolString));
-            NewSymbol.Position = Content.Position();
+            NewSymbol.Position = Position;
             ReturnValue = NewSymbol;
             for(auto const& ExpandPairs : Table.ExpandMappings)
             {
@@ -1461,6 +1462,8 @@ namespace MBLisp
         m_GlobalScope->SetVariable(p_GetSymbolID("bool_t"),ClassDefinition(Value::GetTypeTypeID<bool>()));
         m_GlobalScope->SetVariable(p_GetSymbolID("dict_t"),ClassDefinition(Value::GetTypeTypeID<Dict>()));
         m_GlobalScope->SetVariable(p_GetSymbolID("null_t"),ClassDefinition(Value::GetTypeTypeID<Null>()));
+        m_GlobalScope->SetVariable(p_GetSymbolID("function_t"),ClassDefinition(Value::GetTypeTypeID<Function>()));
+        m_GlobalScope->SetVariable(p_GetSymbolID("lambda_t"),ClassDefinition(Value::GetTypeTypeID<Lambda>()));
         m_GlobalScope->SetVariable(p_GetSymbolID("any_t"),ClassDefinition(0));
         
         //list
@@ -1726,8 +1729,28 @@ namespace MBLisp
         ReturnValue->SetParentScope(m_GlobalScope);
         ReturnValue->SetVariable(p_GetSymbolID("*READTABLE*"),Value::MakeExternal(
                     ReadTable(m_GlobalScope->FindVariable(p_GetSymbolID("*READTABLE*")).GetType<ReadTable>())));
-        ReturnValue->SetVariable(p_GetSymbolID("*standard-input*"),Value::MakeExternal(MBUtility::StreamReader(std::make_unique<MBLSP::TerminalInput>(&std::cin))));
-        ReturnValue->SetVariable(p_GetSymbolID("*standard-output*"),Value::MakeExternal(std::make_unique<MBUtility::TerminalOutput>()));
+        ReturnValue->SetVariable(p_GetSymbolID("*standard-input*"),Value::MakeExternal(MBUtility::StreamReader(std::make_unique<MBLSP::TerminalInput>())));
+        ReturnValue->SetVariable(p_GetSymbolID("*standard-output*"),Value::MakeExternal(
+                    std::unique_ptr<MBUtility::MBOctetOutputStream>( new MBUtility::TerminalOutput())));
+        return ReturnValue;
+    }
+    Value Evaluator::SetName_Macro BUILTIN_ARGLIST
+    {
+        Value ReturnValue;
+        Arguments[0].GetType<Macro>().Name = Arguments[1].GetType<String>();
+
+        return ReturnValue;
+    }
+    Value Evaluator::SetName_Lambda BUILTIN_ARGLIST
+    {
+        Value ReturnValue;
+        Arguments[0].GetType<Lambda>().Name = Arguments[1].GetType<String>();
+        return ReturnValue;
+    }
+    Value Evaluator::SetName_Generic BUILTIN_ARGLIST
+    {
+        Value ReturnValue;
+        Arguments[0].GetType<GenericFunction>().Name = Arguments[1].GetType<String>();
         return ReturnValue;
     }
 }

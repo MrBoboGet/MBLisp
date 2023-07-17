@@ -67,6 +67,7 @@ namespace MBLisp
     {
         std::shared_ptr<FunctionDefinition> Definition;
         std::shared_ptr<Scope> AssociatedScope;
+        std::string Name;
     };
     class Evaluator;
     typedef Value (*BuiltinFuncType)(Evaluator&,Ref<Scope>,std::vector<Value>&);
@@ -82,6 +83,7 @@ namespace MBLisp
     struct Macro
     {
         std::shared_ptr<Value> Callable;
+        std::string Name;
     };
     
 
@@ -616,7 +618,6 @@ public:
         //un specified type is specificty 0, the last used alternative
         std::vector<Value> m_Callables;
         std::vector<std::vector<ClassID>> m_CallablesOverrides;
-        
         std::vector<std::vector<std::pair<ClassID,size_t>>> m_Specifications;
 
 
@@ -624,6 +625,7 @@ public:
         bool p_TypesAreSatisifed(std::vector<ClassID> const& Overrides,std::vector<std::vector<ClassID>> const& ArgumentsClasses);
         std::vector<ClassID> p_GetValueTypes(Value const& ValueToInspect);
     public:
+        std::string Name;
         void AddMethod(std::vector<ClassID> OverridenTypes,Value Callable);
         //TODO more efficient implementation, the current one is the most naive one
         Value* GetMethod(std::vector<Value>& Arguments);
