@@ -277,7 +277,14 @@ public:
                 {
                     return *std::get<Ref<ExternalValue>>(m_Data);
                 }
-                return std::get<Ref<ExternalValue>>(m_Data)->GetType<T>();
+                if(IsType<Value>())
+                {
+                    return std::get<Ref<Value>>(m_Data)->GetType<T>();
+                }
+                else
+                {
+                    return std::get<Ref<ExternalValue>>(m_Data)->GetType<T>();
+                }
             }
             throw std::runtime_error("Invalid type access: Value was not of type "+std::string(typeid(T).name()));
         }
@@ -460,13 +467,27 @@ public:
         Ref<T> GetRef()
         {
             static_assert(IsReferenceType<T>(),"Can only get reference to value type");
-            return std::get<Ref<T>>(m_Data);
+            if(std::holds_alternative<Ref<Value>>(m_Data))
+            {
+                return std::get<Ref<Value>>(m_Data)->GetRef<T>();
+            }
+            else
+            {
+                return std::get<Ref<T>>(m_Data);
+            }
         } 
         template<typename T>
         Ref<T> const GetRef() const
         {
             static_assert(IsReferenceType<T>(),"Can only get reference to value type");
-            return std::get<Ref<T>>(m_Data);
+            if(std::holds_alternative<Ref<Value>>(m_Data))
+            {
+                return std::get<Ref<Value>>(m_Data)->GetRef<T>();
+            }
+            else
+            {
+                return std::get<Ref<T>>(m_Data);
+            }
         } 
         template<typename T>
         T& GetType()

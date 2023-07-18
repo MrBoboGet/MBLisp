@@ -126,6 +126,7 @@ namespace MBLisp
         static Value Minus_Int BUILTIN_ARGLIST;
 
         static Value In_String BUILTIN_ARGLIST;
+        static Value In_Environment BUILTIN_ARGLIST;
         static Value Str_Symbol BUILTIN_ARGLIST;
         static Value Str_Int BUILTIN_ARGLIST;
         static Value Str_Bool BUILTIN_ARGLIST;
@@ -257,6 +258,7 @@ namespace MBLisp
                  ScopeToModify->SetVariable(GenericSymbol,GenericFunction());
             }
             GenericFunction& AssociatedFunction = ScopeToModify->FindVariable(GenericSymbol).GetType<GenericFunction>();
+            AssociatedFunction.Name = MethodName;
             AssociatedFunction.AddMethod(std::move(Types),std::move(Callable));
         }
         template<typename... ArgTypes>

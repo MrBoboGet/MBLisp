@@ -464,6 +464,12 @@ namespace MBLisp
     {
         return Arguments[0].GetType<String>().find(Arguments[0].GetType<String>()) != std::string::npos;
     }
+    Value Evaluator::In_Environment BUILTIN_ARGLIST
+    {
+        Scope& Envir = Arguments[1].GetType<Scope>();
+        Symbol& SymbolToCheck = Arguments[0].GetType<Symbol>();
+        return Envir.TryGet(SymbolToCheck.ID) != nullptr;
+    }
     Value Evaluator::Str_Symbol BUILTIN_ARGLIST
     {
         return AssociatedEvaluator.GetSymbolString(Arguments[0].GetType<Symbol>().ID);
@@ -650,13 +656,13 @@ namespace MBLisp
             Lambda& AssociatedLambda = ObjectToCall.GetType<Lambda>();
             if(Arguments.size() < AssociatedLambda.Definition->Arguments.size())
             {
-                throw std::runtime_error("To few arguments for function call");
+                throw std::runtime_error("To few arguments for function call with function \""+AssociatedLambda.Name+"\"");
             }
             if(AssociatedLambda.Definition->RestParameter == 0)
             {
                 if(Arguments.size() > AssociatedLambda.Definition->Arguments.size())
                 {
-                    throw std::runtime_error("To many arguments for function call");
+                    throw std::runtime_error("To many arguments for function call \""+AssociatedLambda.Name+"\"");
                 }
             }
             StackFrame NewStackFrame(OpCodeExtractor(AssociatedLambda.Definition->Instructions));
@@ -709,7 +715,7 @@ namespace MBLisp
             Value* Callable = GenericToInvoke.GetMethod(Arguments);
             if(Callable == nullptr)
             {
-                throw std::runtime_error("No method associated with the argument list");   
+                throw std::runtime_error("No method associated with the argument list for generic \""+GenericToInvoke.Name+"\"");   
             }
             p_Invoke(*Callable,Arguments,CurrentCallStack);
         }
@@ -1464,6 +1470,8 @@ namespace MBLisp
         m_GlobalScope->SetVariable(p_GetSymbolID("null_t"),ClassDefinition(Value::GetTypeTypeID<Null>()));
         m_GlobalScope->SetVariable(p_GetSymbolID("function_t"),ClassDefinition(Value::GetTypeTypeID<Function>()));
         m_GlobalScope->SetVariable(p_GetSymbolID("lambda_t"),ClassDefinition(Value::GetTypeTypeID<Lambda>()));
+        m_GlobalScope->SetVariable(p_GetSymbolID("macro_t"),ClassDefinition(Value::GetTypeTypeID<Macro>()));
+        m_GlobalScope->SetVariable(p_GetSymbolID("generic_t"),ClassDefinition(Value::GetTypeTypeID<GenericFunction>()));
         m_GlobalScope->SetVariable(p_GetSymbolID("any_t"),ClassDefinition(0));
         
         //list
@@ -1504,11 +1512,18 @@ namespace MBLisp
         //Strings
         AddMethod<String,String>("split",Split_String);
         AddMethod<String,String>("in",In_String);
+        AddMethod<Symbol,Scope>("in",In_Environment);
         AddMethod<Symbol>("str",Str_Symbol);
         AddMethod<bool>("str",Str_Bool);
         AddMethod<Null>("str",Str_Null);
         AddMethod<Float>("str",Str_Float);
         AddMethod<Int>("str",Str_Int);
+       
+
+        //stuff
+        AddMethod<Macro,String>("set-name",SetName_Macro);
+        AddMethod<Lambda,String>("set-name",SetName_Lambda);
+        AddMethod<GenericFunction,String>("set-name",SetName_Generic);
         
         m_GlobalScope->SetVariable(p_GetSymbolID("*READTABLE*"),Value::MakeExternal(ReadTable()));
         //Readtables
@@ -1607,7 +1622,7 @@ namespace MBLisp
         }
         try
         {
-            AssociatedEvaluator.p_LoadFile(CurrentScope,SourceFilepath);
+          AssociatedEvaluator.p_LoadFile(CurrentScope,SourceFilepath);
         }
         catch(LookupError const& e)
         {
