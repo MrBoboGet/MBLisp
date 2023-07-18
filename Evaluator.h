@@ -196,8 +196,8 @@ namespace MBLisp
 
         bool p_ValueIsType(ClassID TypeValue,Value const& ValueToInspect);
 
-        void p_Invoke(Value& ObjectToCall,std::vector<Value>& Arguments,std::vector<StackFrame>& CurrentCallStack);
-        void p_EmitSignal(ExecutionState& State,Value& SignalToEmit,bool ForceUnwind);
+        void p_Invoke(Value& ObjectToCall,std::vector<Value>& Arguments,ExecutionState& CurrentState);
+        void p_EmitSignal(ExecutionState& State,Value SignalToEmit,bool ForceUnwind);
         //The fundamental dispatch loop
         Value p_Eval(ExecutionState& CurrentState);
         Value p_Eval(std::vector<StackFrame> CurrentCallStack);

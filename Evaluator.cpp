@@ -641,10 +641,12 @@ namespace MBLisp
     {
         std::vector<StackFrame> CurrentCallStack = {StackFrame(OpCodeExtractor())};
         CurrentCallStack.back().StackScope = CurrentScope;
-        p_Invoke(Callable,Arguments,CurrentCallStack);
-        return p_Eval(std::move(CurrentCallStack));
+        ExecutionState NewState;
+        NewState.StackFrames = std::move(CurrentCallStack);
+        p_Invoke(Callable,Arguments,NewState);
+        return p_Eval(NewState);
     }
-    void Evaluator::p_EmitSignal(ExecutionState& CurrentState,Value& SignalValue,bool ForceUnwind)
+    void Evaluator::p_EmitSignal(ExecutionState& CurrentState,Value SignalValue,bool ForceUnwind)
     {
         //the signal form returns a value in the current frame, which
         int CurrentFrameIndex = CurrentState.StackFrames.size()-1;
@@ -685,26 +687,38 @@ namespace MBLisp
             }
         }
     }
-    void Evaluator::p_Invoke(Value& ObjectToCall,std::vector<Value>& Arguments,std::vector<StackFrame>& CurrentCallStack)
+    void Evaluator::p_Invoke(Value& ObjectToCall,std::vector<Value>& Arguments,ExecutionState& CurrentState)
     {
+        auto& CurrentCallStack = CurrentState.StackFrames;
         if(ObjectToCall.IsType<Function>())
         {
             BuiltinFuncType AssociatedFunc = ObjectToCall.GetType<Function>().Func;
             assert(AssociatedFunc != nullptr);
-            CurrentCallStack.back().ArgumentStack.push_back(AssociatedFunc(*this,CurrentCallStack.back().StackScope,Arguments));
+            try
+            {
+                CurrentCallStack.back().ArgumentStack.push_back(AssociatedFunc(*this,CurrentCallStack.back().StackScope,Arguments));
+            }
+            catch(std::exception const& e)
+            {
+                p_EmitSignal(CurrentState,e.what(),true);
+            }
         }
         else if(ObjectToCall.IsType<Lambda>())
         {
             Lambda& AssociatedLambda = ObjectToCall.GetType<Lambda>();
             if(Arguments.size() < AssociatedLambda.Definition->Arguments.size())
             {
-                throw std::runtime_error("To few arguments for function call with function \""+AssociatedLambda.Name+"\"");
+                //throw std::runtime_error("To few arguments for function call with function \""+AssociatedLambda.Name+"\"");
+                p_EmitSignal(CurrentState,"To few arguments for function call with function \""+AssociatedLambda.Name+"\"",true);
+                return;
             }
             if(AssociatedLambda.Definition->RestParameter == 0)
             {
                 if(Arguments.size() > AssociatedLambda.Definition->Arguments.size())
                 {
-                    throw std::runtime_error("To many arguments for function call \""+AssociatedLambda.Name+"\"");
+                    //throw std::runtime_error("To many arguments for function call \""+AssociatedLambda.Name+"\"");
+                    p_EmitSignal(CurrentState,"To many arguments for function call \""+AssociatedLambda.Name+"\"",true);
+                    return;
                 }
             }
             StackFrame NewStackFrame(OpCodeExtractor(AssociatedLambda.Definition->Instructions));
@@ -746,7 +760,7 @@ namespace MBLisp
                 {
                     Args.push_back(Arg);
                 }
-                p_Invoke(*NewInstance->AssociatedClass->Constructor,Args,CurrentCallStack);
+                p_Invoke(*NewInstance->AssociatedClass->Constructor,Args,CurrentState);
                 CurrentCallStack.back().PopExtra = 1;
             }
             CurrentCallStack.push_back(std::move(NewStackFrame));
@@ -757,9 +771,11 @@ namespace MBLisp
             Value* Callable = GenericToInvoke.GetMethod(Arguments);
             if(Callable == nullptr)
             {
-                throw std::runtime_error("No method associated with the argument list for generic \""+GenericToInvoke.Name+"\"");   
+                //throw std::runtime_error("No method associated with the argument list for generic \""+GenericToInvoke.Name+"\"");   
+                p_EmitSignal(CurrentState,"No method associated with the argument list for generic \""+GenericToInvoke.Name+"\"",true);
+                return;
             }
-            p_Invoke(*Callable,Arguments,CurrentCallStack);
+            p_Invoke(*Callable,Arguments,CurrentState);
         }
         else
         {
@@ -841,7 +857,13 @@ namespace MBLisp
             else if(CurrentCode.IsType<OpCode_PushVar>())
             {
                 OpCode_PushVar& PushCode = CurrentCode.GetType<OpCode_PushVar>();
-                Value VarToPush = CurrentFrame.StackScope->FindVariable(PushCode.ID);
+                Value* VarPointer = CurrentFrame.StackScope->TryGet(PushCode.ID);
+                if(VarPointer == nullptr)
+                {
+                    p_EmitSignal(CurrentState,"Error finding variable with name \""+GetSymbolString(PushCode.ID)+"\"",true);
+                    continue;
+                }
+                Value VarToPush = *VarPointer;
                 if(!VarToPush.IsType<DynamicVariable>())
                 {
                     CurrentFrame.ArgumentStack.push_back(std::move(VarToPush));
@@ -924,7 +946,7 @@ namespace MBLisp
                 {
                     CurrentFrame.ArgumentStack.pop_back();
                 }
-                p_Invoke(FunctionToCall,Arguments,StackFrames);
+                p_Invoke(FunctionToCall,Arguments,CurrentState);
             }
             else if(CurrentCode.IsType<OpCode_Macro>())
             {
@@ -1010,7 +1032,9 @@ namespace MBLisp
                     Value const& TypeValue = CurrentFrame.ArgumentStack[StackOffset];
                     if(!TypeValue.IsType<ClassDefinition>())
                     {
-                        throw std::runtime_error("signal handler value specifier evaluated to non class type");
+                        //throw std::runtime_error("signal handler value specifier evaluated to non class type");
+                        p_EmitSignal(CurrentState,"signal handler value specifier evaluated to non class type",true);
+                        continue;
                     }
                     SignalHandler NewSignalHandler;
                     NewSignalHandler.HandledType = TypeValue.GetType<ClassDefinition>().ID;
@@ -1071,24 +1095,30 @@ namespace MBLisp
                 {
                     if(!Arguments[i].IsType<Scope>())
                     {
-                        //TODO make this signal  instead
-                        throw std::runtime_error("first part of binding triplet has to be a scope");
+                        //throw std::runtime_error("first part of binding triplet has to be a scope");
+                        p_EmitSignal(CurrentState,"first part of binding triplet has to be a scope",true);
+                        continue;
                     }   
                     Scope& ScopeToModify = Arguments[i].GetType<Scope>();
                     if(!Arguments[i+1].IsType<Symbol>())
                     {
-                        //TODO make this signal  instead
-                        throw std::runtime_error("second part of binding triplet has to be a symbol");
+                        //throw std::runtime_error("second part of binding triplet has to be a symbol");
+                        p_EmitSignal(CurrentState,"second part of binding triplet has to be a symbol",true);
+                        continue;
                     }   
                     SymbolID IDToModify = Arguments[i+1].GetType<Symbol>().ID;
                     Value* VariableToInspect = ScopeToModify.TryGet(IDToModify);
                     if(VariableToInspect == nullptr)
                     {
-                        throw std::runtime_error("couldn't find dynamic variable  in scope");
+                        //throw std::runtime_error("couldn't find dynamic variable  in scope");
+                        p_EmitSignal(CurrentState,"couldn't find dynamic variable  in scope",true);
+                        continue;
                     }
                     if(!VariableToInspect->IsType<DynamicVariable>())
                     {
-                        throw std::runtime_error("variable was not a dynamic variable");
+                        //throw std::runtime_error("variable was not a dynamic variable");
+                        p_EmitSignal(CurrentState,"variable was not a dynamic variable",true);
+                        continue;
                     }
                     ModifiedBindings.push_back(VariableToInspect->GetType<DynamicVariable>().ID);
                     NewValues.push_back(std::move(Arguments[i+2]));
@@ -1121,7 +1151,9 @@ namespace MBLisp
                     CurrentFrame.ArgumentStack.pop_back();
                     if(!ScopeValue.IsType<Scope>())
                     {
-                        throw std::runtime_error("argument to eval not of type environment");
+                        //throw std::runtime_error("argument to eval not of type environment");
+                        p_EmitSignal(CurrentState,"argument to eval not of type environment",true);
+                        continue;
                     }
                     ScopeToUse = ScopeValue.GetRef<Scope>();
                 }
