@@ -1,18 +1,29 @@
 (set lsp (get-internal-module "lsp"))
-
 (set handler (lsp:create-lsp-server))
-
 (defun insert-elements (out-list in-list)
   (doit e in-list
     (append out-list e)
   )
 )
-
 (defun test-func () (print "hello world"))
-
+(defun if-token-extractor (envir ast)
+   (set return-value (list)) 
+   (doit e ast
+        (if (&& (eq (type e) symbol_t) (|| (eq (str e) "if") (eq (str e) "else")))
+            (append return-value (list e "macro"))
+         else 
+            (insert-elements return-value (default-extractor envir e))
+        )
+   )
+   return-value
+)
+(set overriden-extractors (make-dict ('if if-token-extractor)))
 (defun default-extractor (envir ast)
     (set return-value (list))
     (if (eq (type ast) symbol_t)
+      (if (< (position ast) 0)
+        (return return-value)
+      ) 
       (if (in ast envir)
         (set value (index envir ast))
         (if (eq (type value) macro_t)
@@ -21,14 +32,23 @@
           (append return-value (list ast "function"))
          else if (eq (type value) lambda_t)
           (append return-value (list ast "function"))
+         else if (eq (type value) generic_t)
+          (append return-value (list ast "function"))
          else 
           (append return-value (list ast "var"))
         )
-
+       else if (is-special ast)
+        (append return-value (list ast "macro"))
        else 
         (append return-value (list ast "var"))
       )
      else if (eq (type ast) list_t)
+       (if (not (< (len ast) 1))
+           (set head (index ast 0))
+           (if (&& (eq (type head) symbol_t) (in head overriden-extractors))
+             (return ((index overriden-extractors head) envir ast))
+           )
+       )
        (doit sub-form ast
          (insert-elements return-value (default-extractor envir sub-form))
        )

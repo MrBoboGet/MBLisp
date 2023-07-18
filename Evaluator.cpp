@@ -1,5 +1,6 @@
 #include "Evaluator.h"
 #include <MBUtility/StreamReader.h>
+#include "MBLSP/LSP_Structs.h"
 #include "assert.h"
 #include <MBParsing/MBParsing.h>
 
@@ -1524,6 +1525,8 @@ namespace MBLisp
         AddMethod<Macro,String>("set-name",SetName_Macro);
         AddMethod<Lambda,String>("set-name",SetName_Lambda);
         AddMethod<GenericFunction,String>("set-name",SetName_Generic);
+        AddMethod<Symbol>("is-special",IsSpecial_Symbol);
+        AddMethod<Symbol>("position",Position_Symbol);
         
         m_GlobalScope->SetVariable(p_GetSymbolID("*READTABLE*"),Value::MakeExternal(ReadTable()));
         //Readtables
@@ -1590,6 +1593,14 @@ namespace MBLisp
             ReturnValue.push_back(Module.first);
         }
         return ReturnValue;
+    }
+    Value Evaluator::IsSpecial_Symbol BUILTIN_ARGLIST
+    {
+        return Arguments[0].GetType<Symbol>().ID < SymbolID(PrimitiveForms::LAST);
+    }
+    Value Evaluator::Position_Symbol BUILTIN_ARGLIST
+    {
+        return Arguments[0].GetType<Symbol>().Position;
     }
     Evaluator::Evaluator()
     {

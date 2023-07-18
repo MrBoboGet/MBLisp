@@ -179,6 +179,8 @@ namespace MBLisp
         //special stuff
         static Value GetInternalModule BUILTIN_ARGLIST;
         static Value InternalModules BUILTIN_ARGLIST;
+        static Value IsSpecial_Symbol BUILTIN_ARGLIST;
+        static Value Position_Symbol BUILTIN_ARGLIST;
         static Value SetName_Macro BUILTIN_ARGLIST;
         static Value SetName_Lambda BUILTIN_ARGLIST;
         static Value SetName_Generic BUILTIN_ARGLIST;

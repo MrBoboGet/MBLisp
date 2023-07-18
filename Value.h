@@ -13,7 +13,7 @@ namespace MBLisp
     typedef int_least64_t Int;
     typedef double Float;
     typedef uint_least32_t SymbolID;
-    typedef uint_least32_t PositionType;
+    typedef int_least32_t PositionType;
     typedef int FunctionID;
     typedef int MacroID;
     typedef uint_least32_t ClassID;
