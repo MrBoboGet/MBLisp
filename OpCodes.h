@@ -71,11 +71,11 @@ namespace MBLisp
     };
     struct OpCode_Signal
     {
+        bool HasForced = false;
     };
     //as many values on the stack, denoting type, as signal handlers pushed here
     struct OpCode_AddSignalHandlers
     {
-        IPIndex HandlersEnd = -1;
         struct SignalHandler
         {
             SymbolID BoundVariable = -1;
@@ -85,6 +85,7 @@ namespace MBLisp
     };
     struct OpCode_SignalHandler_Done
     {
+        IPIndex HandlersEnd = -1;
     };
     struct OpCode_RemoveSignalHandlers
     {

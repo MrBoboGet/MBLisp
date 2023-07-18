@@ -644,6 +644,47 @@ namespace MBLisp
         p_Invoke(Callable,Arguments,CurrentCallStack);
         return p_Eval(std::move(CurrentCallStack));
     }
+    void Evaluator::p_EmitSignal(ExecutionState& CurrentState,Value& SignalValue,bool ForceUnwind)
+    {
+        //the signal form returns a value in the current frame, which
+        int CurrentFrameIndex = CurrentState.StackFrames.size()-1;
+        auto& CurrentFrame = CurrentState.StackFrames.back();
+        bool SignalFound = false;
+        auto& StackFrames = CurrentState.StackFrames;
+        for(int i = CurrentFrameIndex; i >= 0; i--)
+        {
+            if (SignalFound) break;
+            auto& CandidateFrame = CurrentState.StackFrames[i];
+            for(int j = int(CandidateFrame.ActiveSignalHandlers.size())-1;j >= 0;j--)
+            {
+                auto const& Handler = CandidateFrame.ActiveSignalHandlers[j];
+                if(p_ValueIsType(Handler.HandledType,SignalValue))
+                {
+                    //add frame to stack
+                    StackFrame NewFrame = StackFrame(CandidateFrame.ExecutionPosition);
+                    NewFrame.StackScope = CandidateFrame.StackScope;
+                    NewFrame.ExecutionPosition.SetIP(Handler.SignalBegin);
+                    NewFrame.SignalFrameIndex = i;
+                    NewFrame.StackScope->OverrideVariable(Handler.BoundValue,std::move(SignalValue));
+                    StackFrames.push_back(std::move(NewFrame));
+                    SignalFound = true;
+                    if(ForceUnwind)
+                    {
+                        CurrentState.UnwindForced = true;
+                    }
+                    break;
+                }
+            }
+        }
+        if(!SignalFound)
+        {
+            CurrentFrame.ArgumentStack.push_back(false);
+            if(ForceUnwind)
+            {
+                throw std::runtime_error("Uncaught mandatory signal");   
+            }
+        }
+    }
     void Evaluator::p_Invoke(Value& ObjectToCall,std::vector<Value>& Arguments,std::vector<StackFrame>& CurrentCallStack)
     {
         if(ObjectToCall.IsType<Function>())
@@ -931,38 +972,33 @@ namespace MBLisp
                 assert(CurrentFrame.ArgumentStack.size() > 0);
                 Value SignalValue = std::move(CurrentFrame.ArgumentStack.back());
                 CurrentFrame.ArgumentStack.pop_back();
-                //the signal form returns a value in the current frame, which
-                int CurrentFrameIndex = CurrentState.StackFrames.size()-1;
-                bool SignalFound = false;
-                for(int i = CurrentFrameIndex; i >= 0; i--)
+                bool IsForced = false;
+                if(CurrentCode.GetType<OpCode_Signal>().HasForced)
                 {
-                    if (SignalFound) break;
-                    auto& CandidateFrame = CurrentState.StackFrames[i];
-                    for(int j = int(CandidateFrame.ActiveSignalHandlers.size())-1;j >= 0;j--)
+                    Value IsForcedValue = std::move(CurrentFrame.ArgumentStack.back());
+                    CurrentFrame.ArgumentStack.pop_back();
+                    if(IsForcedValue.IsType<bool>() && IsForcedValue.GetType<bool>())
                     {
-                        auto const& Handler = CandidateFrame.ActiveSignalHandlers[j];
-                        if(p_ValueIsType(Handler.HandledType,SignalValue))
-                        {
-                            //add frame to stack
-                            StackFrame NewFrame = StackFrame(CandidateFrame.ExecutionPosition);
-                            NewFrame.StackScope = CandidateFrame.StackScope;
-                            NewFrame.ExecutionPosition.SetIP(Handler.SignalBegin);
-                            NewFrame.SignalFrameIndex = i;
-                            NewFrame.StackScope->OverrideVariable(Handler.BoundValue,std::move(SignalValue));
-                            StackFrames.push_back(std::move(NewFrame));
-                            SignalFound = true;
-                            break;
-                        }
+                        IsForced = true;
                     }
                 }
-                if(!SignalFound)
-                {
-                    CurrentFrame.ArgumentStack.push_back(false);
-                }
+                p_EmitSignal(CurrentState,SignalValue,IsForced);
             }
             else if(CurrentCode.IsType<OpCode_SignalHandler_Done>())
             {
-                CurrentFrame.ExecutionPosition.SetEnd();
+                if(!CurrentState.UnwindForced)
+                {
+                    CurrentFrame.ExecutionPosition.SetEnd();
+                }
+                else
+                {
+                    assert(CurrentFrame.SignalFrameIndex != -1);
+                    CurrentState.UnwindForced = false;
+                    CurrentState.UnwindingStack = true;
+                    CurrentState.FrameTarget = CurrentFrame.SignalFrameIndex;
+                    StackFrames[CurrentFrame.SignalFrameIndex].ExecutionPosition.SetIP(CurrentCode.GetType<OpCode_SignalHandler_Done>().HandlersEnd);
+                    StackFrames[CurrentFrame.SignalFrameIndex].ArgumentStack.push_back(false);
+                }
             } 
             else if(CurrentCode.IsType<OpCode_AddSignalHandlers>())
             {
@@ -1015,6 +1051,7 @@ namespace MBLisp
             else if(CurrentCode.IsType<OpCode_Unwind>())
             {
                 assert(CurrentFrame.SignalFrameIndex != -1);
+                CurrentState.UnwindForced = false;
                 CurrentState.UnwindingStack = true;
                 CurrentState.FrameTarget = CurrentFrame.SignalFrameIndex;
                 StackFrames[CurrentFrame.SignalFrameIndex].ExecutionPosition.SetIP(CurrentCode.GetType<OpCode_Unwind>().HandlersEnd);
@@ -1107,6 +1144,10 @@ namespace MBLisp
     bool Evaluator::p_ValueIsType(ClassID TypeValue,Value const& ValueToInspect)
     {
         bool ReturnValue = false;
+        if(TypeValue == 0) 
+        {
+            return true;
+        }
         if(ValueToInspect.IsType<ClassInstance>())
         {
             std::vector<ClassID> const& Types = ValueToInspect.GetType<ClassInstance>().AssociatedClass->Types;
@@ -1473,6 +1514,7 @@ namespace MBLisp
         m_GlobalScope->SetVariable(p_GetSymbolID("lambda_t"),ClassDefinition(Value::GetTypeTypeID<Lambda>()));
         m_GlobalScope->SetVariable(p_GetSymbolID("macro_t"),ClassDefinition(Value::GetTypeTypeID<Macro>()));
         m_GlobalScope->SetVariable(p_GetSymbolID("generic_t"),ClassDefinition(Value::GetTypeTypeID<GenericFunction>()));
+        m_GlobalScope->SetVariable(p_GetSymbolID("type_t"),ClassDefinition(Value::GetTypeTypeID<ClassDefinition>()));
         m_GlobalScope->SetVariable(p_GetSymbolID("any_t"),ClassDefinition(0));
         
         //list

@@ -51,6 +51,7 @@ namespace MBLisp
         //-1 means last, other value entails being in a signal
         int FrameTarget = -1;
         bool UnwindingStack = false;
+        bool UnwindForced = false;
         std::vector<StackFrame> StackFrames;
         std::unordered_map<DynamicVarID,std::vector<Value>> DynamicBindings;
         std::vector<std::vector<DynamicVarID>> BindingStack;
@@ -196,6 +197,7 @@ namespace MBLisp
         bool p_ValueIsType(ClassID TypeValue,Value const& ValueToInspect);
 
         void p_Invoke(Value& ObjectToCall,std::vector<Value>& Arguments,std::vector<StackFrame>& CurrentCallStack);
+        void p_EmitSignal(ExecutionState& State,Value& SignalToEmit,bool ForceUnwind);
         //The fundamental dispatch loop
         Value p_Eval(ExecutionState& CurrentState);
         Value p_Eval(std::vector<StackFrame> CurrentCallStack);

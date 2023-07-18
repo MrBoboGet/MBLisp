@@ -5,6 +5,7 @@
     (append out-list e)
   )
 )
+
 (defun test-func () (print "hello world"))
 (defun if-token-extractor (envir ast)
    (set return-value (list)) 
@@ -17,6 +18,7 @@
    )
    return-value
 )
+
 (set overriden-extractors (make-dict ('if if-token-extractor)))
 (defun default-extractor (envir ast)
     (set return-value (list))
@@ -34,6 +36,8 @@
           (append return-value (list ast "function"))
          else if (eq (type value) generic_t)
           (append return-value (list ast "function"))
+         else if (eq (type value) type_t)
+          (append return-value (list ast "class"))
          else 
           (append return-value (list ast "var"))
         )
@@ -70,7 +74,6 @@
   false
 )
 
-
 (defun open-handler (handler uri content)
   (set new-envir (environment))
   (set (index new-envir 'load-filepath) uri)
@@ -90,7 +93,6 @@
   )
   (lsp:set-document-tokens handler uri semantic-tokens)
 )
-
 (lsp:add-on-open-handler handler open-handler)
 (lsp:handle-requests handler)
 (print "adsadasdsadasdsadasd")
