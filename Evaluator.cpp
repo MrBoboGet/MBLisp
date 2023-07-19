@@ -376,7 +376,7 @@ namespace MBLisp
     }
     Value Evaluator::Index_List BUILTIN_ARGLIST
     {
-        assert(Arguments.size() >= 2 && Arguments[0].IsType<List>());
+        assert(Arguments.size() >= 2 && Arguments[0].IsType<List>() && Arguments[0].GetRef<List>() != nullptr);
         List& AssociatedList = Arguments[0].GetType<List>();
         if(!Arguments[1].IsType<Int>())
         {
@@ -388,18 +388,22 @@ namespace MBLisp
             throw std::runtime_error("Index out of range when indexing list"); 
         }
         Value& AssociatedValue = AssociatedList[Index];
+        assert(!AssociatedValue.IsType<List>() || AssociatedValue.GetRef<List>() != nullptr);
         if(!AssociatedValue.IsType<Value>())
         {
             AssociatedValue.MakeRef();
         }
+        assert(!AssociatedValue.IsType<List>() || AssociatedValue.GetRef<List>() != nullptr);
         return AssociatedValue;
     }
     Value Evaluator::Append_List BUILTIN_ARGLIST
     {
-        List& AssociatdList = Arguments[0].GetType<List>();
+        assert(!Arguments[0].IsType<List>() || Arguments[0].GetRef<List>() != nullptr);
+        Ref<List> AssociatdList = Arguments[0].GetRef<List>();
         for(int i = 1; i < Arguments.size();i++)
         {
-            AssociatdList.push_back(Arguments[i]);
+            AssociatdList->push_back(Arguments[i]);
+            assert(!Arguments[i].IsType<List>() || Arguments[i].GetRef<List>() != nullptr);
         }
         return AssociatdList;
     }
@@ -416,12 +420,12 @@ namespace MBLisp
             {
                 for(auto& SubArgument : Argument.GetType<List>())
                 {
-                    ReturnValue.push_back(std::move(SubArgument));
+                    ReturnValue.push_back(SubArgument);
                 }
             }
             else
             {
-                ReturnValue.push_back(std::move(Argument));
+                ReturnValue.push_back(Argument);
             }
         }
         return ReturnValue;
@@ -532,6 +536,29 @@ namespace MBLisp
             ReturnValue->MakeRef();
         }
         return *ReturnValue;
+    }
+    Value Evaluator::Shadow_Environment BUILTIN_ARGLIST
+    {
+        Scope& AssociatedScope = Arguments[0].GetType<Scope>();
+        SymbolID SymbolIndex = Arguments[1].GetType<Symbol>().ID;
+        Value* ReturnValue = AssociatedScope.TryGet(SymbolIndex);
+        if(ReturnValue == nullptr)
+        {
+            AssociatedScope.OverrideVariable(SymbolIndex,Value());
+            ReturnValue = AssociatedScope.TryGet(SymbolIndex);
+            assert(ReturnValue != nullptr);
+        }
+        if(!ReturnValue->IsType<Value>())
+        {
+            ReturnValue->MakeRef();
+        }
+        return *ReturnValue;
+    }
+    Value Evaluator::SetParent_Environment BUILTIN_ARGLIST
+    {
+        Scope& ScopeToModify = Arguments[0].GetType<Scope>();
+        ScopeToModify.SetParentScope(Arguments[1].GetRef<Scope>());
+        return Value();
     }
     Value Evaluator::AddReaderCharacter BUILTIN_ARGLIST
     {
@@ -694,6 +721,11 @@ namespace MBLisp
         {
             BuiltinFuncType AssociatedFunc = ObjectToCall.GetType<Function>().Func;
             assert(AssociatedFunc != nullptr);
+
+            for(auto& Arg : Arguments)
+            {
+                assert(!Arg.IsType<List>() || Arg.GetRef<List>() != nullptr);
+            }
             try
             {
                 CurrentCallStack.back().ArgumentStack.push_back(AssociatedFunc(*this,CurrentCallStack.back().StackScope,Arguments));
@@ -702,6 +734,11 @@ namespace MBLisp
             {
                 p_EmitSignal(CurrentState,e.what(),true);
             }
+            //for(auto& Arg : Arguments)
+            //{
+            //    assert(!Arg.IsType<List>() || Arg.GetRef<List>() != nullptr);
+            //}
+            assert(!CurrentCallStack.back().ArgumentStack.back().IsType<List>() || CurrentCallStack.back().ArgumentStack.back().GetRef<List>() != nullptr);
         }
         else if(ObjectToCall.IsType<Lambda>())
         {
@@ -863,6 +900,7 @@ namespace MBLisp
                     p_EmitSignal(CurrentState,"Error finding variable with name \""+GetSymbolString(PushCode.ID)+"\"",true);
                     continue;
                 }
+                //assert(!VarPointer->IsType<List>() || VarPointer->GetRef<List>() != nullptr);
                 Value VarToPush = *VarPointer;
                 if(!VarToPush.IsType<DynamicVariable>())
                 {
@@ -965,6 +1003,7 @@ namespace MBLisp
                 Value AssignedValue = std::move(*(CurrentFrame.ArgumentStack.end()-1));
                 CurrentFrame.ArgumentStack.pop_back();
                 CurrentFrame.ArgumentStack.pop_back();
+                assert(!SymbolToAssign.IsType<List>() || SymbolToAssign.GetRef<List>() != nullptr);
                 if(SymbolToAssign.IsType<Symbol>())
                 {
                     CurrentFrame.StackScope->SetVariable(SymbolToAssign.GetType<Symbol>().ID,AssignedValue);
@@ -975,17 +1014,19 @@ namespace MBLisp
                     if(auto It = CurrentState.DynamicBindings.find(AssociatedVariable.ID); It != CurrentState.DynamicBindings.end()
                             && It->second.size() != 0)
                     {
-                        It->second.back() = std::move(AssignedValue);
+                        It->second.back() = AssignedValue;
                     }
                     else
                     {
-                        AssociatedVariable.DefaultValue = std::move(AssignedValue);   
+                        AssociatedVariable.DefaultValue = AssignedValue;
                     }
                 }
                 else
                 {
                     SymbolToAssign = AssignedValue;   
                 }
+                assert(!SymbolToAssign.IsType<List>() || SymbolToAssign.GetRef<List>() != nullptr);
+                assert(!AssignedValue.IsType<List>() || AssignedValue.GetRef<List>() != nullptr);
                 CurrentFrame.ArgumentStack.push_back(AssignedValue);
             }
             else if(CurrentCode.IsType<OpCode_Signal>())
@@ -1210,7 +1251,7 @@ namespace MBLisp
         }
         return ValueToExpand;
     }
-    Value Evaluator::p_Expand(std::shared_ptr<Scope> ExpandScope,List& ListToExpand)
+    Value Evaluator::p_Expand(std::shared_ptr<Scope> ExpandScope,List const& ListToExpand)
     {
         Value ReturnValue;
         if(ListToExpand.size() == 0)
@@ -1219,7 +1260,7 @@ namespace MBLisp
         }
         if(ListToExpand[0].IsType<Symbol>())
         {
-            Symbol& HeadSymbol = ListToExpand[0].GetType<Symbol>();
+            Symbol const& HeadSymbol = ListToExpand[0].GetType<Symbol>();
             if(!p_SymbolIsPrimitive(HeadSymbol.ID))
             {
                 if(auto  VarIt = ExpandScope->TryGet(HeadSymbol.ID); VarIt != nullptr && VarIt->IsType<Macro>())
@@ -1395,6 +1436,7 @@ namespace MBLisp
         if(Content.PeekByte() == '(')
         {
             ReturnValue = p_ReadList(AssociatedScope,Table,Content,StreamValue);
+            assert(ReturnValue.GetRef<List>() != nullptr);
         }
         else if(Content.PeekByte() == '"')
         {
@@ -1558,6 +1600,8 @@ namespace MBLisp
 
         //scope
         AddMethod<Scope,Symbol>("index",Index_Environment);
+        AddMethod<Scope,Scope>("set-parent",SetParent_Environment);
+        AddMethod<Scope,Symbol>("shadow",Shadow_Environment);
         //comparisons
         AddMethod<String,String>("eq",Eq_String);
         AddMethod<Symbol,Symbol>("eq",Eq_Symbol);

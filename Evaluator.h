@@ -151,6 +151,8 @@ namespace MBLisp
         static Value Environment BUILTIN_ARGLIST;
         static Value NewEnvironment BUILTIN_ARGLIST;
         static Value Index_Environment BUILTIN_ARGLIST;
+        static Value Shadow_Environment BUILTIN_ARGLIST;
+        static Value SetParent_Environment BUILTIN_ARGLIST;
        
         //Readtable
         static Value AddReaderCharacter BUILTIN_ARGLIST;
@@ -208,7 +210,7 @@ namespace MBLisp
         
 
         Value p_Expand(std::shared_ptr<Scope> ExpandScope,Value ValueToExpand);
-        Value p_Expand(std::shared_ptr<Scope> ExpandScope,List& ListToExpand);
+        Value p_Expand(std::shared_ptr<Scope> ExpandScope,List const& ListToExpand);
 
         //reading
         String p_ReadString(MBUtility::StreamReader& Content);

@@ -8,6 +8,7 @@
 #include <MBUtility/Dynamic.h>
 #include <functional>
 
+#include <assert.h>
 namespace MBLisp
 {
     typedef int_least64_t Int;
@@ -264,7 +265,9 @@ public:
                 }
                 else if constexpr(IsReferenceType<T>())
                 {
-                    return *std::get<Ref<T>>(m_Data);
+                    auto Reference = std::get<Ref<T>>(m_Data);
+                    assert(Reference != nullptr);
+                    return *Reference;
                 }
                 else if constexpr(std::is_same_v<T,String>)
                 {

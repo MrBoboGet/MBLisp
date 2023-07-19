@@ -192,8 +192,7 @@
 (defclass exception () (what "") (constructor (lambda (e message) (set (slot e what) message))))
 
 (defun error (error-signal)
-  (signal error-signal)
-  (print (+ "Un-handled error: " error-signal))
+  (signal error-signal true)
 )
 
 (defun foldl (iterable callable)
@@ -288,4 +287,24 @@
         (if (eq v value) (return true))
     )
     false
+)
+
+(defmacro try  (try-body &rest catch-triplets)
+  (set catch-parts (list))
+  (set i 0)
+  (while (< i (len catch-triplets))
+    (if (eq (index catch-triplets i) 'catch)
+      (set catched-values (. catch-triplets (+ i 1)))
+      (set catch-body (. catch-triplets (+ i 2)))
+      (append catch-body `(unwind))
+      (set catch-body `(progn ,@catch-body)) 
+      (append catch-parts catched-values)
+      (append catch-parts catch-body)
+      (incr i 2)
+     else
+       (error "Non catch-body in try form")
+    )
+    (incr i 1)
+  )
+  `(signal-handlers (progn ,@try-body)  ,@catch-parts)
 )
