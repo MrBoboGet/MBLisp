@@ -78,7 +78,29 @@ namespace MBLisp
         m_CallablesOverrides.push_back(std::move(OverridenTypes));
 
     }
-    bool GenericFunction::p_TypesAreSatisifed(std::vector<ClassID> const& Overrides,std::vector<std::vector<ClassID>> const& ArgumentsClasses)
+    bool GenericFunction::p_TypeIsSatisfied(ClassID Override,Value const& Arg)
+    {
+        bool ReturnValue = true;
+        if(Override == 0)
+        {
+            return true;
+        }
+        if(Arg.IsType<ClassInstance>())
+        {
+            auto const& Types = Arg.GetType<ClassInstance>().AssociatedClass->Types;
+            if(auto It = std::lower_bound(Types.begin(),Types.end(),Override);
+                    !(It != Types.end() && *It == Override))
+            {
+                return false;
+            }
+        }
+        else
+        {
+            return Override == Arg.GetTypeID();
+        }
+        return ReturnValue;
+    }
+    bool GenericFunction::p_TypesAreSatisifed(std::vector<ClassID> const& Overrides,std::vector<Value> const& ArgumentsClasses)
     {
         bool ReturnValue = true;
         if(Overrides.size() > ArgumentsClasses.size())
@@ -87,29 +109,13 @@ namespace MBLisp
         }
         for(int i = 0; i < Overrides.size();i++)
         {
-            if(Overrides[i] == 0)
+            if(!p_TypeIsSatisfied(Overrides[i],ArgumentsClasses[i]))
             {
-                continue;   
-            }
-            if(auto It = std::lower_bound(ArgumentsClasses[i].begin(),ArgumentsClasses[i].end(),Overrides[i]);
-                    !(It != ArgumentsClasses[i].end() && *It == Overrides[i]))
-            {
-                return false;
+                return false;   
             }
         }
 
         return ReturnValue;
-    }
-    std::vector<ClassID> GenericFunction::p_GetValueTypes(Value const& ValueToInspect)
-    {
-        if(ValueToInspect.IsType<ClassInstance>())
-        {
-            return ValueToInspect.GetType<ClassInstance>().AssociatedClass->Types;
-        }
-        else
-        {
-            return {ValueToInspect.GetTypeID()};   
-        }
     }
     Value* GenericFunction::GetMethod(std::vector<Value>& Arguments)
     {
@@ -118,14 +124,9 @@ namespace MBLisp
         {
             return ReturnValue;   
         }
-        std::vector<std::vector<ClassID>> ArgumentClasses;
-        for(auto const& Argument : Arguments)
-        {
-            ArgumentClasses.push_back(p_GetValueTypes(Argument));   
-        }
         for(int i = int(m_Specifications[0].size())-1; i >= 0; i--)
         {
-            if(p_TypesAreSatisifed(m_CallablesOverrides[m_Specifications[0][i].second],ArgumentClasses))
+            if(p_TypesAreSatisifed(m_CallablesOverrides[m_Specifications[0][i].second],Arguments))
             {
                 return &m_Callables[m_Specifications[0][i].second];
             }

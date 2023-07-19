@@ -16,6 +16,8 @@
 
 #include "Modules/LSP/LSPModule.h"
 
+#include <MBUtility/FileStreams.h>
+
 #include <iostream>
 namespace MBLisp
 {
@@ -738,7 +740,7 @@ namespace MBLisp
             //{
             //    assert(!Arg.IsType<List>() || Arg.GetRef<List>() != nullptr);
             //}
-            assert(!CurrentCallStack.back().ArgumentStack.back().IsType<List>() || CurrentCallStack.back().ArgumentStack.back().GetRef<List>() != nullptr);
+            assert(CurrentCallStack.back().ArgumentStack.size() == 0 || !CurrentCallStack.back().ArgumentStack.back().IsType<List>() || CurrentCallStack.back().ArgumentStack.back().GetRef<List>() != nullptr);
         }
         else if(ObjectToCall.IsType<Lambda>())
         {
@@ -1622,6 +1624,7 @@ namespace MBLisp
         AddMethod<String,std::unique_ptr<MBUtility::MBOctetOutputStream>>("write",Write_OutStream);
         AddMethod<String>("out-stream",OutStream_String);
         AddMethod<String>("in-stream",InStream_String);
+        AddMethod<String>("open",Open_URI);
 
         //Dict
         AddMethod<Dict,Any>("index",Index_Dict);
@@ -1683,6 +1686,11 @@ namespace MBLisp
     Value Evaluator::InStream_String BUILTIN_ARGLIST
     {
         return Value::MakeExternal(MBUtility::StreamReader( std::make_unique<MBUtility::OwningStringStream>(Arguments[0].GetType<String>())));
+    }
+    Value Evaluator::Open_URI BUILTIN_ARGLIST
+    {
+        String URIToOpen = Arguments[0].GetType<String>();
+        return Value::MakeExternal(MBUtility::StreamReader(std::make_unique<MBUtility::InputFileStream>(URIToOpen)));
     }
     Value Evaluator::GetInternalModule BUILTIN_ARGLIST
     {

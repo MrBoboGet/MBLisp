@@ -177,6 +177,7 @@ namespace MBLisp
         static Value Flush_OutStream BUILTIN_ARGLIST;
         static Value OutStream_String BUILTIN_ARGLIST;
         static Value InStream_String BUILTIN_ARGLIST;
+        static Value Open_URI BUILTIN_ARGLIST;
 
 
         //special stuff

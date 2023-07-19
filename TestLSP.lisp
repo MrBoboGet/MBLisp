@@ -62,6 +62,9 @@
 (defun if-diagnostics (envir ast)
   (set return-value (list))
   (doit e ast
+    (if (is-trivial-set-form e)
+      (set (index envir (. e 1)) null)
+    )
     (if (not (|| (eq e 'if) (eq e 'else)))
       (insert-elements return-value (get-diagnostics envir  e))
     )
@@ -74,6 +77,12 @@
   (doit arg (. ast 2)
     (if (eq (type arg) symbol_t) (shadow return-value arg))
   )
+  return-value
+)
+(defun doit-envir (envir ast)
+  (set return-value (new-environment))
+  (set-parent return-value envir)
+  (shadow return-value (index ast 1))
   return-value
 )
 (set envir-modifiers (make-dict ('defun func-envir) ('defmacro func-envir)))
@@ -157,9 +166,13 @@
 
    )
   )
-  (lsp:set-document-tokens handler uri semantic-tokens)
-  (lsp:set-document-diagnostics handler uri diagnostics)
 )
-(lsp:add-on-open-handler handler open-handler)
-(lsp:handle-requests handler)
-(print "adsadasdsadasdsadasd")
+
+
+
+(set URI "C:\Users\emanu\Desktop\Program\C++\MBLisp\TestLSP.lisp")
+(set content (read-bytes (open URI) 123123))
+(doit i (range 0 10)
+      (open-handler handler URI content)
+)
+(print "Finished")

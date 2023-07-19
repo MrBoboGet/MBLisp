@@ -646,8 +646,8 @@ public:
 
 
         //TODO improve, inefficient
-        bool p_TypesAreSatisifed(std::vector<ClassID> const& Overrides,std::vector<std::vector<ClassID>> const& ArgumentsClasses);
-        std::vector<ClassID> p_GetValueTypes(Value const& ValueToInspect);
+        bool p_TypesAreSatisifed(std::vector<ClassID> const& Overrides,std::vector<Value> const& Args);
+        bool p_TypeIsSatisfied(ClassID Override,Value const& Arg);
     public:
         std::string Name;
         void AddMethod(std::vector<ClassID> OverridenTypes,Value Callable);
