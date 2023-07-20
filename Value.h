@@ -9,6 +9,8 @@
 #include <functional>
 
 #include <assert.h>
+
+#include <MBUtility/MBVector.h>
 namespace MBLisp
 {
     typedef int_least64_t Int;
@@ -22,6 +24,8 @@ namespace MBLisp
     typedef std::string String;
     class Value;
     typedef std::vector<Value> List;
+    typedef MBUtility::MBVector<Value,4,size_t,std::allocator<Value>> FuncArgVector;
+    //typedef std::vector<Value> FuncArgVector;
     //typedef std::unordered_map<Value,Value> Dict;
     template<typename T>
     using Ref = std::shared_ptr<T>;
@@ -47,6 +51,10 @@ namespace MBLisp
         {
             ID = NewId;
         }
+        bool operator==(Symbol Rhs) const
+        {
+            return ID == Rhs.ID;   
+        }
     };
 
     class OpCodeList;
@@ -71,7 +79,7 @@ namespace MBLisp
         std::string Name;
     };
     class Evaluator;
-    typedef Value (*BuiltinFuncType)(Evaluator&,Ref<Scope>,std::vector<Value>&);
+    typedef Value (*BuiltinFuncType)(Evaluator&,Ref<Scope>,FuncArgVector&);
     struct Function
     {
         BuiltinFuncType Func;
@@ -80,11 +88,19 @@ namespace MBLisp
         {
             Func = FuncToSet;   
         }
+        bool operator==(Function OtherFunc) const
+        {
+            return Func == OtherFunc.Func;   
+        }
     };
     struct Macro
     {
         std::shared_ptr<Value> Callable;
         std::string Name;
+        bool operator==(Macro const& OtherMacro) const
+        {
+            return Callable == OtherMacro.Callable;   
+        }
     };
     
 
@@ -181,7 +197,18 @@ namespace MBLisp
         }
     };
     
-    class Null { };
+    class Null 
+    { 
+    public:
+        bool operator==(Null ) const
+        {
+            return true;   
+        }
+        bool operator!=(Null) const
+        {
+            return false;   
+        }
+    };
     template<typename TypeToCheck,typename... OtherType>
     inline constexpr bool TypeIn = i_TypeIn<TypeToCheck,OtherType...>::value;
     class Value
@@ -342,40 +369,11 @@ public:
 
         bool operator==(Value const& OtherValue) const
         {
-            bool ReturnValue = false;
-            if(!IsSameType(OtherValue))
-            {
-                return false;
-            }
-            if(IsType<Float>())
-            {
-                return GetType<Float>() == OtherValue.GetType<Float>();
-            }
-            else if(IsType<Int>())
-            {
-                return GetType<Int>() == OtherValue.GetType<Int>();
-            }
-            else if(IsType<Symbol>())
-            {
-                return GetType<Symbol>().ID == OtherValue.GetType<Symbol>().ID;
-            }
-            else if(IsType<bool>())
-            {
-                return GetType<bool>() == OtherValue.GetType<bool>();
-            }
-            else if(IsType<String>())
-            {
-                return GetType<String>() == OtherValue.GetType<String>();
-            }
-            else if(IsType<ClassInstance>())
-            {
-                return GetRef<ClassInstance>().get() == OtherValue.GetRef<ClassInstance>().get();
-            }
-            else if(IsType<ClassDefinition>())
-            {
-                return GetRef<ClassDefinition>().get() == OtherValue.GetRef<ClassDefinition>().get();
-            }
-            return ReturnValue;
+            return m_Data == OtherValue.m_Data;
+        }
+        bool operator!=(Value const& OtherValue) const
+        {
+            return(!(*this==OtherValue));   
         }
         
         bool IsBuiltin()
@@ -646,13 +644,13 @@ public:
 
 
         //TODO improve, inefficient
-        bool p_TypesAreSatisifed(std::vector<ClassID> const& Overrides,std::vector<Value> const& Args);
+        bool p_TypesAreSatisifed(std::vector<ClassID> const& Overrides,Value const* Begin, Value const* End);
         bool p_TypeIsSatisfied(ClassID Override,Value const& Arg);
     public:
         std::string Name;
         void AddMethod(std::vector<ClassID> OverridenTypes,Value Callable);
         //TODO more efficient implementation, the current one is the most naive one
-        Value* GetMethod(std::vector<Value>& Arguments);
+        Value* GetMethod(Value* Begin,Value* End);
     };
 
     class DynamicVariable

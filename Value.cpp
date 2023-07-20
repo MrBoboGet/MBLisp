@@ -100,16 +100,16 @@ namespace MBLisp
         }
         return ReturnValue;
     }
-    bool GenericFunction::p_TypesAreSatisifed(std::vector<ClassID> const& Overrides,std::vector<Value> const& ArgumentsClasses)
+    bool GenericFunction::p_TypesAreSatisifed(std::vector<ClassID> const& Overrides,Value const* Begin, Value const* End)
     {
         bool ReturnValue = true;
-        if(Overrides.size() > ArgumentsClasses.size())
+        if(Overrides.size() > End-Begin)
         {
             return false;   
         }
         for(int i = 0; i < Overrides.size();i++)
         {
-            if(!p_TypeIsSatisfied(Overrides[i],ArgumentsClasses[i]))
+            if(!p_TypeIsSatisfied(Overrides[i],*(Begin+i)))
             {
                 return false;   
             }
@@ -117,7 +117,7 @@ namespace MBLisp
 
         return ReturnValue;
     }
-    Value* GenericFunction::GetMethod(std::vector<Value>& Arguments)
+    Value* GenericFunction::GetMethod(Value* Begin,Value* End)
     {
         Value* ReturnValue = nullptr;
         if(m_Specifications.size() == 0)
@@ -126,7 +126,7 @@ namespace MBLisp
         }
         for(int i = int(m_Specifications[0].size())-1; i >= 0; i--)
         {
-            if(p_TypesAreSatisifed(m_CallablesOverrides[m_Specifications[0][i].second],Arguments))
+            if(p_TypesAreSatisifed(m_CallablesOverrides[m_Specifications[0][i].second],Begin,End))
             {
                 return &m_Callables[m_Specifications[0][i].second];
             }

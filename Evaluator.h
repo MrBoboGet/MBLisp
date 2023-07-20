@@ -5,6 +5,10 @@
 
 #include <MBUtility/StreamReader.h>
 #include <MBUtility/MBInterfaces.h>
+
+#include <MBUtility/MBVector.h>
+
+
 namespace MBLisp
 {
    
@@ -20,6 +24,7 @@ namespace MBLisp
     {
         IPIndex UnwindBegin = -1;
     };
+    typedef FuncArgVector StackArgVector;
     struct StackFrame
     {
         //TODO MEGA HACKY 
@@ -31,7 +36,7 @@ namespace MBLisp
 
         std::shared_ptr<Scope> StackScope;
         OpCodeExtractor ExecutionPosition;
-        std::vector<Value> ArgumentStack;
+        StackArgVector ArgumentStack;
 
 
         //signal/unwind stuff
@@ -46,6 +51,7 @@ namespace MBLisp
         {
         }
     };
+
     struct ExecutionState
     {
         //-1 means last, other value entails being in a signal
@@ -76,7 +82,7 @@ namespace MBLisp
 
     //TODO kinda hacky, should be temporary, but much more convenient when
     //iterating and prototyping
-#define BUILTIN_ARGLIST (Evaluator& AssociatedEvaluator,Ref<Scope> CurrentScope,std::vector<Value>& Arguments)
+#define BUILTIN_ARGLIST (Evaluator& AssociatedEvaluator,Ref<Scope> CurrentScope,FuncArgVector& Arguments)
     class Evaluator
     {
         SymbolID m_CurrentSymbolID = 1;
@@ -199,7 +205,7 @@ namespace MBLisp
 
         bool p_ValueIsType(ClassID TypeValue,Value const& ValueToInspect);
 
-        void p_Invoke(Value& ObjectToCall,std::vector<Value>& Arguments,ExecutionState& CurrentState);
+        void p_Invoke(Value& ObjectToCall,FuncArgVector& Arguments,ExecutionState& CurrentState);
         void p_EmitSignal(ExecutionState& State,Value SignalToEmit,bool ForceUnwind);
         //The fundamental dispatch loop
         Value p_Eval(ExecutionState& CurrentState);
@@ -280,6 +286,6 @@ namespace MBLisp
 
         void LoadStd();
         void Eval(std::filesystem::path const& SourceFile);
-        Value Eval(Ref<Scope> CurrentScope,Value Callable,std::vector<Value> Arguments);
+        Value Eval(Ref<Scope> CurrentScope,Value Callable,FuncArgVector Arguments);
     };
 }

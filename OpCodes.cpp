@@ -83,6 +83,7 @@ namespace MBLisp
                     std::unordered_map<SymbolID,IPIndex> SymbolToOffsetMap;
                     while(CurrentOffset < ListToConvert.size())
                     {
+
                         if(!ListToConvert[CurrentOffset].IsType<Symbol>())
                         {
                             throw std::runtime_error("first part of a tagbody pairs has to be a symbol");

@@ -51,7 +51,12 @@ namespace MBLisp
     }
     Value Evaluator::CreateList BUILTIN_ARGLIST
     {
-        Value ReturnValue = List(std::move(Arguments));
+        Ref<List> ReturnValue = std::make_shared<List>();
+        for(auto& Elem : Arguments)
+        {
+            ReturnValue->push_back(std::move(Elem));
+        }
+        //Value ReturnValue = List(std::move(Arguments));
         return  ReturnValue;
     }
     Value Evaluator::CreateDict BUILTIN_ARGLIST
@@ -666,7 +671,7 @@ namespace MBLisp
     ///    }
     ///    return p_Eval(AssociatedScope,*FunctionToExecute.Instructions);
     ///}
-    Value Evaluator::Eval(Ref<Scope> CurrentScope,Value Callable,std::vector<Value> Arguments)
+    Value Evaluator::Eval(Ref<Scope> CurrentScope,Value Callable,FuncArgVector Arguments)
     {
         std::vector<StackFrame> CurrentCallStack = {StackFrame(OpCodeExtractor())};
         CurrentCallStack.back().StackScope = CurrentScope;
@@ -716,7 +721,7 @@ namespace MBLisp
             }
         }
     }
-    void Evaluator::p_Invoke(Value& ObjectToCall,std::vector<Value>& Arguments,ExecutionState& CurrentState)
+    void Evaluator::p_Invoke(Value& ObjectToCall,FuncArgVector& Arguments,ExecutionState& CurrentState)
     {
         auto& CurrentCallStack = CurrentState.StackFrames;
         if(ObjectToCall.IsType<Function>())
@@ -794,7 +799,7 @@ namespace MBLisp
             NewStackFrame.StackScope->OverrideVariable(p_GetSymbolID("INIT"),NewValue);
             if(NewInstance->AssociatedClass->Constructor != nullptr)
             {
-                std::vector<Value> Args = {NewValue};
+                FuncArgVector Args = {NewValue};
                 for(auto& Arg : Arguments)
                 {
                     Args.push_back(Arg);
@@ -807,7 +812,7 @@ namespace MBLisp
         else if(ObjectToCall.IsType<GenericFunction>())
         {
             GenericFunction& GenericToInvoke = ObjectToCall.GetType<GenericFunction>();
-            Value* Callable = GenericToInvoke.GetMethod(Arguments);
+            Value* Callable = GenericToInvoke.GetMethod(Arguments.data(),Arguments.data()+Arguments.size());
             if(Callable == nullptr)
             {
                 //throw std::runtime_error("No method associated with the argument list for generic \""+GenericToInvoke.Name+"\"");   
@@ -903,23 +908,22 @@ namespace MBLisp
                     continue;
                 }
                 //assert(!VarPointer->IsType<List>() || VarPointer->GetRef<List>() != nullptr);
-                Value VarToPush = *VarPointer;
-                if(!VarToPush.IsType<DynamicVariable>())
+                if(!VarPointer->IsType<DynamicVariable>())
                 {
-                    CurrentFrame.ArgumentStack.push_back(std::move(VarToPush));
+                    CurrentFrame.ArgumentStack.push_back(*VarPointer);
                 }
                 else
                 {
-                    DynamicVariable const& DynamicToPush = VarToPush.GetType<DynamicVariable>();
-                    VarToPush = DynamicToPush.DefaultValue;
+                    DynamicVariable const& DynamicToPush = VarPointer->GetType<DynamicVariable>();
+                    Value const* VarToPushPointer = &DynamicToPush.DefaultValue;
                     if(auto DynIt = CurrentState.DynamicBindings.find(DynamicToPush.ID); DynIt != CurrentState.DynamicBindings.end())
                     {
                         if(DynIt->second.size() > 0)
                         {
-                            VarToPush = DynIt->second.back();
+                            VarToPushPointer = &DynIt->second.back();
                         }
                     }
-                    CurrentFrame.ArgumentStack.push_back(std::move(VarToPush));
+                    CurrentFrame.ArgumentStack.push_back(*VarToPushPointer);
                 }
             }
             else if(CurrentCode.IsType<OpCode_PushLiteral>())
@@ -977,15 +981,16 @@ namespace MBLisp
                 OpCode_CallFunc&  CallFuncCode = CurrentCode.GetType<OpCode_CallFunc>();
                 Value FunctionToCall = std::move(CurrentFrame.ArgumentStack.back());
                 CurrentFrame.ArgumentStack.pop_back();
-                std::vector<Value> Arguments;
+                FuncArgVector Arguments;
                 for(int i = 0; i < CallFuncCode.ArgumentCount;i++)
                 {
                     Arguments.push_back(CurrentFrame.ArgumentStack[CurrentFrame.ArgumentStack.size()-CallFuncCode.ArgumentCount+i]);
                 }
-                for(int i = 0; i < CallFuncCode.ArgumentCount;i++)
-                {
-                    CurrentFrame.ArgumentStack.pop_back();
-                }
+                CurrentFrame.ArgumentStack.resize(CurrentFrame.ArgumentStack.size()-CallFuncCode.ArgumentCount);
+                //for(int i = 0; i < CallFuncCode.ArgumentCount;i++)
+                //{
+                //    CurrentFrame.ArgumentStack.pop_back();
+                //}
                 p_Invoke(FunctionToCall,Arguments,CurrentState);
             }
             else if(CurrentCode.IsType<OpCode_Macro>())
@@ -1268,7 +1273,7 @@ namespace MBLisp
                 if(auto  VarIt = ExpandScope->TryGet(HeadSymbol.ID); VarIt != nullptr && VarIt->IsType<Macro>())
                 {
                     Macro& AssociatedMacro = VarIt->GetType<Macro>();
-                    std::vector<Value> Arguments;
+                    FuncArgVector Arguments;
                     for(int i = 1; i < ListToExpand.size();i++)
                     {
                         Arguments.push_back(ListToExpand[i]);
@@ -1849,6 +1854,7 @@ namespace MBLisp
                 OpCodes->Append(ListToEncode);
             }
             p_Eval(CurrentScope,OpCodes,InstructionToExecute);
+
         }
     }
     void Evaluator::LoadStd()
