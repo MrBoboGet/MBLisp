@@ -19,8 +19,62 @@
    )
    return-value
 )
+(defun if-diagnostics (envir ast)
+  (set return-value (list))
+  (doit e ast
+    (if (is-trivial-set-form e)
+      (set (index envir (. e 1)) null)
+    )
+    (if (not (|| (eq e 'if) (eq e 'else)))
+      (insert-elements return-value (get-diagnostics envir  e))
+    )
+  )
+  return-value
+)
 
-(set overriden-extractors (make-dict ('if if-token-extractor)))
+(defun try-token-extractor (envir ast)
+   (set return-value (list)) 
+   (doit e ast
+        (if (&& (eq (type e) symbol_t) (|| (eq e 'catch) (eq e 'catch)))
+
+            (append return-value (list e "macro"))
+         else 
+            (insert-elements return-value (default-extractor envir e))
+        )
+   )
+   return-value
+)
+(defun try-diagnostics (envir ast)
+  (set return-value (list))
+  (set i 1)
+  (while (< i (len ast))
+    (set e (. ast i))
+    (if (is-trivial-set-form e)
+      (set (index envir (. e 1)) null)
+    )
+    (if (eq e 'catch)
+      (set catch-envir (new-environment))
+      (set-parent catch-envir envir)
+      (shadow catch-envir (. (. ast (+ i 1)) 1))
+      (insert-elements return-value (get-diagnostics catch-envir  (. ast (+ i 1))))
+      (insert-elements return-value (get-diagnostics catch-envir  (. ast (+ i 2))))
+      (incr i 2)
+     else 
+      (insert-elements return-value (get-diagnostics envir  e))
+    )
+    (incr i 1)
+  )
+  return-value
+)
+
+(defun type-eq (lhs rhs)
+    (eq (type lhs) rhs)
+)
+
+(set overriden-extractors (make-dict 
+                            ('if if-token-extractor)
+                            ('try try-token-extractor)
+))
 (defun default-extractor (envir ast)
     (set return-value (list))
     (if (eq (type ast) symbol_t)
@@ -62,17 +116,8 @@
     return-value
 )
 
-(defun if-diagnostics (envir ast)
-  (set return-value (list))
-  (doit e ast
-    (if (is-trivial-set-form e)
-      (set (index envir (. e 1)) null)
-    )
-    (if (not (|| (eq e 'if) (eq e 'else)))
-      (insert-elements return-value (get-diagnostics envir  e))
-    )
-  )
-  return-value
+(defun quote-diagnostics (envir ast)
+    (list)
 )
 
 (defun catch-diagnostics (envir ast)
@@ -111,8 +156,17 @@
   (shadow return-value (index ast 1))
   return-value
 )
-(set envir-modifiers (make-dict ('defun func-envir) ('defmacro func-envir) ('defmethod method-envir) ('doit doit-envir) ))
-(set diagnostics-overrides (make-dict ('if if-diagnostics)))
+(set envir-modifiers (make-dict 
+                        ('defun func-envir) 
+                        ('defmacro func-envir) 
+                        ('defmethod method-envir) 
+                        ('doit doit-envir)
+))
+(set diagnostics-overrides (make-dict 
+                        ('if if-diagnostics) 
+                        ('quote quote-diagnostics)
+                        ('try try-diagnostics)
+))
 
 
 (defun get-diagnostics (envir ast)
@@ -141,6 +195,7 @@
   )
   return-value
 )
+
 (defun should-execute-form (form)
   (if (not (eq (type form) list_t))
     (return false)
@@ -180,7 +235,7 @@
     )
     (eq thing-to-inspect target)
 )
-
+(set delayed-map (make-dict ('defun true) ('defmacro true) ('defmethod true) ('defclass true)))
 
 (defun open-handler (handler uri content)
   (set new-envir (new-environment))
@@ -191,18 +246,27 @@
 
   (set semantic-tokens (list))
   (set diagnostics (list))
+  (set delayed-forms (list))
   (try
    (
       (while (not (eof file-stream))
              (set new-term (eval `(read-term ,file-stream) new-envir))
+             (skip-whitespace file-stream)
              (if (should-execute-form new-term)
                (eval new-term new-envir)
               else if (is-trivial-set-form new-term)
                (set (index new-envir (index new-term 1)) null)
              )
+             (if (&& (type-eq new-term list_t) (< 0 (len new-term)) (type-eq (. new-term 0) symbol_t) (in (. new-term 0) delayed-map))
+                    (append delayed-forms new-term)
+                    (continue)
+             )
              (insert-elements semantic-tokens (default-extractor new-envir new-term))
              (insert-elements diagnostics (get-diagnostics new-envir new-term))
-             (skip-whitespace file-stream)
+      )
+      (doit new-term delayed-forms
+       (insert-elements semantic-tokens (default-extractor new-envir new-term))
+       (insert-elements diagnostics (get-diagnostics new-envir new-term))
       )
    )
    catch (any_t e)
@@ -213,5 +277,6 @@
   (lsp:set-document-tokens handler uri semantic-tokens)
   (lsp:set-document-diagnostics handler uri diagnostics)
 )
+
 (lsp:add-on-open-handler handler open-handler)
 (lsp:handle-requests handler)
