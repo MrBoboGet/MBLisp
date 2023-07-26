@@ -137,6 +137,27 @@
         (eq (type (index new-term 1)) symbol_t)
     )
 )
+
+(defmethod str ((ls list_t))
+    (set return-value "(")
+    (doit e ls
+        (incr return-value (+ (str e) " "))
+    )
+    (incr return-value ")")
+    return-value
+)
+
+(defun in-rec (thing-to-inspect target)
+    (set return-value false)
+    (if (eq (type thing-to-inspect) list_t)
+        (doit e thing-to-inspect
+            (cond (in-rec e target) (return true) false)
+        )
+    )
+    (eq thing-to-inspect target)
+)
+
+
 (defun open-handler (handler uri content)
   (set new-envir (new-environment))
   (set (index new-envir 'load-filepath) uri)
@@ -168,5 +189,6 @@
   (lsp:set-document-tokens handler uri semantic-tokens)
   (lsp:set-document-diagnostics handler uri diagnostics)
 )
+
 (lsp:add-on-open-handler handler open-handler)
 (lsp:handle-requests handler)
