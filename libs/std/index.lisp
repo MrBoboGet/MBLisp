@@ -1,5 +1,9 @@
-(set quote-reader (lambda (stream) (list (quote quote) (read-term stream))))
+(set quote-reader (lambda (stream) (list (symbol (quote quote) -1) (read-term stream))))
 (add-reader-character *READTABLE* "'" quote-reader)
+
+(set slash-reader (lambda (stream) (list (symbol (quote quote) -1) (symbol (read-term stream) -1))))
+(add-reader-character *READTABLE* "\\" slash-reader)
+
 (set while (macro (lambda (condition &rest body)
                     (list 'tagbody 'begin (list 'cond condition (flatten-1 'progn body (list (list 'go 'begin)) ) (list 'go 'end)) 'end true))
                     ))
@@ -7,7 +11,7 @@
 (set break (macro (lambda () (quote (go end)))))
 (set backtick-read-list
      (lambda (stream) 
-        (set return-value (list 'flatten-1))
+        (set return-value (list \flatten-1))
         (read-byte stream)
         (while true
                (skip-whitespace stream)
@@ -19,11 +23,11 @@
                        (read-byte stream)
                        (cond (eq (peek-byte stream) "@") 
                              (progn (read-byte stream) (append return-value (read-term stream)) )
-                             (append return-value (list 'list (read-term stream))))
+                             (append return-value (list \list (read-term stream))))
                      )
                      (cond (eq current-byte "(")
-                           (append return-value (list 'list (backtick-read-list stream)))
-                           (append return-value (list 'list (list 'quote (read-term stream)))))
+                           (append return-value (list \list (backtick-read-list stream)))
+                           (append return-value (list \list (list \quote (read-term stream)))))
                )
         )
         return-value
@@ -212,7 +216,7 @@
           (set in-top-curry false)
           (set curry-term (read-term stream))
           (set in-top-curry true)
-          (set ret-value `(lambda (,@curry-args) ,curry-term))
+          (set ret-value `( ,\lambda (,@curry-args) ,curry-term))
           (set curry-args (list))
           ret-value
         )

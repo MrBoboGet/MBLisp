@@ -369,7 +369,17 @@ public:
 
         bool operator==(Value const& OtherValue) const
         {
-            return m_Data == OtherValue.m_Data;
+            auto* LHSData = &m_Data;
+            auto* RHSData = &OtherValue.m_Data;
+            if(IsType<Value>())
+            {
+                LHSData = &GetType<Value>().m_Data;
+            }
+            if(OtherValue.IsType<Value>())
+            {
+                RHSData = &OtherValue.GetType<Value>().m_Data;
+            }
+            return *LHSData == *RHSData;
         }
         bool operator!=(Value const& OtherValue) const
         {

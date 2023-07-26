@@ -513,6 +513,13 @@ namespace MBLisp
     {
         return Symbol(AssociatedEvaluator.GetSymbolID(Arguments[0].GetType<String>()));
     }
+    Value Evaluator::Symbol_SymbolInt BUILTIN_ARGLIST
+    {
+        Symbol ReturnValue;
+        ReturnValue.ID = Arguments[0].GetType<Symbol>().ID;
+        ReturnValue.Position = Arguments[1].GetType<Int>();
+        return ReturnValue;
+    }
     Value Evaluator::GenSym BUILTIN_ARGLIST
     {
         return Symbol(AssociatedEvaluator.GenerateSymbol());
@@ -1569,7 +1576,6 @@ namespace MBLisp
                     {"list-dir",ListDir},
                     {"is-directory",IsDirectory},
                     //
-                    {"symbol",Symbol_String},
                     {"dict",CreateDict},
                     //
                     {"get-internal-module",GetInternalModule},
@@ -1630,6 +1636,7 @@ namespace MBLisp
         AddMethod<String>("out-stream",OutStream_String);
         AddMethod<String>("in-stream",InStream_String);
         AddMethod<String>("open",Open_URI);
+        AddMethod<String,String>("open",Open_URI);
 
         //Dict
         AddMethod<Dict,Any>("index",Index_Dict);
@@ -1646,7 +1653,9 @@ namespace MBLisp
         AddMethod<Float>("str",Str_Float);
         AddMethod<Int>("str",Str_Int);
        
-
+        //Symbols
+        AddMethod<String>("symbol",Symbol_String);
+        AddMethod<Symbol,Int>("symbol",Symbol_SymbolInt);
         //stuff
         AddMethod<Macro,String>("set-name",SetName_Macro);
         AddMethod<Lambda,String>("set-name",SetName_Lambda);
@@ -1694,8 +1703,29 @@ namespace MBLisp
     }
     Value Evaluator::Open_URI BUILTIN_ARGLIST
     {
+        Value ReturnValue;
         String URIToOpen = Arguments[0].GetType<String>();
-        return Value::MakeExternal(MBUtility::StreamReader(std::make_unique<MBUtility::InputFileStream>(URIToOpen)));
+        if(Arguments.size() == 1)
+        {
+            return Value::MakeExternal(MBUtility::StreamReader(std::make_unique<MBUtility::InputFileStream>(URIToOpen)));
+        }
+        else if(Arguments.size() == 2)
+        {
+            String AccessString = Arguments[1].GetType<String>();
+            if(AccessString.find('r') != AccessString.npos)
+            {
+                return Value::MakeExternal(MBUtility::StreamReader(std::make_unique<MBUtility::InputFileStream>(URIToOpen)));
+            }
+            else if(AccessString.find('w') != AccessString.npos)
+            {
+                return Value::MakeExternal(std::unique_ptr<MBUtility::MBOctetOutputStream>(new MBUtility::MBFileOutputStream(URIToOpen)));
+            }
+            else
+            {
+                throw std::runtime_error("open with access string requires that the access string contains either 'r' or 'w'");   
+            }
+        }
+        return ReturnValue;
     }
     Value Evaluator::GetInternalModule BUILTIN_ARGLIST
     {

@@ -5,6 +5,8 @@
     (append out-list e)
   )
 )
+
+
 (defun test-func () (print "hello world"))
 (defun if-token-extractor (envir ast)
    (set return-value (list)) 
@@ -58,7 +60,6 @@
     )  
     return-value
 )
-
 (defun if-diagnostics (envir ast)
   (set return-value (list))
   (doit e ast
@@ -85,13 +86,14 @@
   (shadow return-value (index ast 1))
   return-value
 )
-(set envir-modifiers (make-dict ('defun func-envir) ('defmacro func-envir)))
+(set envir-modifiers (make-dict ('defun func-envir) ('defmacro func-envir) ('doit doit-envir) ))
 (set diagnostics-overrides (make-dict ('if if-diagnostics)))
+
 
 (defun get-diagnostics (envir ast)
   (set return-value (list)) 
   (if (eq (type ast) symbol_t)
-    (if (&& (not (is-special ast)) (not (in ast envir)))
+    (if (&& (not (is-special ast)) (not (in ast envir)) (not (< (position ast) 0) ))
       (append return-value (list ast (+ (+ "Couldn't find symbol " (str ast)) " in current environment")))
     )
    else if (eq (type ast) list_t)
@@ -114,7 +116,6 @@
   )
   return-value
 )
-
 (defun should-execute-form (form)
   (if (not (eq (type form) list_t))
     (return false)
@@ -123,12 +124,11 @@
   (if (not (eq (type form-head) symbol_t))
     (return false)
   )
-  (if (in form-head `(defun defmacro defgeneric))
+  (if (in form-head `(defun defmacro defgeneric defclass))
     (return true)
   )
   false
 )
-
 
 (defun is-trivial-set-form (new-term)
     (&& (eq (type new-term) list_t) 
@@ -137,7 +137,6 @@
         (eq (type (index new-term 1)) symbol_t)
     )
 )
-
 (defun open-handler (handler uri content)
   (set new-envir (new-environment))
   (set (index new-envir 'load-filepath) uri)
@@ -166,13 +165,8 @@
 
    )
   )
+  (lsp:set-document-tokens handler uri semantic-tokens)
+  (lsp:set-document-diagnostics handler uri diagnostics)
 )
-
-
-
-(set URI "C:\Users\emanu\Desktop\Program\C++\MBLisp\TestLSP.lisp")
-(set content (read-bytes (open URI) 123123))
-(doit i (range 0 10)
-      (open-handler handler URI content)
-)
-(print "Finished")
+(lsp:add-on-open-handler handler open-handler)
+(lsp:handle-requests handler)

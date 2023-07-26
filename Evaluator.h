@@ -140,6 +140,7 @@ namespace MBLisp
         static Value Str_Null BUILTIN_ARGLIST;
         static Value Str_Float BUILTIN_ARGLIST;
         static Value Symbol_String BUILTIN_ARGLIST;
+        static Value Symbol_SymbolInt BUILTIN_ARGLIST;
         static Value GenSym BUILTIN_ARGLIST;
 
 
