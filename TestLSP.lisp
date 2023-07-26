@@ -19,6 +19,7 @@
    )
    return-value
 )
+
 (set overriden-extractors (make-dict ('if if-token-extractor)))
 (defun default-extractor (envir ast)
     (set return-value (list))
@@ -60,6 +61,7 @@
     )  
     return-value
 )
+
 (defun if-diagnostics (envir ast)
   (set return-value (list))
   (doit e ast
@@ -72,11 +74,34 @@
   )
   return-value
 )
+
+(defun catch-diagnostics (envir ast)
+  (set return-value (list))
+  (doit e ast
+    (if (is-trivial-set-form e)
+      (set (index envir (. e 1)) null)
+    )
+    (if (not (|| (eq e 'if) (eq e 'else)))
+      (insert-elements return-value (get-diagnostics envir  e))
+    )
+  )
+  return-value
+)
+
 (defun func-envir (envir ast)
   (set return-value (new-environment))
   (set-parent return-value envir)
   (doit arg (. ast 2)
     (if (eq (type arg) symbol_t) (shadow return-value arg))
+  )
+  return-value
+)
+(defun method-envir (envir ast)
+  (set return-value (new-environment))
+  (set-parent return-value envir)
+  (doit arg (. ast 2)
+    (if (eq (type arg) symbol_t) (shadow return-value arg))
+    (if (eq (type arg) list_t) (shadow return-value (. arg  0)))
   )
   return-value
 )
@@ -86,7 +111,7 @@
   (shadow return-value (index ast 1))
   return-value
 )
-(set envir-modifiers (make-dict ('defun func-envir) ('defmacro func-envir) ('doit doit-envir) ))
+(set envir-modifiers (make-dict ('defun func-envir) ('defmacro func-envir) ('defmethod method-envir) ('doit doit-envir) ))
 (set diagnostics-overrides (make-dict ('if if-diagnostics)))
 
 
@@ -146,7 +171,6 @@
     (incr return-value ")")
     return-value
 )
-
 (defun in-rec (thing-to-inspect target)
     (set return-value false)
     (if (eq (type thing-to-inspect) list_t)
@@ -189,6 +213,5 @@
   (lsp:set-document-tokens handler uri semantic-tokens)
   (lsp:set-document-diagnostics handler uri diagnostics)
 )
-
 (lsp:add-on-open-handler handler open-handler)
 (lsp:handle-requests handler)
