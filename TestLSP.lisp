@@ -77,10 +77,9 @@
     )
     return-value
 )
-
 (defun is-literal (ast)
     (|| (type-eq ast int_t) (type-eq ast string_t) (type-eq ast float_t)
-        (&& (type-eq ast list_t) (< (len ast) 0) (eq (. ast 0) 'quote)))
+        (&& (type-eq ast list_t) (< 0 (len ast)) (eq (. ast 0) 'quote)))
 )
 
 (defun is-compile-time-dot (envir ast)
@@ -96,15 +95,32 @@
 
 
 
+
 (defun dot-token-extractor (envir ast)
    (set return-value (list)) 
-   (if (is-compile-time-dot ast)
-        (asdasd)
+   (if (is-compile-time-dot envir ast)
+        (set map-like (. envir (. ast 1)))
+        (insert-elements return-value (default-extractor envir (. ast 1)))
+        (doit e (map _(eval (. ast _)) (range 2 (len ast)))
+            (try
+             (
+                (insert-elements return-value (default-extractor map-like e))
+                (set map-like (. map-like e))
+             )
+             catch (any_t except)
+             (
+
+             )
+            )
+        )
     else 
-        (return (default-extractor envir ast))
+        (doit e ast
+            (insert-elements return-value (default-extractor envir e))
+        )
    )
    return-value
 )
+
 
 (defun dot-diagnostics (envir ast)
   (set return-value (list))
@@ -118,7 +134,9 @@
 (set overriden-extractors (make-dict 
                             ('if if-token-extractor)
                             ('try try-token-extractor)
+                            ('. dot-token-extractor)
 ))
+
 (defun default-extractor (envir ast)
     (set return-value (list))
     (if (eq (type ast) symbol_t)
@@ -203,6 +221,7 @@
 (set envir-modifiers (make-dict 
                         ('defun func-envir) 
                         ('defmacro func-envir) 
+                        ('lambda func-envir) 
                         ('defmethod method-envir) 
                         ('doit doit-envir)
 ))
@@ -320,5 +339,7 @@
   (lsp:set-document-tokens handler uri semantic-tokens)
   (lsp:set-document-diagnostics handler uri diagnostics)
 )
-(lsp:add-on-open-handler handler open-handler)
-(lsp:handle-requests handler)
+(if (not is-repl)
+    (lsp:add-on-open-handler handler open-handler)
+    (lsp:handle-requests handler)
+)

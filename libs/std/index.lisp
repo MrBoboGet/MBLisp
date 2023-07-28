@@ -206,25 +206,6 @@
   )
   result
 )
-(set in-top-curry true)
-(set curry-args (list))
-(defun curry-reader (stream)
-  (cond in-top-curry
-        (progn
-          (set in-top-curry false)
-          (set curry-term (read-term stream))
-          (set in-top-curry true)
-          (set ret-value `( ,\lambda (,@curry-args) ,curry-term))
-          (set curry-args (list))
-          ret-value
-        )
-        (progn
-          (set new-symbol (gensym))
-          (append curry-args new-symbol)
-          new-symbol
-        )
-  )
-)
 (defun sublist (current-list offset)
   (set return-value (list))
   (doit i (range offset (len current-list))
@@ -259,14 +240,9 @@
   (if-func forms) 
 )
 
-(add-reader-character *READTABLE* "_" curry-reader)
-(defun . (&rest args)
-  (foldl args _(index _ _))
-)
 (defmacro defvar (name star-value)
   `(set ,name (dynamic ,star-value))
 )
-(load (+ (parent-path load-filepath) "/import.lisp"))
 
 
 (defmacro make-dict (&rest forms)
@@ -296,8 +272,8 @@
   (set i 0)
   (while (< i (len catch-triplets))
     (if (eq (index catch-triplets i) 'catch)
-      (set catched-values (. catch-triplets (+ i 1)))
-      (set catch-body (. catch-triplets (+ i 2)))
+      (set catched-values (index catch-triplets (+ i 1)))
+      (set catch-body (index catch-triplets (+ i 2)))
       (set catch-body `(progn ,@catch-body (unwind))) 
       (append catch-parts catched-values)
       (append catch-parts catch-body)
@@ -313,3 +289,48 @@
 (defmacro catch-all (&rest body)
     `(try (,@body) catch (any_t e) (true))
 )
+
+
+
+
+
+(set in-top-curry true)
+(set curry-args (list))
+(set arg-dict (dict))
+(defun curry-reader (stream)
+  (if in-top-curry
+      (set in-top-curry false)
+      (set curry-term (read-term stream))
+      (set in-top-curry true)
+      (set ret-value `( ,\lambda (,@(map (lambda (x) (index arg-dict x)) (sort (keys arg-dict)) )) ,curry-term))
+      (set arg-dict (dict))
+      ret-value
+   else
+      (set current-sym "_")
+      (set next-byte (peek-byte stream))
+      (if (not (|| (eq next-byte " ") (eq next-byte ")")))
+        (incr current-sym (read-byte stream))
+      )
+      (if (in current-sym arg-dict)
+        (set current-sym (index arg-dict current-sym))
+       else 
+        (set (index arg-dict current-sym) (gensym))
+        (set current-sym (index arg-dict current-sym))
+      )
+      current-sym
+   )
+)
+(add-reader-character *READTABLE* "_" curry-reader)
+
+(defun . (&rest args)
+  (foldl args _(index _ _1))
+)
+(defmacro ++ (value increase)
+    (set temp-sym (gensym))
+    `(progn
+        (set ,temp-sym ,value)
+        (incr ,value ,increase)
+        ,temp-sym
+     )
+)
+(load (+ (parent-path load-filepath) "/import.lisp"))

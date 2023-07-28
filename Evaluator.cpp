@@ -49,6 +49,17 @@ namespace MBLisp
         }
         return  ReturnValue;
     }
+    Value Evaluator::Sort BUILTIN_ARGLIST
+    {
+        Ref<List> AssociatedList = Arguments[0].GetRef<List>();
+        std::sort(AssociatedList->begin(),AssociatedList->end(),[&](Value const& lhs,Value const& rhs)
+                {
+                    FuncArgVector Args = {lhs,rhs};
+                    auto Result = Less(AssociatedEvaluator,CurrentScope,Args);
+                    return Result.IsType<bool>() && Result.GetType<bool>();
+                });
+        return AssociatedList;
+    }
     Value Evaluator::CreateList BUILTIN_ARGLIST
     {
         Ref<List> ReturnValue = std::make_shared<List>();
@@ -472,6 +483,10 @@ namespace MBLisp
         }
         return ReturnValue;
     }
+    Value Evaluator::Len_String BUILTIN_ARGLIST
+    {
+        return Arguments[0].GetType<String>().size();
+    }
     Value Evaluator::In_String BUILTIN_ARGLIST
     {
         return Arguments[0].GetType<String>().find(Arguments[0].GetType<String>()) != std::string::npos;
@@ -573,6 +588,11 @@ namespace MBLisp
         Scope& ScopeToModify = Arguments[0].GetType<Scope>();
         ScopeToModify.SetParentScope(Arguments[1].GetRef<Scope>());
         return Value();
+    }
+    Value Evaluator::Clear_Environment BUILTIN_ARGLIST
+    {
+        Arguments[0].GetType<Scope>().Clear();
+        return true;
     }
     Value Evaluator::AddReaderCharacter BUILTIN_ARGLIST
     {
@@ -1614,6 +1634,7 @@ namespace MBLisp
         AddMethod<List>("append",Append_List);
         AddMethod<List>("index",Index_List);
         AddMethod<List>("len",Len_List);
+        AddMethod<List>("sort",Sort);
         //class
         AddMethod<ClassInstance>("index",Index_ClassInstance);
 
@@ -1652,6 +1673,7 @@ namespace MBLisp
         //Strings
         AddMethod<String,String>("split",Split_String);
         AddMethod<String,String>("in",In_String);
+        AddMethod<String>("len",Len_String);
         AddMethod<Symbol,Scope>("in",In_Environment);
         AddMethod<Symbol>("str",Str_Symbol);
         AddMethod<bool>("str",Str_Bool);
@@ -1680,6 +1702,7 @@ namespace MBLisp
         m_GlobalScope->SetVariable(p_GetSymbolID("*standard-input*"),Value::MakeExternal(MBUtility::StreamReader(std::make_unique<MBLSP::TerminalInput>())));
         m_GlobalScope->SetVariable(p_GetSymbolID("*standard-output*"),Value::MakeExternal(
                     std::unique_ptr<MBUtility::MBOctetOutputStream>( new MBUtility::TerminalOutput())));
+        m_GlobalScope->SetVariable(p_GetSymbolID("is-repl"),false);
     }
 
     Value Evaluator::Write_OutStream BUILTIN_ARGLIST
@@ -1930,7 +1953,7 @@ namespace MBLisp
         auto ReplScope = CreateDefaultScope();
         Value TableValue = ReplScope->FindVariable(p_GetSymbolID("*READTABLE*"));
         ReadTable const& Table = TableValue.GetType<ReadTable>();
-
+        m_GlobalScope->SetVariable(p_GetSymbolID("is-repl"),true);
         ReplScope->SetVariable( p_GetSymbolID("load-filepath"),MBUnicode::PathToUTF8(std::filesystem::current_path()));
         Ref<OpCodeList> OpCodes = std::make_shared<OpCodeList>();
         while(true)

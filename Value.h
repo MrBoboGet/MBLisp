@@ -724,6 +724,7 @@ public:
         void SetVariable(SymbolID Variable,Value NewValue);
         void OverrideVariable(SymbolID Variable,Value NewValue);
         Value* TryGet(SymbolID Variable);
+        void Clear();
     };
 
 };

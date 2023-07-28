@@ -102,6 +102,7 @@ namespace MBLisp
         static void Print(Evaluator& AssociatedEvaluator,Value const& ValueToPrint);
         static Value Print BUILTIN_ARGLIST;
         static Value Less BUILTIN_ARGLIST;
+        static Value Sort BUILTIN_ARGLIST;
         static Value Plus  BUILTIN_ARGLIST;
         static Value CreateList BUILTIN_ARGLIST;
         static Value CreateDict BUILTIN_ARGLIST;
@@ -164,6 +165,7 @@ namespace MBLisp
         
         //String manip
         static Value Split_String BUILTIN_ARGLIST;
+        static Value Len_String BUILTIN_ARGLIST;
 
         //Environment
         static Value Environment BUILTIN_ARGLIST;
@@ -171,6 +173,7 @@ namespace MBLisp
         static Value Index_Environment BUILTIN_ARGLIST;
         static Value Shadow_Environment BUILTIN_ARGLIST;
         static Value SetParent_Environment BUILTIN_ARGLIST;
+        static Value Clear_Environment BUILTIN_ARGLIST;
        
         //Readtable
         static Value AddReaderCharacter BUILTIN_ARGLIST;
@@ -298,7 +301,6 @@ namespace MBLisp
 
         void LoadStd();
         void Eval(std::filesystem::path const& SourceFile);
-
         void Repl();
         Value Eval(Ref<Scope> CurrentScope,Value Callable,FuncArgVector Arguments);
     };

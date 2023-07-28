@@ -31,6 +31,10 @@ namespace MBLisp
         }
         return ReturnValue;
     }
+    void Scope::Clear()
+    {
+        m_Variables.clear();
+    }
     void Scope::SetVariable(SymbolID Variable,Value NewValue)
     {
         if(m_ParentScope != nullptr)
