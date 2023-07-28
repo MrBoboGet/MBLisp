@@ -7,6 +7,7 @@
 (set while (macro (lambda (condition &rest body)
                     (list 'tagbody 'begin (list 'cond condition (flatten-1 'progn body (list (list 'go 'begin)) ) (list 'go 'end)) 'end true))
                     ))
+(set error (lambda (error-signal) (signal error-signal true)))
 (set continue (macro (lambda () (quote (go begin)))))
 (set break (macro (lambda () (quote (go end)))))
 (set backtick-read-list
@@ -37,7 +38,7 @@
        (skip-whitespace stream)
        (cond (eq (peek-byte stream) "(")
                 (backtick-read-list stream)
-                (print "error in backtick-reader: first element has to be a ("))))
+                (error "error in backtick-reader: first element has to be a ("))))
 (add-reader-character *READTABLE* "`" backtick-reader)
 (set defun (macro (lambda (name arglist &rest body) `(progn (set ,name (lambda ,arglist ,@body)) (set-name ,name ,(str name))))))
 (set defmacro (macro (lambda (name arglist &rest body) `(progn (set ,name (macro (lambda ,arglist ,@body))) (set-name ,name ,(str name))))))
@@ -195,9 +196,6 @@
 
 (defclass exception () (what "") (constructor (lambda (e message) (set (slot e what) message))))
 
-(defun error (error-signal)
-  (signal error-signal true)
-)
 
 (defun foldl (iterable callable)
   (set it (iterator iterable))
@@ -249,7 +247,7 @@
     )
   )
   (cond (eq (len if-body) 0)
-        (progn (print  "empty if body:") (print forms) (print (eq (index forms 0) 'else)))
+        (error  "empty if body")
         false
   )
   (cond (eq (len else-form) 0)

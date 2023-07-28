@@ -78,22 +78,34 @@
     return-value
 )
 
-
+(defun is-literal (ast)
+    (|| (type-eq ast int_t) (type-eq ast string_t) (type-eq ast float_t)
+        (&& (type-eq ast list_t) (< (len ast) 0) (eq (. ast 0) 'quote)))
+)
 
 (defun is-compile-time-dot (envir ast)
+  (set return-value false)
   (if (&& (< 2 (len ast)) (type-eq (. ast 1) symbol_t))
       (set base (. ast 1))
       (if (&& (in base envir) (not (type-eq (. envir base) null_t)))
-        (doit i (range 2 (len ast))
-
-        )
+        (set return-value (all (map _(is-literal (. ast _)) (range 2 (len ast)))))
       ) 
   ) 
+  return-value
 )
+
+
+
 (defun dot-token-extractor (envir ast)
    (set return-value (list)) 
+   (if (is-compile-time-dot ast)
+        (asdasd)
+    else 
+        (return (default-extractor envir ast))
+   )
    return-value
 )
+
 (defun dot-diagnostics (envir ast)
   (set return-value (list))
   return-value
