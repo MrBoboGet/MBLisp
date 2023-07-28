@@ -1,4 +1,4 @@
-(set lsp (get-internal-module "lsp"))
+(import lsp lsp)
 (set handler (lsp:create-lsp-server))
 (defun insert-elements (out-list in-list)
   (doit e in-list
@@ -267,7 +267,7 @@
   (if (not (eq (type form-head) symbol_t))
     (return false)
   )
-  (if (in form-head `(defun defmacro defgeneric defclass))
+  (if (in form-head `(defun defmacro defgeneric defclass import))
     (return true)
   )
   false
