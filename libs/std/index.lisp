@@ -300,7 +300,7 @@
     (if (eq (index catch-triplets i) 'catch)
       (set catched-values (. catch-triplets (+ i 1)))
       (set catch-body (. catch-triplets (+ i 2)))
-      (set catch-body `(progn ,@catch-body unwind)) 
+      (set catch-body `(progn ,@catch-body (unwind))) 
       (append catch-parts catched-values)
       (append catch-parts catch-body)
       (incr i 2)
@@ -310,4 +310,8 @@
     (incr i 1)
   )
   `(signal-handlers (progn ,@try-body)  ,@catch-parts)
+)
+
+(defmacro catch-all (&rest body)
+    `(try (,@body) catch (any_t e) (true))
 )

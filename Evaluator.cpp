@@ -696,6 +696,10 @@ namespace MBLisp
         auto& StackFrames = CurrentState.StackFrames;
         for(int i = CurrentFrameIndex; i >= 0; i--)
         {
+            if(CurrentFrame.SignalFrameIndex != -1 && i == CurrentFrameIndex)
+            {
+                continue;   
+            }
             if (SignalFound) break;
             auto& CandidateFrame = CurrentState.StackFrames[i];
             for(int j = int(CandidateFrame.ActiveSignalHandlers.size())-1;j >= 0;j--)
@@ -724,7 +728,9 @@ namespace MBLisp
             CurrentFrame.ArgumentStack.push_back(false);
             if(ForceUnwind)
             {
-                throw std::runtime_error("Uncaught mandatory signal");   
+                UncaughtSignal Exception;
+                Exception.ThrownValue = SignalValue;
+                throw Exception;
             }
         }
     }
@@ -1669,6 +1675,11 @@ namespace MBLisp
         AddMethod<ReadTable,String>("remove-reader-character",RemoveReaderCharacter);
         AddMethod<ReadTable,String>("add-character-expander",AddCharacterExpander);
         AddMethod<ReadTable,String>("remove-character-expander",RemoveCharacterExpander);
+
+
+        m_GlobalScope->SetVariable(p_GetSymbolID("*standard-input*"),Value::MakeExternal(MBUtility::StreamReader(std::make_unique<MBLSP::TerminalInput>())));
+        m_GlobalScope->SetVariable(p_GetSymbolID("*standard-output*"),Value::MakeExternal(
+                    std::unique_ptr<MBUtility::MBOctetOutputStream>( new MBUtility::TerminalOutput())));
     }
 
     Value Evaluator::Write_OutStream BUILTIN_ARGLIST
@@ -1911,15 +1922,45 @@ namespace MBLisp
         //set load path
         p_LoadFile(CurrentScope,SourcePath);
     }
+    void Evaluator::Repl()
+    {
+        LoadStd();
+        Value StdinValue = m_GlobalScope->FindVariable(p_GetSymbolID("*standard-input*"));
+        auto& Stdin  = StdinValue.GetType<MBUtility::StreamReader>();
+        auto ReplScope = CreateDefaultScope();
+        Value TableValue = ReplScope->FindVariable(p_GetSymbolID("*READTABLE*"));
+        ReadTable const& Table = TableValue.GetType<ReadTable>();
+
+        ReplScope->SetVariable( p_GetSymbolID("load-filepath"),MBUnicode::PathToUTF8(std::filesystem::current_path()));
+        Ref<OpCodeList> OpCodes = std::make_shared<OpCodeList>();
+        while(true)
+        {
+            try
+            {
+                IPIndex InstructionToExecute = OpCodes->Size();
+                Value NewTerm = p_Expand(ReplScope,p_ReadTerm(ReplScope,Table,Stdin,StdinValue));
+                OpCodes->Append(NewTerm);
+                Print(*this,p_Eval(ReplScope,OpCodes,InstructionToExecute));
+                std::cout<<std::endl;
+            }
+            catch(UncaughtSignal const& e)
+            {
+                std::cout<<"Uncaught signal: ";
+                Print(*this,e.ThrownValue);
+                std::cout<<std::endl;
+            }
+            catch(std::exception const& e)
+            {
+                std::cout<<"Uncaught signal: "<<e.what()<<std::endl;
+            }
+        }
+    }
     Ref<Scope> Evaluator::CreateDefaultScope()
     {
         Ref<Scope> ReturnValue = std::make_shared<Scope>();
         ReturnValue->SetParentScope(m_GlobalScope);
         ReturnValue->SetVariable(p_GetSymbolID("*READTABLE*"),Value::MakeExternal(
                     ReadTable(m_GlobalScope->FindVariable(p_GetSymbolID("*READTABLE*")).GetType<ReadTable>())));
-        ReturnValue->SetVariable(p_GetSymbolID("*standard-input*"),Value::MakeExternal(MBUtility::StreamReader(std::make_unique<MBLSP::TerminalInput>())));
-        ReturnValue->SetVariable(p_GetSymbolID("*standard-output*"),Value::MakeExternal(
-                    std::unique_ptr<MBUtility::MBOctetOutputStream>( new MBUtility::TerminalOutput())));
         return ReturnValue;
     }
     Value Evaluator::SetName_Macro BUILTIN_ARGLIST

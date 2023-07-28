@@ -67,6 +67,38 @@
   return-value
 )
 
+
+(defun all (iterable)
+    (set return-value true)
+    (doit e iterable 
+        (if (not e)
+            (return false)
+        )
+    )
+    return-value
+)
+
+
+
+(defun is-compile-time-dot (envir ast)
+  (if (&& (< 2 (len ast)) (type-eq (. ast 1) symbol_t))
+      (set base (. ast 1))
+      (if (&& (in base envir) (not (type-eq (. envir base) null_t)))
+        (doit i (range 2 (len ast))
+
+        )
+      ) 
+  ) 
+)
+(defun dot-token-extractor (envir ast)
+   (set return-value (list)) 
+   return-value
+)
+(defun dot-diagnostics (envir ast)
+  (set return-value (list))
+  return-value
+)
+
 (defun type-eq (lhs rhs)
     (eq (type lhs) rhs)
 )
@@ -236,7 +268,6 @@
     (eq thing-to-inspect target)
 )
 (set delayed-map (make-dict ('defun true) ('defmacro true) ('defmethod true) ('defclass true)))
-
 (defun open-handler (handler uri content)
   (set new-envir (new-environment))
   (set (index new-envir 'load-filepath) uri)
@@ -247,8 +278,9 @@
   (set semantic-tokens (list))
   (set diagnostics (list))
   (set delayed-forms (list))
-  (try
-   (
+  (set diagnostics (list))
+
+  (catch-all
       (while (not (eof file-stream))
              (set new-term (eval `(read-term ,file-stream) new-envir))
              (skip-whitespace file-stream)
@@ -261,22 +293,20 @@
                     (append delayed-forms new-term)
                     (continue)
              )
-             (insert-elements semantic-tokens (default-extractor new-envir new-term))
-             (insert-elements diagnostics (get-diagnostics new-envir new-term))
+             (catch-all 
+                 (insert-elements semantic-tokens (default-extractor new-envir new-term))
+                 (insert-elements diagnostics (get-diagnostics new-envir new-term))
+             )
       )
       (doit new-term delayed-forms
-       (insert-elements semantic-tokens (default-extractor new-envir new-term))
-       (insert-elements diagnostics (get-diagnostics new-envir new-term))
+             (catch-all 
+               (insert-elements semantic-tokens (default-extractor new-envir new-term))
+               (insert-elements diagnostics (get-diagnostics new-envir new-term))
+             )
       )
-   )
-   catch (any_t e)
-   (
-
-   )
   )
   (lsp:set-document-tokens handler uri semantic-tokens)
   (lsp:set-document-diagnostics handler uri diagnostics)
 )
-
 (lsp:add-on-open-handler handler open-handler)
 (lsp:handle-requests handler)

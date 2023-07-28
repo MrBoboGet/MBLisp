@@ -5,16 +5,16 @@
 #include <MBUnicode/MBUnicode.h>
 int main(int argc,const char** argv)
 {
-    if(argc == 1)
-    {
-        return 0;   
-    }
-    std::string FileContent = argv[1];
     MBLisp::Evaluator Evaluator;
     try
     {
-      Evaluator.LoadStd();
-      Evaluator.Eval(FileContent);
+        if(argc == 1)
+        {
+            Evaluator.Repl();
+        }
+        std::string FileContent = argv[1];
+        Evaluator.LoadStd();
+        Evaluator.Eval(FileContent);
     }
     catch(MBLisp::LookupError const& e)
     {

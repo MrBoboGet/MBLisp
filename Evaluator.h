@@ -80,6 +80,17 @@ namespace MBLisp
         virtual void SetEvaluator(Evaluator* AssociatedEvaluator) = 0;
     };
 
+
+    class UncaughtSignal : public std::exception 
+    {
+    public:
+        Value ThrownValue;
+        const char* what() const noexcept 
+        {
+            return "Uncaught signal";   
+        }
+    };
+    
     //TODO kinda hacky, should be temporary, but much more convenient when
     //iterating and prototyping
 #define BUILTIN_ARGLIST (Evaluator& AssociatedEvaluator,Ref<Scope> CurrentScope,FuncArgVector& Arguments)
@@ -287,6 +298,8 @@ namespace MBLisp
 
         void LoadStd();
         void Eval(std::filesystem::path const& SourceFile);
+
+        void Repl();
         Value Eval(Ref<Scope> CurrentScope,Value Callable,FuncArgVector Arguments);
     };
 }
