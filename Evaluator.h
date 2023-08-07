@@ -90,6 +90,15 @@ namespace MBLisp
             return "Uncaught signal";   
         }
     };
+    class InvalidCharacter : public std::exception 
+    {
+    public:
+        std::string Message;
+        const char* what() const noexcept 
+        {
+            return Message.c_str();
+        }
+    };
     
     //TODO kinda hacky, should be temporary, but much more convenient when
     //iterating and prototyping

@@ -1403,7 +1403,10 @@ namespace MBLisp
                 });
         if (SymbolString == "")
         {
-            throw std::runtime_error("Error reading symbol: first character invalid");
+            InvalidCharacter Exception;
+            Exception.Message = "Error reading symbol: first character invalid: ";
+            Exception.Message += Content.PeekByte();
+            throw Exception;
         }
         else if(SymbolString == "true")
         {
@@ -1971,6 +1974,12 @@ namespace MBLisp
                 std::cout<<"Uncaught signal: ";
                 Print(*this,e.ThrownValue);
                 std::cout<<std::endl;
+            }
+            catch(InvalidCharacter const& e)
+            {
+                std::cout<<e.what();
+                std::cout<<std::endl;
+                Stdin.ReadByte();
             }
             catch(std::exception const& e)
             {
