@@ -9,6 +9,11 @@
 #include <MBUtility/MBVector.h>
 
 
+#include <thread>
+#include <mutex>
+#include <condition_variable>
+
+#include "Threading.h"
 namespace MBLisp
 {
    
@@ -55,6 +60,7 @@ namespace MBLisp
     struct ExecutionState
     {
         //-1 means last, other value entails being in a signal
+        ThreadID ThreadID = 0;
         int FrameTarget = -1;
         bool UnwindingStack = false;
         bool UnwindForced = false;
@@ -219,14 +225,23 @@ namespace MBLisp
         static Value SetName_Lambda BUILTIN_ARGLIST;
         static Value SetName_Generic BUILTIN_ARGLIST;
 
+        //Threading
+        ThreadingState m_ThreadingState;
+
+        static Value Thread BUILTIN_ARGLIST;
+        static Value This_Thread BUILTIN_ARGLIST;
+        static Value Sleep BUILTIN_ARGLIST;
+
+
+
 
         std::unordered_map<std::string,std::unique_ptr<Module>> m_BuiltinModules;
-        
         std::unordered_map<std::string,SymbolID> m_InternedSymbols;
         std::unordered_map<SymbolID,std::string> m_SymbolToString;
         std::shared_ptr<Scope> m_GlobalScope = std::make_shared<Scope>();
         //easiest possible testable variant
 
+        
         bool p_ValueIsType(ClassID TypeValue,Value const& ValueToInspect);
 
         void p_Invoke(Value& ObjectToCall,FuncArgVector& Arguments,ExecutionState& CurrentState);
@@ -279,8 +294,19 @@ namespace MBLisp
 
 
         void p_LoadFile(Ref<Scope> AssocatedScope,std::filesystem::path const& LoadFilePath);
+
+
+        template<typename ClassToConvert, Value (ClassToConvert::*MemberMethod)()>
+        static Value p_MemberConverter BUILTIN_ARGLIST
+        {
+            return (Arguments[0].GetType<ClassToConvert>().*MemberMethod)();
+        }
     public:
         Evaluator();
+
+        Evaluator(Evaluator&&) = delete;
+        Evaluator(Evaluator const&) = delete;
+        Evaluator& operator==(Evaluator const&) = delete;
 
         Ref<Scope> CreateDefaultScope();
 
@@ -302,6 +328,22 @@ namespace MBLisp
         void AddMethod(std::string const& MethodName,Value Callable)
         {
             AddMethod<ArgTypes...>(m_GlobalScope,MethodName,std::move(Callable));
+        }
+
+        //template<typename ClassType,typename... ArgTypes>
+        //void AddMemberMethod(Ref<Scope> ScopeToModify,std::string const& MethodName,Value (ClassType::*MemberMethod)(ArgTypes...))
+        //{
+
+        //}
+        template<typename ClassType,Value (ClassType::*MemberMethod)()>
+        void AddMemberMethod(Ref<Scope> ScopeToModify,std::string const& MethodName)
+        {
+            AddMethod<ClassType>(ScopeToModify,MethodName,p_MemberConverter<ClassType,MemberMethod>);
+        }
+        template<typename ClassType,Value (ClassType::*MemberMethod)()>
+        void AddMemberMethod(std::string const& MethodName)
+        {
+            AddMethod<ClassType>(m_GlobalScope,MethodName,p_MemberConverter<ClassType,MemberMethod>);
         }
         SymbolID GenerateSymbol();
 

@@ -21,6 +21,7 @@ namespace MBLisp
     typedef int MacroID;
     typedef uint_least32_t ClassID;
     typedef uint_least32_t DynamicVarID;
+    typedef uint_least32_t ThreadID;
     typedef std::string String;
     class Value;
     typedef std::vector<Value> List;
@@ -102,6 +103,19 @@ namespace MBLisp
             return Callable == OtherMacro.Callable;   
         }
     };
+
+    struct ThreadHandle
+    {
+        ThreadID ID = -1;
+        bool operator==(ThreadHandle Rhs) const
+        {
+            return ID == Rhs.ID;   
+        }
+        bool operator!=(ThreadHandle Rhs) const
+        {
+            return !(*this == Rhs);
+        }
+    };
     
 
     template<typename T,typename U,typename... OtherTypes>
@@ -142,6 +156,10 @@ namespace MBLisp
         ClassID m_ClassID = 0;
         void* m_ExternalData = nullptr;
         std::function<void(void*)> m_Deleter;
+        ExternalValue()
+        {
+               
+        }
     public:
         ExternalValue(ExternalValue const&) = delete;
         ExternalValue& operator=(ExternalValue const&) = delete;
@@ -159,6 +177,15 @@ namespace MBLisp
             m_ExternalData = new T(std::move(ValueToStore));
             m_Deleter = [](void* DataToDelete){delete static_cast<T*>(DataToDelete);};
             m_ClassID = GetClassID<T>();
+        }
+        template<typename Class,typename... ArgTypes>
+        static ExternalValue Emplace(ArgTypes&&... Args)
+        {
+            ExternalValue ReturnValue;
+            ReturnValue.m_ExternalData = new Class(std::forward<ArgTypes>(Args)...);
+            ReturnValue.m_Deleter = [](void* DataToDelete){delete static_cast<Class*>(DataToDelete);};
+            ReturnValue.m_ClassID = GetClassID<Class>();
+            return ReturnValue;
         }
         ~ExternalValue()
         {
@@ -242,7 +269,7 @@ public:
                 return ReturnValue;
             };
         };
-        typedef std::variant<Null,bool,Function,Macro,Int,Float,Symbol,MBUtility::Dynamic<String>,
+        typedef std::variant<Null,bool,Function,Macro,Int,Float,Symbol,ThreadHandle,MBUtility::Dynamic<String>,
             Ref<Lambda>,
             Ref<List>,
             Ref<std::unordered_map<Value,Value,Value_Hasher>>,
@@ -259,7 +286,7 @@ public:
         template<typename T>
         static constexpr bool IsValueType()
         {
-            return TypeIn<T,bool,Function,Int,Float,Symbol,Macro,Null>;
+            return TypeIn<T,bool,Function,Int,Float,Symbol,Macro,ThreadHandle,Null>;
         }
         template<typename T>
         static constexpr bool IsReferenceType()
@@ -572,6 +599,13 @@ public:
         {
             Value ReturnValue;
             ReturnValue.m_Data = std::make_shared<ExternalValue>(std::move(ExternalObject));
+            return ReturnValue;
+        }
+        template<typename T,typename... ArgTypes>
+        static Value EmplaceExternal(ArgTypes&&... Args)
+        {
+            Value ReturnValue;
+            ReturnValue.m_Data = std::shared_ptr<ExternalValue>(new ExternalValue(ExternalValue::Emplace<T,ArgTypes...>(std::forward<ArgTypes>(Args)...)));
             return ReturnValue;
         }
         template<typename T>

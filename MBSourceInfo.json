@@ -23,6 +23,7 @@
                 "/Value.cpp",
                 "/OpCodes.cpp",
                 "/MBLisp_CLIMain.cpp",
+                "/Threading.cpp",
                 "/Modules/LSP/LSPModule.cpp"
             ],
             "TargetType": "Executable"

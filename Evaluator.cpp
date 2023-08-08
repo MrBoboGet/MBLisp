@@ -1,3 +1,4 @@
+
 #include "Evaluator.h"
 #include <MBUtility/StreamReader.h>
 #include "MBLSP/LSP_Structs.h"
@@ -19,10 +20,15 @@
 #include <MBUtility/FileStreams.h>
 
 #include <iostream>
+
+
+#include "Threading.h"
 namespace MBLisp
 {
 
 
+
+    //BEGIN ThreadingState
 
     
 
@@ -871,7 +877,10 @@ namespace MBLisp
         auto& StackFrames = CurrentState.StackFrames;
         while(StackFrames.size() != 0)
         {
-
+            if(m_ThreadingState.MultipleThreadsActive())
+            {
+                m_ThreadingState.WaitForTurn(CurrentState.ThreadID);
+            }
             if(CurrentState.UnwindingStack)
             {
                 assert(CurrentState.StackFrames.size() > 0);
@@ -1609,6 +1618,14 @@ namespace MBLisp
                     //
                     {"get-internal-module",GetInternalModule},
                     {"internal-modules",InternalModules},
+
+                    //threading
+                    {"lock",[] BUILTIN_ARGLIST -> Value
+                        {
+                            return Value::EmplaceExternal<Lock>();
+                        }},
+                    {"thread",Thread},
+                    {"this-thread",This_Thread},
                 })
         {
             Function NewBuiltin;
@@ -1683,7 +1700,14 @@ namespace MBLisp
         AddMethod<Null>("str",Str_Null);
         AddMethod<Float>("str",Str_Float);
         AddMethod<Int>("str",Str_Int);
-       
+
+
+        //Threading
+        AddMemberMethod<Lock,&Lock::Get>("get");
+        AddMemberMethod<Lock,&Lock::Notify>("notify");
+        AddMemberMethod<Lock,&Lock::Release>("release");
+        AddMemberMethod<Lock,&Lock::Wait>("wait");
+        AddMethod<ThreadHandle,Int>("sleep",Sleep);
         //Symbols
         AddMethod<String>("symbol",Symbol_String);
         AddMethod<Symbol,Int>("symbol",Symbol_SymbolInt);
@@ -1764,6 +1788,42 @@ namespace MBLisp
         }
         return ReturnValue;
     }
+
+
+    Value Evaluator::Thread BUILTIN_ARGLIST
+    {
+        ThreadHandle NewThread;
+        if(Arguments.size() == 0)
+        {
+            throw std::runtime_error("Thread requires a callable as first argument");
+        }
+        ExecutionState NewExecState;
+        FuncArgVector Args;
+        for(int i = 1; i < Arguments.size();i++)
+        {
+            Args.push_back(Arguments[i]);
+        }
+        AssociatedEvaluator.p_Invoke(Arguments[0],Args,NewExecState);
+        NewExecState.ThreadID = AssociatedEvaluator.m_ThreadingState.GetNextID();
+        NewThread.ID = NewExecState.ThreadID;
+        AssociatedEvaluator.m_ThreadingState.AddThread([&,ExecState=std::move(NewExecState)]() mutable
+                {
+                    AssociatedEvaluator.p_Eval(ExecState);
+                });
+        return NewThread;
+    }
+    Value Evaluator::This_Thread BUILTIN_ARGLIST
+    {
+        ThreadHandle Handle;
+        Handle.ID = AssociatedEvaluator.m_ThreadingState.CurrentID();
+        return Handle;
+    }
+    Value Evaluator::Sleep BUILTIN_ARGLIST
+    {
+        AssociatedEvaluator.m_ThreadingState.Sleep(Arguments[0].GetType<ThreadHandle>().ID,Arguments[1].GetType<Int>());
+        return Value();
+    }
+
     Value Evaluator::GetInternalModule BUILTIN_ARGLIST
     {
         Value ReturnValue;
