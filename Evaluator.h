@@ -130,8 +130,10 @@ namespace MBLisp
         static Value Generic BUILTIN_ARGLIST;
         static Value Dynamic BUILTIN_ARGLIST;
 
-
-
+        //Operators
+        static Value Less_String BUILTIN_ARGLIST;
+        static Value Less_Int BUILTIN_ARGLIST;
+        static Value Less_Symbol BUILTIN_ARGLIST;
         //builtin containers
         //List
         static Value Index_List BUILTIN_ARGLIST;
@@ -238,6 +240,14 @@ namespace MBLisp
         std::unordered_map<std::string,std::unique_ptr<Module>> m_BuiltinModules;
         std::unordered_map<std::string,SymbolID> m_InternedSymbols;
         std::unordered_map<SymbolID,std::string> m_SymbolToString;
+        std::unordered_map<ClassID,Value> m_BuiltinTypeDefinitions;
+
+        template<typename T>
+        void p_RegisterBuiltinClass(std::string const& Name)
+        {
+            m_GlobalScope->SetVariable(p_GetSymbolID(Name),ClassDefinition(Value::GetTypeTypeID<T>()));
+            m_BuiltinTypeDefinitions[Value::GetTypeTypeID<T>] = m_GlobalScope->FindVariable(p_GetSymbolID(Name));
+        }
         std::shared_ptr<Scope> m_GlobalScope = std::make_shared<Scope>();
         //easiest possible testable variant
 
@@ -260,11 +270,11 @@ namespace MBLisp
 
         //reading
         String p_ReadString(MBUtility::StreamReader& Content);
-        Value p_ReadSymbol(Ref<Scope> ReadScope,ReadTable const& Table,MBUtility::StreamReader& Content);
+        Value p_ReadSymbol(Ref<Scope> ReadScope, SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content);
         Int p_ReadInteger(MBUtility::StreamReader& Content);
-        List p_ReadList(std::shared_ptr<Scope> AssociatedScope,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
-        Value p_ReadTerm(std::shared_ptr<Scope> AssociatedScope,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
-        List p_Read(std::shared_ptr<Scope> AssociatedScope,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
+        List p_ReadList(std::shared_ptr<Scope> AssociatedScope,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
+        Value p_ReadTerm(std::shared_ptr<Scope> AssociatedScope,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
+        List p_Read(std::shared_ptr<Scope> AssociatedScope,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
         
         SymbolID p_GetSymbolID(std::string const& SymbolString);
         

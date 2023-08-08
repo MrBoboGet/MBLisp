@@ -299,6 +299,17 @@
     (eq thing-to-inspect target)
 )
 (set delayed-map (make-dict ('defun true) ('defmacro true) ('defmethod true) ('defclass true)))
+
+(defclass symbol-location ()
+    (file-symbol null)
+    (location-symbol null)
+    (constructor (lambda (res file location) (set (slot res file-symbol) file) (set (slot res location-symbol) location) res))
+)
+
+(defclass file-data ()
+    (jump-symbols (list))
+)
+
 (defun open-handler (handler uri content)
   (set new-envir (new-environment))
   (set (index new-envir 'load-filepath) uri)

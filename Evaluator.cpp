@@ -53,15 +53,36 @@ namespace MBLisp
         {
             ReturnValue = Arguments[0].GetType<Int>() < Arguments[1].GetType<Int>();
         }
+        else if(Arguments[1].IsType<Symbol>())
+        {
+            ReturnValue = Arguments[0].GetType<Symbol>().SymbolLocation.Position < Arguments[1].GetType<Symbol>().SymbolLocation.Position;
+        }
+        else if(Arguments[1].IsType<Symbol>())
+        {
+            ReturnValue = Arguments[0].GetType<Symbol>().SymbolLocation.Position < Arguments[1].GetType<Symbol>().SymbolLocation.Position;
+        }
         return  ReturnValue;
+    }
+    Value Evaluator::Less_String BUILTIN_ARGLIST
+    {
+        return Arguments[0].GetType<String>() < Arguments[1].GetType<String>();
+    }
+    Value Evaluator::Less_Int BUILTIN_ARGLIST
+    {
+        return Arguments[0].GetType<Int>() < Arguments[1].GetType<Int>();
+    }
+    Value Evaluator::Less_Symbol BUILTIN_ARGLIST
+    {
+        return Arguments[0].GetType<Symbol>().ID < Arguments[1].GetType<Symbol>().ID;
     }
     Value Evaluator::Sort BUILTIN_ARGLIST
     {
         Ref<List> AssociatedList = Arguments[0].GetRef<List>();
+        Value LessFunc = CurrentScope->FindVariable(AssociatedEvaluator.p_GetSymbolID("<"));
         std::sort(AssociatedList->begin(),AssociatedList->end(),[&](Value const& lhs,Value const& rhs)
                 {
                     FuncArgVector Args = {lhs,rhs};
-                    auto Result = Less(AssociatedEvaluator,CurrentScope,Args);
+                    auto Result = AssociatedEvaluator.Eval(CurrentScope,LessFunc,std::move(Args));
                     return Result.IsType<bool>() && Result.GetType<bool>();
                 });
         return AssociatedList;
@@ -333,8 +354,9 @@ namespace MBLisp
         }
         MBUtility::StreamReader& Reader = Arguments[0].GetType<MBUtility::StreamReader>();
         ReadTable& Table = CurrentScope->FindVariable(AssociatedEvaluator.GetSymbolID("*READTABLE*")).GetType<ReadTable>();
+        SymbolID URI = AssociatedEvaluator.p_GetSymbolID(CurrentScope->FindVariable(AssociatedEvaluator.p_GetSymbolID("load-filepath")).GetType<String>());
         std::shared_ptr<Scope> NewScope = std::make_shared<Scope>();
-        ReturnValue = AssociatedEvaluator.p_ReadTerm(NewScope,Table,Reader,Arguments[0]);
+        ReturnValue = AssociatedEvaluator.p_ReadTerm(NewScope,URI,Table,Reader,Arguments[0]);
         return ReturnValue;
     }
     Value Evaluator::Stream_ReadString BUILTIN_ARGLIST
@@ -538,7 +560,7 @@ namespace MBLisp
     {
         Symbol ReturnValue;
         ReturnValue.ID = Arguments[0].GetType<Symbol>().ID;
-        ReturnValue.Position = Arguments[1].GetType<Int>();
+        ReturnValue.SymbolLocation.Position = Arguments[1].GetType<Int>();
         return ReturnValue;
     }
     Value Evaluator::GenSym BUILTIN_ARGLIST
@@ -1401,7 +1423,7 @@ namespace MBLisp
         }
         return ReturnValue;
     }
-    Value Evaluator::p_ReadSymbol(Ref<Scope> ReadScope,ReadTable const& Table,MBUtility::StreamReader& Content)
+    Value Evaluator::p_ReadSymbol(Ref<Scope> ReadScope,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content)
     {
         Value ReturnValue;
         size_t Position = Content.Position();
@@ -1432,7 +1454,8 @@ namespace MBLisp
         else
         {
             Symbol NewSymbol = Symbol(p_GetSymbolID(SymbolString));
-            NewSymbol.Position = Position;
+            NewSymbol.SymbolLocation.Position = Position;
+            NewSymbol.SymbolLocation.URI = URI;
             ReturnValue = NewSymbol;
             for(auto const& ExpandPairs : Table.ExpandMappings)
             {
@@ -1455,7 +1478,7 @@ namespace MBLisp
         ReturnValue = std::stoi(NumberString);
         return ReturnValue;
     }
-    List Evaluator::p_ReadList(std::shared_ptr<Scope> AssociatedScope,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue)
+    List Evaluator::p_ReadList(std::shared_ptr<Scope> AssociatedScope,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue)
     {
         List ReturnValue;
         Content.ReadByte();
@@ -1471,12 +1494,12 @@ namespace MBLisp
                 Content.ReadByte();
                 break;
             }
-            ReturnValue.push_back(p_ReadTerm(AssociatedScope,Table,Content,StreamValue));
+            ReturnValue.push_back(p_ReadTerm(AssociatedScope,URI,Table,Content,StreamValue));
             p_SkipWhiteSpace(Content);
         }
         return ReturnValue;
     }
-    Value Evaluator::p_ReadTerm(std::shared_ptr<Scope> AssociatedScope,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue)
+    Value Evaluator::p_ReadTerm(std::shared_ptr<Scope> AssociatedScope,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue)
     {
         Value ReturnValue;
         p_SkipWhiteSpace(Content);
@@ -1487,7 +1510,7 @@ namespace MBLisp
         char NextChar = Content.PeekByte();
         if(Content.PeekByte() == '(')
         {
-            ReturnValue = p_ReadList(AssociatedScope,Table,Content,StreamValue);
+            ReturnValue = p_ReadList(AssociatedScope,URI,Table,Content,StreamValue);
             assert(ReturnValue.GetRef<List>() != nullptr);
         }
         else if(Content.PeekByte() == '"')
@@ -1505,16 +1528,16 @@ namespace MBLisp
         }
         else
         {
-            ReturnValue = p_ReadSymbol(AssociatedScope,Table,Content);
+            ReturnValue = p_ReadSymbol(AssociatedScope,URI,Table,Content);
         }
         return ReturnValue;
     }
-    List Evaluator::p_Read(std::shared_ptr<Scope> AssociatedScope,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue)
+    List Evaluator::p_Read(std::shared_ptr<Scope> AssociatedScope, SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue)
     {
         List ReturnValue;
         while(!Content.EOFReached())
         {
-            ReturnValue.push_back(p_ReadTerm(AssociatedScope,Table,Content,StreamValue));
+            ReturnValue.push_back(p_ReadTerm(AssociatedScope,URI,Table,Content,StreamValue));
             p_SkipWhiteSpace(Content);
         }
         return ReturnValue;
@@ -1555,7 +1578,14 @@ namespace MBLisp
         Value ReturnValue;
         if(!(Arguments[0].IsType<ClassDefinition>() && Arguments[0].IsType<ClassInstance>()))
         {
-            return ClassDefinition(Arguments[0].GetTypeID());
+            if(Arguments[0].IsBuiltin())
+            {
+                return AssociatedEvaluator.m_BuiltinTypeDefinitions[Arguments[0].GetTypeID()];
+            }
+            else
+            {
+                return ClassDefinition(Arguments[0].GetTypeID());
+            }
         }
         else if(Arguments[0].IsType<ClassDefinition>())
         {
@@ -1591,7 +1621,6 @@ namespace MBLisp
         for(auto const& Pair : std::vector<std::pair<std::string,BuiltinFuncType>>{
                     {"print",Print},
                     {"+",Plus},
-                    {"<",Less},
                     {"list",CreateList},
                     {"class",Class},
                     {"addmethod",AddMethod},
@@ -1635,20 +1664,21 @@ namespace MBLisp
         m_PrimitiveSymbolMax = m_CurrentSymbolID;
 
         //primitive types
-        m_GlobalScope->SetVariable(p_GetSymbolID("list_t"),ClassDefinition(Value::GetTypeTypeID<List>()));
-        m_GlobalScope->SetVariable(p_GetSymbolID("int_t"),ClassDefinition(Value::GetTypeTypeID<Int>()));
-        m_GlobalScope->SetVariable(p_GetSymbolID("float_t"),ClassDefinition(Value::GetTypeTypeID<Float>()));
-        m_GlobalScope->SetVariable(p_GetSymbolID("symbol_t"),ClassDefinition(Value::GetTypeTypeID<Symbol>()));
-        m_GlobalScope->SetVariable(p_GetSymbolID("string_t"),ClassDefinition(Value::GetTypeTypeID<String>()));
-        m_GlobalScope->SetVariable(p_GetSymbolID("bool_t"),ClassDefinition(Value::GetTypeTypeID<bool>()));
-        m_GlobalScope->SetVariable(p_GetSymbolID("dict_t"),ClassDefinition(Value::GetTypeTypeID<Dict>()));
-        m_GlobalScope->SetVariable(p_GetSymbolID("null_t"),ClassDefinition(Value::GetTypeTypeID<Null>()));
-        m_GlobalScope->SetVariable(p_GetSymbolID("function_t"),ClassDefinition(Value::GetTypeTypeID<Function>()));
-        m_GlobalScope->SetVariable(p_GetSymbolID("lambda_t"),ClassDefinition(Value::GetTypeTypeID<Lambda>()));
-        m_GlobalScope->SetVariable(p_GetSymbolID("macro_t"),ClassDefinition(Value::GetTypeTypeID<Macro>()));
-        m_GlobalScope->SetVariable(p_GetSymbolID("generic_t"),ClassDefinition(Value::GetTypeTypeID<GenericFunction>()));
-        m_GlobalScope->SetVariable(p_GetSymbolID("type_t"),ClassDefinition(Value::GetTypeTypeID<ClassDefinition>()));
-        m_GlobalScope->SetVariable(p_GetSymbolID("any_t"),ClassDefinition(0));
+        p_RegisterBuiltinClass<List>("list_t");
+        p_RegisterBuiltinClass<Int>("int_t");
+        p_RegisterBuiltinClass<Float>("float_t");
+        p_RegisterBuiltinClass<Symbol>("symbol_t");
+        p_RegisterBuiltinClass<String>("string_t");
+        p_RegisterBuiltinClass<bool>("bool_t");
+        p_RegisterBuiltinClass<Dict>("dict_t");
+        p_RegisterBuiltinClass<Null>("null_t");
+        p_RegisterBuiltinClass<BuiltinFuncType>("function_t");
+        p_RegisterBuiltinClass<Lambda>("lambda_t");
+        p_RegisterBuiltinClass<Macro>("macro_t");
+        p_RegisterBuiltinClass<GenericFunction>("generic_t");
+        p_RegisterBuiltinClass<ClassDefinition>("type_t");
+        p_RegisterBuiltinClass<Any>("any_t");
+        p_RegisterBuiltinClass<ThreadHandle>("thread_t");
         
         //list
         AddMethod<List>("append",Append_List);
@@ -1702,6 +1732,10 @@ namespace MBLisp
         AddMethod<Int>("str",Str_Int);
 
 
+        //operators
+        AddMethod<Int,Int>("<",Less_Int);
+        AddMethod<String,String>("<",Less_String);
+        AddMethod<Symbol,Symbol>("<",Less_Symbol);
         //Threading
         AddMemberMethod<Lock,&Lock::Get>("get");
         AddMemberMethod<Lock,&Lock::Notify>("notify");
@@ -1858,7 +1892,7 @@ namespace MBLisp
     }
     Value Evaluator::Position_Symbol BUILTIN_ARGLIST
     {
-        return Arguments[0].GetType<Symbol>().Position;
+        return Arguments[0].GetType<Symbol>().SymbolLocation.Position;
     }
     Evaluator::Evaluator()
     {
@@ -1961,6 +1995,7 @@ namespace MBLisp
         }
         //updates  the load-filepath
         CurrentScope->SetVariable(p_GetSymbolID("load-filepath"),LoadFilePath.generic_string());
+        SymbolID URI = p_GetSymbolID(LoadFilePath.generic_string());
         std::string Content = MBUtility::ReadWholeFile(LoadFilePath.generic_string());
         Value ReaderValue = Value::MakeExternal(MBUtility::StreamReader(std::make_unique<MBUtility::IndeterminateStringStream>(Content)));
         MBUtility::StreamReader& Reader = ReaderValue.GetType<MBUtility::StreamReader>();
@@ -1969,7 +2004,7 @@ namespace MBLisp
         while(!Reader.EOFReached())
         {
             IPIndex InstructionToExecute = OpCodes->Size();
-            Value NewTerm = p_Expand(CurrentScope,p_ReadTerm(CurrentScope,Table,Reader,ReaderValue));
+            Value NewTerm = p_Expand(CurrentScope,p_ReadTerm(CurrentScope,URI,Table,Reader,ReaderValue));
             p_SkipWhiteSpace(Reader);
             if(NewTerm.IsType<List>())
             {
@@ -2018,13 +2053,14 @@ namespace MBLisp
         ReadTable const& Table = TableValue.GetType<ReadTable>();
         m_GlobalScope->SetVariable(p_GetSymbolID("is-repl"),true);
         ReplScope->SetVariable( p_GetSymbolID("load-filepath"),MBUnicode::PathToUTF8(std::filesystem::current_path()));
+        SymbolID URI = p_GetSymbolID(MBUnicode::PathToUTF8(std::filesystem::current_path()));
         Ref<OpCodeList> OpCodes = std::make_shared<OpCodeList>();
         while(true)
         {
             try
             {
                 IPIndex InstructionToExecute = OpCodes->Size();
-                Value NewTerm = p_Expand(ReplScope,p_ReadTerm(ReplScope,Table,Stdin,StdinValue));
+                Value NewTerm = p_Expand(ReplScope,p_ReadTerm(ReplScope,URI,Table,Stdin,StdinValue));
                 OpCodes->Append(NewTerm);
                 Print(*this,p_Eval(ReplScope,OpCodes,InstructionToExecute));
                 std::cout<<std::endl;

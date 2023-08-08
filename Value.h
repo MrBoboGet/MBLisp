@@ -42,10 +42,16 @@ namespace MBLisp
         UserDefined
     };
 
+
+    struct Location
+    {
+        PositionType Position = -1;
+        SymbolID URI = -1;
+    };
     struct Symbol
     {
         SymbolID ID;
-        PositionType Position = -1;
+        Location SymbolLocation;
 
         Symbol() = default;
         Symbol(SymbolID  NewId)
@@ -428,7 +434,11 @@ public:
             {
                 return 1<<UserClassBit;   
             }
-            if constexpr(IsBuiltin<T>())
+            else if constexpr(std::is_same_v<T,Any>())
+            {
+                return 0;   
+            }
+            else if constexpr(IsBuiltin<T>())
             {
                 if constexpr (std::is_same_v<T, String>)
                 {
