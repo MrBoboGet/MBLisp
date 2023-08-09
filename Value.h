@@ -83,7 +83,7 @@ namespace MBLisp
     {
         std::shared_ptr<FunctionDefinition> Definition;
         std::shared_ptr<Scope> AssociatedScope;
-        std::string Name;
+        Symbol Name;
     };
     class Evaluator;
     typedef Value (*BuiltinFuncType)(Evaluator&,Ref<Scope>,FuncArgVector&);
@@ -103,7 +103,7 @@ namespace MBLisp
     struct Macro
     {
         std::shared_ptr<Value> Callable;
-        std::string Name;
+        Symbol Name;
         bool operator==(Macro const& OtherMacro) const
         {
             return Callable == OtherMacro.Callable;   
@@ -434,7 +434,7 @@ public:
             {
                 return 1<<UserClassBit;   
             }
-            else if constexpr(std::is_same_v<T,Any>())
+            else if constexpr(std::is_same_v<T,Any>)
             {
                 return 0;   
             }
@@ -672,6 +672,7 @@ public:
         {
             ID = NewID;
         }
+        Symbol Name;
         ClassID ID = 0;
         std::vector<ClassID> Types;
         //expression to compile
@@ -701,7 +702,7 @@ public:
         bool p_TypesAreSatisifed(std::vector<ClassID> const& Overrides,Value const* Begin, Value const* End);
         bool p_TypeIsSatisfied(ClassID Override,Value const& Arg);
     public:
-        std::string Name;
+        Symbol Name;
         void AddMethod(std::vector<ClassID> OverridenTypes,Value Callable);
         //TODO more efficient implementation, the current one is the most naive one
         Value* GetMethod(Value* Begin,Value* End);

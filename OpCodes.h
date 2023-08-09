@@ -68,6 +68,7 @@ namespace MBLisp
     struct OpCode_Unwind
     {
         IPIndex HandlersEnd = -1;
+        int NewStackSize =  -1;
     };
     struct OpCode_Signal
     {

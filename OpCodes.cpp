@@ -289,6 +289,8 @@ namespace MBLisp
                     }
                     IPIndex AddHandlersIndex = ListToAppend.size();
                     ListToAppend.push_back(OpCode_AddSignalHandlers());
+                    IPIndex UnwindProtectIndex = ListToAppend.size();
+                    ListToAppend.push_back(OpCode_UnwindProtect_Add());
                     CurrentIndex = 2;
                     CurrentState.InSignalHandler += 1;
 
@@ -310,12 +312,15 @@ namespace MBLisp
                     for(IPIndex& UnwindIndexes : CurrentState.UnResolvedUnwinds)
                     {
                         ListToAppend[UnwindIndexes].GetType<OpCode_Unwind>().HandlersEnd = HandlersEnd;
+                        ListToAppend[UnwindIndexes].GetType<OpCode_Unwind>().NewStackSize = CurrentState.ArgumentStackCount;
                     }
                     for(IPIndex& HandlerDoneIndex : SignalHandlerDones)
                     {
                         ListToAppend[HandlerDoneIndex].GetType<OpCode_SignalHandler_Done>().HandlersEnd = HandlersEnd;
                     }
+                    ListToAppend[UnwindProtectIndex].GetType<OpCode_UnwindProtect_Add>().UnwindBegin = ListToAppend.size();
                     ListToAppend.push_back(OpCode_RemoveSignalHandlers());
+                    ListToAppend.push_back(OpCode_UnwindProtect_Pop());
                     OpCode_AddSignalHandlers& SignalOpCode = ListToAppend[AddHandlersIndex].GetType<OpCode_AddSignalHandlers>();
                     SignalOpCode.Handlers = std::move(Handlers);
                     OpCode_Goto&  GotoEnd = ListToAppend[JumpEndIndex].GetType<OpCode_Goto>();

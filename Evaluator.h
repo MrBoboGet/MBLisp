@@ -226,6 +226,11 @@ namespace MBLisp
         static Value SetName_Macro BUILTIN_ARGLIST;
         static Value SetName_Lambda BUILTIN_ARGLIST;
         static Value SetName_Generic BUILTIN_ARGLIST;
+        static Value SetName_ClassDefinition BUILTIN_ARGLIST;
+        static Value Name_Macro BUILTIN_ARGLIST;
+        static Value Name_Lambda BUILTIN_ARGLIST;
+        static Value Name_Generic BUILTIN_ARGLIST;
+        static Value Name_ClassDefinition BUILTIN_ARGLIST;
 
         //Threading
         ThreadingState m_ThreadingState;
@@ -246,7 +251,7 @@ namespace MBLisp
         void p_RegisterBuiltinClass(std::string const& Name)
         {
             m_GlobalScope->SetVariable(p_GetSymbolID(Name),ClassDefinition(Value::GetTypeTypeID<T>()));
-            m_BuiltinTypeDefinitions[Value::GetTypeTypeID<T>] = m_GlobalScope->FindVariable(p_GetSymbolID(Name));
+            m_BuiltinTypeDefinitions[Value::GetTypeTypeID<T>()] = m_GlobalScope->FindVariable(p_GetSymbolID(Name));
         }
         std::shared_ptr<Scope> m_GlobalScope = std::make_shared<Scope>();
         //easiest possible testable variant
@@ -331,7 +336,7 @@ namespace MBLisp
                  ScopeToModify->SetVariable(GenericSymbol,GenericFunction());
             }
             GenericFunction& AssociatedFunction = ScopeToModify->FindVariable(GenericSymbol).GetType<GenericFunction>();
-            AssociatedFunction.Name = MethodName;
+            AssociatedFunction.Name = p_GetSymbolID(MethodName);
             AssociatedFunction.AddMethod(std::move(Types),std::move(Callable));
         }
         template<typename... ArgTypes>

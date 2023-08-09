@@ -814,7 +814,7 @@ namespace MBLisp
             if(Arguments.size() < AssociatedLambda.Definition->Arguments.size())
             {
                 //throw std::runtime_error("To few arguments for function call with function \""+AssociatedLambda.Name+"\"");
-                p_EmitSignal(CurrentState,"To few arguments for function call with function \""+AssociatedLambda.Name+"\"",true);
+                p_EmitSignal(CurrentState,"To few arguments for function call with function \""+GetSymbolString(AssociatedLambda.Name.ID)+"\"",true);
                 return;
             }
             if(AssociatedLambda.Definition->RestParameter == 0)
@@ -822,7 +822,7 @@ namespace MBLisp
                 if(Arguments.size() > AssociatedLambda.Definition->Arguments.size())
                 {
                     //throw std::runtime_error("To many arguments for function call \""+AssociatedLambda.Name+"\"");
-                    p_EmitSignal(CurrentState,"To many arguments for function call \""+AssociatedLambda.Name+"\"",true);
+                    p_EmitSignal(CurrentState,"To many arguments for function call \""+GetSymbolString(AssociatedLambda.Name.ID)+"\"",true);
                     return;
                 }
             }
@@ -877,7 +877,7 @@ namespace MBLisp
             if(Callable == nullptr)
             {
                 //throw std::runtime_error("No method associated with the argument list for generic \""+GenericToInvoke.Name+"\"");   
-                p_EmitSignal(CurrentState,"No method associated with the argument list for generic \""+GenericToInvoke.Name+"\"",true);
+                p_EmitSignal(CurrentState,"No method associated with the argument list for generic \""+GetSymbolString(GenericToInvoke.Name.ID)+"\"",true);
                 return;
             }
             p_Invoke(*Callable,Arguments,CurrentState);
@@ -1139,6 +1139,7 @@ namespace MBLisp
                 OpCode_AddSignalHandlers const& AddSignalsCode = CurrentCode.GetType<OpCode_AddSignalHandlers>();
                 assert(CurrentFrame.ArgumentStack.size() >= AddSignalsCode.Handlers.size());
                 int StackOffset = CurrentFrame.ArgumentStack.size()-AddSignalsCode.Handlers.size();
+                std::vector<SignalHandler> NewHandlers;
                 for(auto const& NewHandler : AddSignalsCode.Handlers)
                 {
                     Value const& TypeValue = CurrentFrame.ArgumentStack[StackOffset];
@@ -1152,9 +1153,11 @@ namespace MBLisp
                     NewSignalHandler.HandledType = TypeValue.GetType<ClassDefinition>().ID;
                     NewSignalHandler.BoundValue = NewHandler.BoundVariable;
                     NewSignalHandler.SignalBegin = NewHandler.HandlerBegin;
-                    CurrentFrame.ActiveSignalHandlers.push_back(NewSignalHandler);
+                    NewHandlers.push_back(std::move(NewSignalHandler));
                     StackOffset++;
                 }
+                std::reverse(NewHandlers.begin(),NewHandlers.end());
+                CurrentFrame.ActiveSignalHandlers.insert(CurrentFrame.ActiveSignalHandlers.end(),NewHandlers.begin(),NewHandlers.end());
                 CurrentFrame.ArgumentStack.resize(CurrentFrame.ArgumentStack.size() - AddSignalsCode.Handlers.size());
                 CurrentFrame.SignalHandlerBunchSize.push_back(AddSignalsCode.Handlers.size());
             }
@@ -1191,7 +1194,7 @@ namespace MBLisp
                 CurrentState.UnwindingStack = true;
                 CurrentState.FrameTarget = CurrentFrame.SignalFrameIndex;
                 StackFrames[CurrentFrame.SignalFrameIndex].ExecutionPosition.SetIP(CurrentCode.GetType<OpCode_Unwind>().HandlersEnd);
-                StackFrames[CurrentFrame.SignalFrameIndex].ArgumentStack.push_back(false);
+                StackFrames[CurrentFrame.SignalFrameIndex].ArgumentStack.resize(CurrentCode.GetType<OpCode_Unwind>().NewStackSize+1);
             }
             else if(CurrentCode.IsType<OpCode_PushBindings>())
             {
@@ -1746,9 +1749,16 @@ namespace MBLisp
         AddMethod<String>("symbol",Symbol_String);
         AddMethod<Symbol,Int>("symbol",Symbol_SymbolInt);
         //stuff
-        AddMethod<Macro,String>("set-name",SetName_Macro);
-        AddMethod<Lambda,String>("set-name",SetName_Lambda);
-        AddMethod<GenericFunction,String>("set-name",SetName_Generic);
+        AddMethod<Macro,Symbol>("set-name",SetName_Macro);
+        AddMethod<Lambda,Symbol>("set-name",SetName_Lambda);
+        AddMethod<GenericFunction,Symbol>("set-name",SetName_Generic);
+        AddMethod<ClassDefinition,Symbol>("set-name",SetName_ClassDefinition);
+
+        AddMethod<Macro>("name",Name_Macro);
+        AddMethod<Lambda>("name",Name_Lambda);
+        AddMethod<GenericFunction>("name",Name_Generic);
+        AddMethod<ClassDefinition>("name",Name_ClassDefinition);
+
         AddMethod<Symbol>("is-special",IsSpecial_Symbol);
         AddMethod<Symbol>("position",Position_Symbol);
         
@@ -2094,20 +2104,41 @@ namespace MBLisp
     Value Evaluator::SetName_Macro BUILTIN_ARGLIST
     {
         Value ReturnValue;
-        Arguments[0].GetType<Macro>().Name = Arguments[1].GetType<String>();
+        Arguments[0].GetType<Macro>().Name = Arguments[1].GetType<Symbol>();
 
         return ReturnValue;
     }
     Value Evaluator::SetName_Lambda BUILTIN_ARGLIST
     {
         Value ReturnValue;
-        Arguments[0].GetType<Lambda>().Name = Arguments[1].GetType<String>();
+        Arguments[0].GetType<Lambda>().Name = Arguments[1].GetType<Symbol>();
         return ReturnValue;
     }
     Value Evaluator::SetName_Generic BUILTIN_ARGLIST
     {
         Value ReturnValue;
-        Arguments[0].GetType<GenericFunction>().Name = Arguments[1].GetType<String>();
+        Arguments[0].GetType<GenericFunction>().Name = Arguments[1].GetType<Symbol>();
         return ReturnValue;
+    }
+    Value Evaluator::SetName_ClassDefinition BUILTIN_ARGLIST
+    {
+        Arguments[0].GetType<ClassDefinition>().Name = Arguments[1].GetType<Symbol>();
+        return Value();
+    }
+    Value Evaluator::Name_Macro BUILTIN_ARGLIST
+    {
+        return Arguments[0].GetType<Macro>().Name;
+    }
+    Value Evaluator::Name_Lambda BUILTIN_ARGLIST
+    {
+        return Arguments[0].GetType<Lambda>().Name;
+    }
+    Value Evaluator::Name_Generic BUILTIN_ARGLIST
+    {
+        return Arguments[0].GetType<GenericFunction>().Name;
+    }
+    Value Evaluator::Name_ClassDefinition BUILTIN_ARGLIST
+    {
+        return Arguments[0].GetType<ClassDefinition>().Name;
     }
 }

@@ -6,7 +6,6 @@
   )
 )
 
-
 (defun test-func () (print "hello world"))
 (defun if-token-extractor (envir ast)
    (set return-value (list)) 
@@ -147,14 +146,18 @@
         (set value (index envir ast))
         (if (eq (type value) macro_t)
           (append return-value (list ast "macro"))
+          (signal (symbol-location ast (name value)))
          else if (eq (type value) function_t)
           (append return-value (list ast "function"))
          else if (eq (type value) lambda_t)
           (append return-value (list ast "function"))
+          (signal (symbol-location ast (name value)))
          else if (eq (type value) generic_t)
           (append return-value (list ast "function"))
+          (signal (symbol-location ast (name value)))
          else if (eq (type value) type_t)
           (append return-value (list ast "class"))
+          (signal (symbol-location ast (name value)))
          else 
           (append return-value (list ast "var"))
         )
@@ -203,6 +206,15 @@
   )
   return-value
 )
+(defun lambda-envir (envir ast)
+  (set return-value (new-environment))
+  (set-parent return-value envir)
+  (doit arg (. ast 1)
+    (if (eq (type arg) symbol_t) (shadow return-value arg))
+  )
+  return-value
+)
+
 (defun method-envir (envir ast)
   (set return-value (new-environment))
   (set-parent return-value envir)
@@ -221,10 +233,11 @@
 (set envir-modifiers (make-dict 
                         ('defun func-envir) 
                         ('defmacro func-envir) 
-                        ('lambda func-envir) 
+                        ('lambda lambda-envir) 
                         ('defmethod method-envir) 
                         ('doit doit-envir)
 ))
+
 (set diagnostics-overrides (make-dict 
                         ('if if-diagnostics) 
                         ('quote quote-diagnostics)
@@ -301,14 +314,17 @@
 (set delayed-map (make-dict ('defun true) ('defmacro true) ('defmethod true) ('defclass true)))
 
 (defclass symbol-location ()
-    (file-symbol null)
-    (location-symbol null)
-    (constructor (lambda (res file location) (set (slot res file-symbol) file) (set (slot res location-symbol) location) res))
+    (symbols (list))
+    (constructor (lambda (res source dest) (set (slot res symbols) (list source dest)) res))
 )
 
 (defclass file-data ()
     (jump-symbols (list))
+    (constructor (lambda (res) res))
 )
+
+
+(set open-documents (dict))
 
 (defun open-handler (handler uri content)
   (set new-envir (new-environment))
@@ -317,38 +333,65 @@
   (set input-stream-symbol (gensym))
   (set (index new-envir input-stream-symbol) file-stream)
 
+  (set new-file-data (file-data))
+
+  (set jump-symbols (list))
+
   (set semantic-tokens (list))
   (set diagnostics (list))
   (set delayed-forms (list))
   (set diagnostics (list))
 
   (catch-all
-      (while (not (eof file-stream))
-             (set new-term (eval `(read-term ,file-stream) new-envir))
-             (skip-whitespace file-stream)
-             (if (should-execute-form new-term)
-               (eval new-term new-envir)
-              else if (is-trivial-set-form new-term)
-               (set (index new-envir (index new-term 1)) null)
-             )
-             (if (&& (type-eq new-term list_t) (< 0 (len new-term)) (type-eq (. new-term 0) symbol_t) (in (. new-term 0) delayed-map))
-                    (append delayed-forms new-term)
-                    (continue)
-             )
-             (catch-all 
-                 (insert-elements semantic-tokens (default-extractor new-envir new-term))
-                 (insert-elements diagnostics (get-diagnostics new-envir new-term))
-             )
-      )
-      (doit new-term delayed-forms
-             (catch-all 
-               (insert-elements semantic-tokens (default-extractor new-envir new-term))
-               (insert-elements diagnostics (get-diagnostics new-envir new-term))
-             )
-      )
+          (while (not (eof file-stream))
+                 (set new-term (eval `(read-term ,file-stream) new-envir))
+                 (skip-whitespace file-stream)
+                 (if (should-execute-form new-term)
+                   (eval new-term new-envir)
+                  else if (is-trivial-set-form new-term)
+                   (set (index new-envir (index new-term 1)) null)
+                 )
+                 (if (&& (type-eq new-term list_t) (< 0 (len new-term)) (type-eq (. new-term 0) symbol_t) (in (. new-term 0) delayed-map))
+                        (append delayed-forms new-term)
+                        (continue)
+                 )
+                 (catch-signals
+                  (
+                   (insert-elements semantic-tokens (default-extractor new-envir new-term))
+                   (insert-elements diagnostics (get-diagnostics new-envir new-term))
+                  )
+                  catch (symbol-location loc)
+                  (
+                     (append jump-symbols (slot loc symbols))
+                  )
+                  catch (any_t e)
+                  (
+                    false
+                  )
+                 )
+          )
+          (doit new-term delayed-forms
+                 (catch-signals
+                  (
+                   (insert-elements semantic-tokens (default-extractor new-envir new-term))
+                   (insert-elements diagnostics (get-diagnostics new-envir new-term))
+                  )
+                  catch (symbol-location loc)
+                  (
+                     (append jump-symbols (slot loc symbols))
+                  )
+                  catch (any_t e)
+                  (
+                    false
+                  )
+                 )
+          )
   )
+
+  (set (. open-documents uri) new-file-data)
   (lsp:set-document-tokens handler uri semantic-tokens)
   (lsp:set-document-diagnostics handler uri diagnostics)
+  (lsp:set-document-jumps handler uri jump-symbols)
 )
 (if (not is-repl)
     (lsp:add-on-open-handler handler open-handler)
