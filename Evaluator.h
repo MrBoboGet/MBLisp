@@ -188,6 +188,7 @@ namespace MBLisp
         static Value Environment BUILTIN_ARGLIST;
         static Value NewEnvironment BUILTIN_ARGLIST;
         static Value Index_Environment BUILTIN_ARGLIST;
+        static Value SetVar_Environment BUILTIN_ARGLIST;
         static Value Shadow_Environment BUILTIN_ARGLIST;
         static Value SetParent_Environment BUILTIN_ARGLIST;
         static Value Clear_Environment BUILTIN_ARGLIST;

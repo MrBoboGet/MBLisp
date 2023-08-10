@@ -761,10 +761,16 @@ public:
 
     class Scope
     {
-        std::shared_ptr<Scope> m_ParentScope = nullptr;
+        struct ParentScope
+        {
+            std::shared_ptr<Scope> AssociatedScope;   
+            bool Shadowing = false;
+        };
+        ParentScope m_ParentScope;
         std::unordered_map<SymbolID,Value> m_Variables;
     public:
         void SetParentScope(std::shared_ptr<Scope> ParentScope);
+        void SetShadowingParent(std::shared_ptr<Scope> ParentScope);
         Value FindVariable(SymbolID Variable);
         void SetVariable(SymbolID Variable,Value NewValue);
         void OverrideVariable(SymbolID Variable,Value NewValue);

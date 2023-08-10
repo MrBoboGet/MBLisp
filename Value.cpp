@@ -7,7 +7,12 @@ namespace MBLisp
     //Begin Scope
     void Scope::SetParentScope(std::shared_ptr<Scope> ParentScope)
     {
-        m_ParentScope = ParentScope;
+        m_ParentScope.AssociatedScope = ParentScope;
+    }
+    void Scope::SetShadowingParent(std::shared_ptr<Scope> ParentScope)
+    {
+        m_ParentScope.AssociatedScope = ParentScope;
+        m_ParentScope.Shadowing = true;
     }
     Value Scope::FindVariable(SymbolID Variable)
     {
@@ -25,9 +30,9 @@ namespace MBLisp
         {
             return &VarIt->second;
         }
-        else if(m_ParentScope != nullptr)
+        else if(m_ParentScope.AssociatedScope != nullptr)
         {
-            ReturnValue = m_ParentScope->TryGet(Variable);
+            ReturnValue = m_ParentScope.AssociatedScope->TryGet(Variable);
         }
         return ReturnValue;
     }
@@ -37,9 +42,9 @@ namespace MBLisp
     }
     void Scope::SetVariable(SymbolID Variable,Value NewValue)
     {
-        if(m_ParentScope != nullptr)
+        if(m_ParentScope.AssociatedScope!= nullptr && !m_ParentScope.Shadowing)
         {
-            if(auto It = m_ParentScope->TryGet(Variable); It != nullptr)
+            if(auto It = m_ParentScope.AssociatedScope->TryGet(Variable); It != nullptr)
             {
                 *It = std::move(NewValue);
                 return;

@@ -92,7 +92,7 @@ namespace MBLisp
         Ref<List> ReturnValue = std::make_shared<List>();
         for(auto& Elem : Arguments)
         {
-            ReturnValue->push_back(std::move(Elem));
+            ReturnValue->push_back(Elem);
         }
         //Value ReturnValue = List(std::move(Arguments));
         return  ReturnValue;
@@ -288,7 +288,7 @@ namespace MBLisp
         i___CurrentClassID++;
         NewClass.Types.push_back(i___CurrentClassID);
         NewClass.ID = i___CurrentClassID;
-        return std::move(NewClass);
+        return NewClass;
     }
     Value Evaluator::AddMethod BUILTIN_ARGLIST
     {
@@ -387,7 +387,7 @@ namespace MBLisp
                     ReadBytes += 1;
                     return ReturnValue;
                 });
-        return std::move(ReturnValue);
+        return ReturnValue;
     }
     Value Evaluator::Stream_ReadLine BUILTIN_ARGLIST
     {
@@ -401,7 +401,7 @@ namespace MBLisp
         {
             Reader.ReadByte();
         }
-        return std::move(ReturnValue);
+        return ReturnValue;
     }
     Value Evaluator::Stream_EOF BUILTIN_ARGLIST
     {
@@ -574,7 +574,7 @@ namespace MBLisp
     Value Evaluator::NewEnvironment BUILTIN_ARGLIST
     {
         Ref<Scope> NewScope = std::make_shared<Scope>();
-        NewScope->SetParentScope(AssociatedEvaluator.m_GlobalScope);
+        NewScope->SetShadowingParent(AssociatedEvaluator.m_GlobalScope);
         return NewScope;
     }
     Value Evaluator::Index_Environment BUILTIN_ARGLIST
@@ -593,6 +593,11 @@ namespace MBLisp
             ReturnValue->MakeRef();
         }
         return *ReturnValue;
+    }
+    Value Evaluator::SetVar_Environment BUILTIN_ARGLIST
+    {
+        Arguments[0].GetType<Scope>().SetVariable(Arguments[1].GetType<Symbol>().ID,Arguments[2]);
+        return Value();
     }
     Value Evaluator::Shadow_Environment BUILTIN_ARGLIST
     {
@@ -634,7 +639,7 @@ namespace MBLisp
         }
         Value ReturnValue = false;
         ReadTable& TableToModify = Arguments[0].GetType<ReadTable>();
-        TableToModify.Mappings[Arguments[1].GetType<String>()[0]] = std::move(Arguments[2]);
+        TableToModify.Mappings[Arguments[1].GetType<String>()[0]] = Arguments[2];
         return ReturnValue;
     }
     Value Evaluator::RemoveReaderCharacter BUILTIN_ARGLIST
@@ -664,7 +669,7 @@ namespace MBLisp
         }
         Value ReturnValue = false;
         ReadTable& TableToModify = Arguments[0].GetType<ReadTable>();
-        TableToModify.ExpandMappings.push_back(std::make_pair(Arguments[1].GetType<String>()[0],std::move(Arguments[2])));
+        TableToModify.ExpandMappings.push_back(std::make_pair(Arguments[1].GetType<String>()[0],Arguments[2]));
         return false;
     }
     Value Evaluator::RemoveCharacterExpander BUILTIN_ARGLIST
@@ -1693,6 +1698,7 @@ namespace MBLisp
 
         //scope
         AddMethod<Scope,Symbol>("index",Index_Environment);
+        AddMethod<Scope,Symbol,Any>("set-var",SetVar_Environment);
         AddMethod<Scope,Scope>("set-parent",SetParent_Environment);
         AddMethod<Scope,Symbol>("shadow",Shadow_Environment);
         //comparisons
@@ -2096,7 +2102,7 @@ namespace MBLisp
     Ref<Scope> Evaluator::CreateDefaultScope()
     {
         Ref<Scope> ReturnValue = std::make_shared<Scope>();
-        ReturnValue->SetParentScope(m_GlobalScope);
+        ReturnValue->SetShadowingParent(m_GlobalScope);
         ReturnValue->SetVariable(p_GetSymbolID("*READTABLE*"),Value::MakeExternal(
                     ReadTable(m_GlobalScope->FindVariable(p_GetSymbolID("*READTABLE*")).GetType<ReadTable>())));
         return ReturnValue;

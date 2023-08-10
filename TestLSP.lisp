@@ -22,7 +22,7 @@
   (set return-value (list))
   (doit e ast
     (if (is-trivial-set-form e)
-      (set (index envir (. e 1)) null)
+      (set-var envir (. e 1) null)
     )
     (if (not (|| (eq e 'if) (eq e 'else)))
       (insert-elements return-value (get-diagnostics envir  e))
@@ -318,6 +318,7 @@
     (constructor (lambda (res source dest) (set (slot res symbols) (list source dest)) res))
 )
 
+
 (defclass file-data ()
     (jump-symbols (list))
     (constructor (lambda (res) res))
@@ -349,7 +350,7 @@
                  (if (should-execute-form new-term)
                    (eval new-term new-envir)
                   else if (is-trivial-set-form new-term)
-                   (set (index new-envir (index new-term 1)) null)
+                   (set-var new-envir (index new-term 1) null)
                  )
                  (if (&& (type-eq new-term list_t) (< 0 (len new-term)) (type-eq (. new-term 0) symbol_t) (in (. new-term 0) delayed-map))
                         (append delayed-forms new-term)
@@ -387,7 +388,6 @@
                  )
           )
   )
-
   (set (. open-documents uri) new-file-data)
   (lsp:set-document-tokens handler uri semantic-tokens)
   (lsp:set-document-diagnostics handler uri diagnostics)

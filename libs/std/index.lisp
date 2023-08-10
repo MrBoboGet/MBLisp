@@ -87,8 +87,8 @@
         (incr i 1)
     )
     (cond (eq (len constructors) 0)
-        `(set ,classname (class (list ,@parents)  (quote ,slots)))
-        `(set ,classname (class (list ,@parents)  (quote ,filtered-slots) ,(index constructors 0)))
+        `(progn (set ,classname (class (list ,@parents)  (quote ,slots))) (set-name ,classname (quote ,classname)))
+        `(progn (set ,classname (class (list ,@parents)  (quote ,filtered-slots) ,(index constructors 0))) (set-name ,classname (quote ,classname)))
     )
 )
 
@@ -397,3 +397,5 @@
 (defun =< (lhs rhs)
     (leq lhs rhs)
 )
+
+
