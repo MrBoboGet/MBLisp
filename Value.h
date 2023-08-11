@@ -275,7 +275,8 @@ public:
                 return ReturnValue;
             };
         };
-        typedef std::variant<Null,bool,Function,Macro,Int,Float,Symbol,ThreadHandle,MBUtility::Dynamic<String>,
+        typedef std::variant<Null,bool,Function,Int,Float,Symbol,ThreadHandle,MBUtility::Dynamic<String>,
+            Ref<Macro>,
             Ref<Lambda>,
             Ref<List>,
             Ref<std::unordered_map<Value,Value,Value_Hasher>>,
@@ -292,12 +293,12 @@ public:
         template<typename T>
         static constexpr bool IsValueType()
         {
-            return TypeIn<T,bool,Function,Int,Float,Symbol,Macro,ThreadHandle,Null>;
+            return TypeIn<T,bool,Function,Int,Float,Symbol,ThreadHandle,Null>;
         }
         template<typename T>
         static constexpr bool IsReferenceType()
         {
-            return TypeIn<T,ClassDefinition,DynamicVariable,Lambda,GenericFunction,ClassInstance,List,Value,Scope
+            return TypeIn<T,ClassDefinition,DynamicVariable,Macro,Lambda,GenericFunction,ClassInstance,List,Value,Scope
                 ,std::unordered_map<Value,Value,Value_Hasher>>;
         }
         template<typename T>

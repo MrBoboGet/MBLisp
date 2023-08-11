@@ -49,7 +49,7 @@
   (while (< i (len ast))
     (set e (. ast i))
     (if (is-trivial-set-form e)
-      (set (index envir (. e 1)) null)
+      (set-var envir (. e 1) null)
     )
     (if (eq e 'catch)
       (set catch-envir (new-environment))
@@ -189,7 +189,7 @@
   (set return-value (list))
   (doit e ast
     (if (is-trivial-set-form e)
-      (set (index envir (. e 1)) null)
+      (set-var envir (. e 1) null)
     )
     (if (not (|| (eq e 'if) (eq e 'else)))
       (insert-elements return-value (get-diagnostics envir  e))
@@ -264,7 +264,7 @@
     )
     (doit e ast
       (if (is-trivial-set-form e)
-        (set (index envir (. e 1)) null)
+        (set-var envir (. e 1) null)
       )
       (insert-elements return-value (get-diagnostics envir  e))
     )
