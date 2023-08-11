@@ -101,14 +101,14 @@
         (set map-like (. envir (. ast 1)))
         (insert-elements return-value (default-extractor envir (. ast 1)))
         (doit e (map _(eval (. ast _)) (range 2 (len ast)))
-            (try
+            (catch-signals
              (
                 (insert-elements return-value (default-extractor map-like e))
                 (set map-like (. map-like e))
              )
              catch (any_t except)
              (
-
+                false
              )
             )
         )
@@ -146,6 +146,7 @@
         (set value (index envir ast))
         (if (eq (type value) macro_t)
           (append return-value (list ast "macro"))
+
           (signal (symbol-location ast (name value)))
          else if (eq (type value) function_t)
           (append return-value (list ast "function"))
@@ -397,3 +398,4 @@
     (lsp:add-on-open-handler handler open-handler)
     (lsp:handle-requests handler)
 )
+(defmacro test () `(asdasd))

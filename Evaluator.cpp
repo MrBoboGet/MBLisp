@@ -1680,7 +1680,7 @@ namespace MBLisp
         p_RegisterBuiltinClass<bool>("bool_t");
         p_RegisterBuiltinClass<Dict>("dict_t");
         p_RegisterBuiltinClass<Null>("null_t");
-        p_RegisterBuiltinClass<BuiltinFuncType>("function_t");
+        p_RegisterBuiltinClass<Function>("function_t");
         p_RegisterBuiltinClass<Lambda>("lambda_t");
         p_RegisterBuiltinClass<Macro>("macro_t");
         p_RegisterBuiltinClass<GenericFunction>("generic_t");
