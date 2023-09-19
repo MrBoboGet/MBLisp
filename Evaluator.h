@@ -143,6 +143,7 @@ namespace MBLisp
         //class instance
         static Value Index_ClassInstance BUILTIN_ARGLIST;
         //Streams
+        static Value Expand BUILTIN_ARGLIST;
         static Value Stream_ReadTerm BUILTIN_ARGLIST;
         static Value Stream_ReadString BUILTIN_ARGLIST;
         static Value Stream_ReadNumber BUILTIN_ARGLIST;

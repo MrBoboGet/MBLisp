@@ -341,6 +341,10 @@ namespace MBLisp
         g__CurrentDynamicVarID.fetch_add(1);
         return ReturnValue;
     }
+    Value Evaluator::Expand BUILTIN_ARGLIST
+    {
+        return AssociatedEvaluator.p_Expand(CurrentScope,Arguments[0]);
+    }
     Value Evaluator::Stream_ReadTerm BUILTIN_ARGLIST
     {
         Value ReturnValue;
@@ -1639,6 +1643,7 @@ namespace MBLisp
                     {"dynamic",Dynamic},
                     {"environment",Environment},
                     {"new-environment",NewEnvironment},
+                    {"expand",Expand},
                     {"type",Type},
                     {"load",Load},
 

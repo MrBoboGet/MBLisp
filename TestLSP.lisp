@@ -326,6 +326,20 @@
 )
 
 
+
+(defun extract-macros (envir ast)
+    (set return-value (list))
+    (if (type-eq ast list_t)
+        (if (&& (> (len ast) 0) (type-eq (. ast 0) symbol_t)) (type-eq (. envir ast) macro_t)
+            (append return-value (list ast "macro"))
+        )
+        (doit e (range 1 (len ast))
+            (insert-elements return-value (default-extractor envir ast))
+        )
+    )
+    return-value
+)
+
 (set open-documents (dict))
 
 (defun open-handler (handler uri content)
