@@ -5,19 +5,18 @@
     (append out-list e)
   )
 )
-
 (defun test-func () (print "hello world"))
 (defun if-token-extractor (envir ast)
    (set return-value (list)) 
    (doit e ast
         (if (&& (eq (type e) symbol_t) (|| (eq (str e) "if") (eq (str e) "else")))
             (append return-value (list e "macro"))
-         else 
-            (insert-elements return-value (default-extractor envir e))
         )
    )
    return-value
 )
+
+
 (defun if-diagnostics (envir ast)
   (set return-value (list))
   (doit e ast
@@ -30,15 +29,15 @@
   )
   return-value
 )
+(defun go-diagnostics (envir ast)
+    (list)
+)
 
 (defun try-token-extractor (envir ast)
    (set return-value (list)) 
    (doit e ast
         (if (&& (eq (type e) symbol_t) (|| (eq e 'catch) (eq e 'catch)))
-
             (append return-value (list e "macro"))
-         else 
-            (insert-elements return-value (default-extractor envir e))
         )
    )
    return-value
@@ -145,27 +144,26 @@
       (if (in ast envir)
         (set value (index envir ast))
         (if (eq (type value) macro_t)
-          (append return-value (list ast "macro"))
-
-          (signal (symbol-location ast (name value)))
+            (append return-value (list ast "macro"))
+            (signal (symbol-location ast (name value)))
          else if (eq (type value) function_t)
-          (append return-value (list ast "function"))
+            (append return-value (list ast "function"))
          else if (eq (type value) lambda_t)
-          (append return-value (list ast "function"))
-          (signal (symbol-location ast (name value)))
+            (append return-value (list ast "function"))
+            (signal (symbol-location ast (name value)))
          else if (eq (type value) generic_t)
-          (append return-value (list ast "function"))
-          (signal (symbol-location ast (name value)))
+            (append return-value (list ast "function"))
+            (signal (symbol-location ast (name value)))
          else if (eq (type value) type_t)
-          (append return-value (list ast "class"))
-          (signal (symbol-location ast (name value)))
+            (append return-value (list ast "class"))
+            (signal (symbol-location ast (name value)))
          else 
-          (append return-value (list ast "var"))
+            (append return-value (list ast "var"))
         )
        else if (is-special ast)
-        (append return-value (list ast "macro"))
+          (append return-value (list ast "macro"))
        else 
-        (append return-value (list ast "var"))
+          (append return-value (list ast "var"))
       )
      else if (eq (type ast) list_t)
        (if (not (< (len ast) 1))
@@ -199,19 +197,27 @@
   return-value
 )
 
-(defun func-envir (envir ast)
-  (set return-value (new-environment))
-  (set-parent return-value envir)
-  (doit arg (. ast 2)
-    (if (eq (type arg) symbol_t) (shadow return-value arg))
-  )
-  return-value
-)
 (defun lambda-envir (envir ast)
   (set return-value (new-environment))
   (set-parent return-value envir)
   (doit arg (. ast 1)
     (if (eq (type arg) symbol_t) (shadow return-value arg))
+  )
+  return-value
+)
+(defun bind-diagnostics (envir ast)
+  (set return-value (list))
+  (set new-envir (new-environment))
+  (set-parent new-envir envir)
+  (shadow (. (. ast 1) 1) null)
+  (doit i (range 1 (len ast))
+    (insert-elements return-value (get-diagnostics new-envir (. ast i)))
+  )
+)
+(defun defclass-diagnostics (envir ast)
+  (set return-value (list))
+  (doit e ast
+    (insert-elements return-value (get-diagnostics envir (. e 1)))
   )
   return-value
 )
@@ -232,19 +238,22 @@
   return-value
 )
 (set envir-modifiers (make-dict 
-                        ('defun func-envir) 
-                        ('defmacro func-envir) 
                         ('lambda lambda-envir) 
-                        ('defmethod method-envir) 
-                        ('doit doit-envir)
+))
+
+(set pre-expand-diagnostics (make-dict 
+        ('defclass defclass-diagnostics)
+))
+(set pre-expand-tokens (make-dict 
+        ('if if-token-extractor)
+        ('try try-token-extractor)
+        ('catch-signals try-token-extractor)
 ))
 
 (set diagnostics-overrides (make-dict 
-                        ('if if-diagnostics) 
+                        ('go go-diagnostics) 
                         ('quote quote-diagnostics)
-                        ('try try-diagnostics)
 ))
-
 
 (defun get-diagnostics (envir ast)
   (set return-value (list)) 
@@ -326,22 +335,52 @@
 )
 
 
+(set open-documents (dict))
 
-(defun extract-macros (envir ast)
+(defun extract-macros (envir ast tokens jumps diagnostics) 
     (set return-value (list))
     (if (type-eq ast list_t)
-        (if (&& (> (len ast) 0) (type-eq (. ast 0) symbol_t)) (type-eq (. envir ast) macro_t)
-            (append return-value (list ast "macro"))
+        (if (&& (not (eq (len ast) 0)) (type-eq (. ast 0) symbol_t))
+            (set sym (. ast 0))
+            (if (in sym pre-expand-diagnostics)
+                (insert-elements diagnostics ((. pre-expand-diagnostics sym) envir ast))
+            )
+            (if (in sym pre-expand-tokens)
+                (insert-elements tokens ((. pre-expand-tokens sym) envir ast))
+            )
+            (if (&& (in sym envir) (type-eq (index envir sym) macro_t))
+                (set value (index envir sym))
+                (append return-value (list sym "macro"))
+                (signal (symbol-location sym (name value)))
+            )
         )
-        (doit e (range 1 (len ast))
-            (insert-elements return-value (default-extractor envir ast))
+        (doit i (range 1 (len ast))
+            (insert-elements return-value (extract-macros envir (. ast i) tokens jumps diagnostics))
         )
     )
     return-value
 )
-
-(set open-documents (dict))
-
+(defun handle-form (envir ast tokens jumps diagnostics)
+   (catch-signals
+    (
+      (insert-elements tokens (extract-macros envir ast tokens jumps diagnostics))
+      (if (&& (type-eq ast list_t) (type-eq ( . ast 0) symbol_t))
+        (set head-sym (. ast 0))
+        (set ast (eval `(expand (quote ,ast)) envir))
+      )
+      (insert-elements tokens (default-extractor envir ast))
+      (insert-elements diagnostics (get-diagnostics envir ast))
+    )
+    catch (symbol-location loc)
+    (
+       (append jumps (slot loc symbols))
+    )
+    catch (any_t e)
+    (
+      false
+    )
+   )
+)
 (defun open-handler (handler uri content)
   (set new-envir (new-environment))
   (set (index new-envir 'load-filepath) uri)
@@ -358,7 +397,8 @@
   (set delayed-forms (list))
   (set diagnostics (list))
 
-  (catch-all
+  (catch-signals
+    (
           (while (not (eof file-stream))
                  (set new-term (eval `(read-term ,file-stream) new-envir))
                  (skip-whitespace file-stream)
@@ -371,37 +411,20 @@
                         (append delayed-forms new-term)
                         (continue)
                  )
-                 (catch-signals
-                  (
-                   (insert-elements semantic-tokens (default-extractor new-envir new-term))
-                   (insert-elements diagnostics (get-diagnostics new-envir new-term))
-                  )
-                  catch (symbol-location loc)
-                  (
-                     (append jump-symbols (slot loc symbols))
-                  )
-                  catch (any_t e)
-                  (
-                    false
-                  )
-                 )
+                 (handle-form new-envir new-term semantic-tokens jump-symbols diagnostics)
           )
           (doit new-term delayed-forms
-                 (catch-signals
-                  (
-                   (insert-elements semantic-tokens (default-extractor new-envir new-term))
-                   (insert-elements diagnostics (get-diagnostics new-envir new-term))
-                  )
-                  catch (symbol-location loc)
-                  (
-                     (append jump-symbols (slot loc symbols))
-                  )
-                  catch (any_t e)
-                  (
-                    false
-                  )
-                 )
+                 (handle-form new-envir new-term semantic-tokens jump-symbols diagnostics)
           )
+    )    
+    catch (symbol-location loc)
+    (
+       (append jump-symbols (slot loc symbols))
+    )
+    catch (any_t e)
+    (
+      false
+    )
   )
   (set (. open-documents uri) new-file-data)
   (lsp:set-document-tokens handler uri semantic-tokens)

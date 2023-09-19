@@ -317,6 +317,7 @@ namespace MBLisp
                     for(IPIndex& HandlerDoneIndex : SignalHandlerDones)
                     {
                         ListToAppend[HandlerDoneIndex].GetType<OpCode_SignalHandler_Done>().HandlersEnd = HandlersEnd;
+                        ListToAppend[HandlerDoneIndex].GetType<OpCode_SignalHandler_Done>().NewStackSize = CurrentState.ArgumentStackCount;
                     }
                     ListToAppend[UnwindProtectIndex].GetType<OpCode_UnwindProtect_Add>().UnwindBegin = ListToAppend.size();
                     ListToAppend.push_back(OpCode_RemoveSignalHandlers());

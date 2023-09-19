@@ -1140,7 +1140,7 @@ namespace MBLisp
                     CurrentState.UnwindingStack = true;
                     CurrentState.FrameTarget = CurrentFrame.SignalFrameIndex;
                     StackFrames[CurrentFrame.SignalFrameIndex].ExecutionPosition.SetIP(CurrentCode.GetType<OpCode_SignalHandler_Done>().HandlersEnd);
-                    StackFrames[CurrentFrame.SignalFrameIndex].ArgumentStack.push_back(false);
+                    StackFrames[CurrentFrame.SignalFrameIndex].ArgumentStack.resize(CurrentCode.GetType<OpCode_SignalHandler_Done>().NewStackSize+1);
                 }
             } 
             else if(CurrentCode.IsType<OpCode_AddSignalHandlers>())
@@ -1695,7 +1695,7 @@ namespace MBLisp
         
         //list
         AddMethod<List>("append",Append_List);
-        AddMethod<List>("index",Index_List);
+        AddMethod<List,Int>("index",Index_List);
         AddMethod<List>("len",Len_List);
         AddMethod<List>("sort",Sort);
         //class

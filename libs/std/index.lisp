@@ -42,6 +42,7 @@
 (add-reader-character *READTABLE* "`" backtick-reader)
 (set defun (macro (lambda (name arglist &rest body) `(progn (set ,name (lambda ,arglist ,@body)) (set-name ,name (quote ,name))))))
 (set defmacro (macro (lambda (name arglist &rest body) `(progn (set ,name (macro (lambda ,arglist ,@body))) (set-name ,name (quote ,name))))))
+
 (defmacro incr (var increment)
      `(set ,var (+ ,var ,increment)))
 (defmacro dotimes (count &rest body) 

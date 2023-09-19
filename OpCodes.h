@@ -87,6 +87,7 @@ namespace MBLisp
     struct OpCode_SignalHandler_Done
     {
         IPIndex HandlersEnd = -1;
+            int NewStackSize =  -1;
     };
     struct OpCode_RemoveSignalHandlers
     {
