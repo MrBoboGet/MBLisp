@@ -25,7 +25,26 @@
 #include "Threading.h"
 namespace MBLisp
 {
-
+    //CallContext
+    Evaluator& CallContext::GetEvaluator()
+    {
+        assert(m_AssociatedEvaluator != nullptr);
+        return *m_AssociatedEvaluator;
+    }
+    Ref<Scope> CallContext::GetCurrentScope()
+    {
+        assert(m_CurrentState != nullptr);
+        return m_CurrentState->StackFrames.back().StackScope;
+    }
+    bool CallContext::IsSetting()
+    {
+        return m_IsSetting;
+    }
+    Value const& CallContext::GetSetValue()
+    {
+        return m_SetValue;
+    }
+    //
 
 
     //BEGIN ThreadingState
@@ -78,11 +97,11 @@ namespace MBLisp
     Value Evaluator::Sort BUILTIN_ARGLIST
     {
         Ref<List> AssociatedList = Arguments[0].GetRef<List>();
-        Value LessFunc = CurrentScope->FindVariable(AssociatedEvaluator.p_GetSymbolID("<"));
+        Value LessFunc = Context.GetCurrentScope()->FindVariable(Context.GetEvaluator().p_GetSymbolID("<"));
         std::sort(AssociatedList->begin(),AssociatedList->end(),[&](Value const& lhs,Value const& rhs)
                 {
                     FuncArgVector Args = {lhs,rhs};
-                    auto Result = AssociatedEvaluator.Eval(CurrentScope,LessFunc,std::move(Args));
+                    auto Result = Context.GetEvaluator().Eval(Context.GetCurrentScope() ,LessFunc,std::move(Args));
                     return Result.IsType<bool>() && Result.GetType<bool>();
                 });
         return AssociatedList;
@@ -103,12 +122,16 @@ namespace MBLisp
     }
     Value Evaluator::Index_Dict BUILTIN_ARGLIST
     {
-        Value& AssociatedValue = Arguments[0].GetType<Dict>()[Arguments[1]];
-        if(!AssociatedValue.IsType<Value>())
+        if(!Context.IsSetting())
         {
-            AssociatedValue.MakeRef();
+            return Arguments[0].GetType<Dict>()[Arguments[1]];
         }
-        return AssociatedValue;
+        else
+        {
+            Arguments[0].GetType<Dict>()[Arguments[1]] = Context.GetSetValue();
+            return Context.GetSetValue();
+        }
+        return Value(Null());
     }
     Value Evaluator::Keys_Dict BUILTIN_ARGLIST
     {
@@ -187,7 +210,7 @@ namespace MBLisp
         Value ReturnValue;
         for(auto const& Argument : Arguments)
         {
-            Print(AssociatedEvaluator,Argument);
+            Print(Context.GetEvaluator(),Argument);
             std::cout<<" ";
         }
         std::cout<<std::endl;
@@ -281,8 +304,8 @@ namespace MBLisp
         }
         
         Ref<FunctionDefinition> SlotInitializers = std::make_shared<FunctionDefinition>();
-        SlotInitializers->Arguments = {AssociatedEvaluator.GetSymbolID("INIT")};
-        SlotInitializers->Instructions = std::make_shared<OpCodeList>(OpCodeList(AssociatedEvaluator.GetSymbolID("INIT"),AssociatedEvaluator.GetSymbolID("index"),
+        SlotInitializers->Arguments = {Context.GetEvaluator().GetSymbolID("INIT")};
+        SlotInitializers->Instructions = std::make_shared<OpCodeList>(OpCodeList(Context.GetEvaluator().GetSymbolID("INIT"),Context.GetEvaluator().GetSymbolID("index"),
                 NewClass.SlotDefinitions));
         NewClass.SlotInitializers = SlotInitializers;
         i___CurrentClassID++;
@@ -343,7 +366,7 @@ namespace MBLisp
     }
     Value Evaluator::Expand BUILTIN_ARGLIST
     {
-        return AssociatedEvaluator.p_Expand(CurrentScope,Arguments[0]);
+        return Context.GetEvaluator().p_Expand(Context.GetCurrentScope(),Arguments[0]);
     }
     Value Evaluator::Stream_ReadTerm BUILTIN_ARGLIST
     {
@@ -357,15 +380,15 @@ namespace MBLisp
             throw std::runtime_error("Invalid argument for read-term, argument has to be stream");   
         }
         MBUtility::StreamReader& Reader = Arguments[0].GetType<MBUtility::StreamReader>();
-        ReadTable& Table = CurrentScope->FindVariable(AssociatedEvaluator.GetSymbolID("*READTABLE*")).GetType<ReadTable>();
-        SymbolID URI = AssociatedEvaluator.p_GetSymbolID(CurrentScope->FindVariable(AssociatedEvaluator.p_GetSymbolID("load-filepath")).GetType<String>());
+        ReadTable& Table = Context.GetCurrentScope()->FindVariable(Context.GetEvaluator().GetSymbolID("*READTABLE*")).GetType<ReadTable>();
+        SymbolID URI = Context.GetEvaluator().p_GetSymbolID(Context.GetCurrentScope()->FindVariable(Context.GetEvaluator().p_GetSymbolID("load-filepath")).GetType<String>());
         std::shared_ptr<Scope> NewScope = std::make_shared<Scope>();
-        ReturnValue = AssociatedEvaluator.p_ReadTerm(NewScope,URI,Table,Reader,Arguments[0]);
+        ReturnValue = Context.GetEvaluator().p_ReadTerm(NewScope,URI,Table,Reader,Arguments[0]);
         return ReturnValue;
     }
     Value Evaluator::Stream_ReadString BUILTIN_ARGLIST
     {
-        return AssociatedEvaluator.p_ReadString(Arguments[0].GetType<MBUtility::StreamReader>());
+        return Context.GetEvaluator().p_ReadString(Arguments[0].GetType<MBUtility::StreamReader>());
     }
     Value Evaluator::Stream_ReadNumber BUILTIN_ARGLIST
     {
@@ -421,7 +444,7 @@ namespace MBLisp
     }
     Value Evaluator::Stream_SkipWhitespace BUILTIN_ARGLIST
     {
-        AssociatedEvaluator.p_SkipWhiteSpace(Arguments[0].GetType<MBUtility::StreamReader>());
+        Context.GetEvaluator().p_SkipWhiteSpace(Arguments[0].GetType<MBUtility::StreamReader>());
         return false;
     }
     Value Evaluator::Index_List BUILTIN_ARGLIST
@@ -439,9 +462,9 @@ namespace MBLisp
         }
         Value& AssociatedValue = AssociatedList[Index];
         assert(!AssociatedValue.IsType<List>() || AssociatedValue.GetRef<List>() != nullptr);
-        if(!AssociatedValue.IsType<Value>())
+        if(Context.IsSetting())
         {
-            AssociatedValue.MakeRef();
+            AssociatedValue = Context.GetSetValue();
         }
         assert(!AssociatedValue.IsType<List>() || AssociatedValue.GetRef<List>() != nullptr);
         return AssociatedValue;
@@ -531,7 +554,7 @@ namespace MBLisp
     }
     Value Evaluator::Str_Symbol BUILTIN_ARGLIST
     {
-        return AssociatedEvaluator.GetSymbolString(Arguments[0].GetType<Symbol>().ID);
+        return Context.GetEvaluator().GetSymbolString(Arguments[0].GetType<Symbol>().ID);
     }
     Value Evaluator::Str_Int BUILTIN_ARGLIST
     {
@@ -558,7 +581,7 @@ namespace MBLisp
     }
     Value Evaluator::Symbol_String BUILTIN_ARGLIST
     {
-        return Symbol(AssociatedEvaluator.GetSymbolID(Arguments[0].GetType<String>()));
+        return Symbol(Context.GetEvaluator().GetSymbolID(Arguments[0].GetType<String>()));
     }
     Value Evaluator::Symbol_SymbolInt BUILTIN_ARGLIST
     {
@@ -569,16 +592,16 @@ namespace MBLisp
     }
     Value Evaluator::GenSym BUILTIN_ARGLIST
     {
-        return Symbol(AssociatedEvaluator.GenerateSymbol());
+        return Symbol(Context.GetEvaluator().GenerateSymbol());
     }
     Value Evaluator::Environment BUILTIN_ARGLIST
     {
-        return CurrentScope;
+        return Context.GetCurrentScope();
     }
     Value Evaluator::NewEnvironment BUILTIN_ARGLIST
     {
         Ref<Scope> NewScope = std::make_shared<Scope>();
-        NewScope->SetShadowingParent(AssociatedEvaluator.m_GlobalScope);
+        NewScope->SetShadowingParent(Context.GetEvaluator().m_GlobalScope);
         return NewScope;
     }
     Value Evaluator::Index_Environment BUILTIN_ARGLIST
@@ -592,9 +615,9 @@ namespace MBLisp
             ReturnValue = AssociatedScope.TryGet(SymbolIndex);
             assert(ReturnValue != nullptr);
         }
-        if(!ReturnValue->IsType<Value>())
+        if(Context.IsSetting())
         {
-            ReturnValue->MakeRef();
+            *ReturnValue = Context.GetSetValue();
         }
         return *ReturnValue;
     }
@@ -614,9 +637,9 @@ namespace MBLisp
             ReturnValue = AssociatedScope.TryGet(SymbolIndex);
             assert(ReturnValue != nullptr);
         }
-        if(!ReturnValue->IsType<Value>())
+        if(Context.IsSetting())
         {
-            ReturnValue->MakeRef();
+            *ReturnValue = Context.GetSetValue();
         }
         return *ReturnValue;
     }
@@ -717,9 +740,9 @@ namespace MBLisp
         {
             throw std::runtime_error("Couldn't find symbol when indexing class instance");
         }
-        if(!SymbolIt->second.IsType<Value>())
+        if(Context.IsSetting())
         {
-            SymbolIt->second.MakeRef();
+            SymbolIt->second = Context.GetSetValue();
         }
         return SymbolIt->second;
     }
@@ -791,7 +814,7 @@ namespace MBLisp
             }
         }
     }
-    void Evaluator::p_Invoke(Value& ObjectToCall,FuncArgVector& Arguments,ExecutionState& CurrentState)
+    void Evaluator::p_Invoke(Value& ObjectToCall,FuncArgVector& Arguments,ExecutionState& CurrentState,bool Setting)
     {
         auto& CurrentCallStack = CurrentState.StackFrames;
         if(ObjectToCall.IsType<Function>())
@@ -805,7 +828,8 @@ namespace MBLisp
             }
             try
             {
-                CurrentCallStack.back().ArgumentStack.push_back(AssociatedFunc(*this,CurrentCallStack.back().StackScope,Arguments));
+                CurrentState.CurrentCallContext.m_IsSetting = Setting;
+                CurrentCallStack.back().ArgumentStack.push_back(AssociatedFunc(CurrentState.CurrentCallContext,Arguments));
             }
             catch(std::exception const& e)
             {
@@ -889,7 +913,7 @@ namespace MBLisp
                 p_EmitSignal(CurrentState,"No method associated with the argument list for generic \""+GetSymbolString(GenericToInvoke.Name.ID)+"\"",true);
                 return;
             }
-            p_Invoke(*Callable,Arguments,CurrentState);
+            p_Invoke(*Callable,Arguments,CurrentState,Setting);
         }
         else
         {
@@ -905,6 +929,8 @@ namespace MBLisp
     Value Evaluator::p_Eval(ExecutionState& CurrentState)
     {
         Value ReturnValue;
+        CurrentState.CurrentCallContext.m_AssociatedEvaluator = this;
+        CurrentState.CurrentCallContext.m_CurrentState = &CurrentState;
         auto& StackFrames = CurrentState.StackFrames;
         while(StackFrames.size() != 0)
         {
@@ -1057,14 +1083,14 @@ namespace MBLisp
                 FuncArgVector Arguments;
                 for(int i = 0; i < CallFuncCode.ArgumentCount;i++)
                 {
-                    Arguments.push_back(CurrentFrame.ArgumentStack[CurrentFrame.ArgumentStack.size()-CallFuncCode.ArgumentCount+i]);
+                    Arguments.push_back(std::move(CurrentFrame.ArgumentStack[CurrentFrame.ArgumentStack.size()-CallFuncCode.ArgumentCount+i]));
                 }
                 CurrentFrame.ArgumentStack.resize(CurrentFrame.ArgumentStack.size()-CallFuncCode.ArgumentCount);
                 //for(int i = 0; i < CallFuncCode.ArgumentCount;i++)
                 //{
                 //    CurrentFrame.ArgumentStack.pop_back();
                 //}
-                p_Invoke(FunctionToCall,Arguments,CurrentState);
+                p_Invoke(FunctionToCall,Arguments,CurrentState,CallFuncCode.Setting);
             }
             else if(CurrentCode.IsType<OpCode_Macro>())
             {
@@ -1075,12 +1101,18 @@ namespace MBLisp
                 MacroToCreate.Callable = std::make_shared<Value>(std::move(ValueToConvert));
                 CurrentFrame.ArgumentStack.push_back(std::move(MacroToCreate));
             }
+            else if(CurrentCode.IsType<OpCode_PreSet>())
+            {
+                assert(CurrentFrame.ArgumentStack.size() >= 1);
+                CurrentState.CurrentCallContext.m_SetValue = std::move(CurrentFrame.ArgumentStack.back());
+                CurrentFrame.ArgumentStack.pop_back();
+            }
             else if(CurrentCode.IsType<OpCode_Set>())
             {
                 //first value of stack is symbol, second is value
                 assert(CurrentFrame.ArgumentStack.size() >= 2);
-                Value SymbolToAssign = std::move(*(CurrentFrame.ArgumentStack.end()-2));
-                Value AssignedValue = std::move(*(CurrentFrame.ArgumentStack.end()-1));
+                Value SymbolToAssign = std::move(*(CurrentFrame.ArgumentStack.end()-1));
+                Value AssignedValue = std::move(*(CurrentFrame.ArgumentStack.end()-2));
                 CurrentFrame.ArgumentStack.pop_back();
                 CurrentFrame.ArgumentStack.pop_back();
                 assert(!SymbolToAssign.IsType<List>() || SymbolToAssign.GetRef<List>() != nullptr);
@@ -1592,7 +1624,7 @@ namespace MBLisp
         {
             if(Arguments[0].IsBuiltin())
             {
-                return AssociatedEvaluator.m_BuiltinTypeDefinitions[Arguments[0].GetTypeID()];
+                return Context.GetEvaluator().m_BuiltinTypeDefinitions[Arguments[0].GetTypeID()];
             }
             else
             {
@@ -1859,24 +1891,24 @@ namespace MBLisp
         {
             Args.push_back(Arguments[i]);
         }
-        AssociatedEvaluator.p_Invoke(Arguments[0],Args,NewExecState);
-        NewExecState.ThreadID = AssociatedEvaluator.m_ThreadingState.GetNextID();
+        Context.GetEvaluator().p_Invoke(Arguments[0],Args,NewExecState);
+        NewExecState.ThreadID = Context.GetEvaluator().m_ThreadingState.GetNextID();
         NewThread.ID = NewExecState.ThreadID;
-        AssociatedEvaluator.m_ThreadingState.AddThread([&,ExecState=std::move(NewExecState)]() mutable
+        Context.GetEvaluator().m_ThreadingState.AddThread([&,ExecState=std::move(NewExecState)]() mutable
                 {
-                    AssociatedEvaluator.p_Eval(ExecState);
+                    Context.GetEvaluator().p_Eval(ExecState);
                 });
         return NewThread;
     }
     Value Evaluator::This_Thread BUILTIN_ARGLIST
     {
         ThreadHandle Handle;
-        Handle.ID = AssociatedEvaluator.m_ThreadingState.CurrentID();
+        Handle.ID = Context.GetEvaluator().m_ThreadingState.CurrentID();
         return Handle;
     }
     Value Evaluator::Sleep BUILTIN_ARGLIST
     {
-        AssociatedEvaluator.m_ThreadingState.Sleep(Arguments[0].GetType<ThreadHandle>().ID,Arguments[1].GetType<Int>());
+        Context.GetEvaluator().m_ThreadingState.Sleep(Arguments[0].GetType<ThreadHandle>().ID,Arguments[1].GetType<Int>());
         return Value();
     }
 
@@ -1888,7 +1920,7 @@ namespace MBLisp
             throw std::runtime_error("get-internal-module requires exactly 1 argument of type string");
         }
         String& AssociatedString = Arguments[0].GetType<String>();
-        if( auto It = AssociatedEvaluator.m_BuiltinModules.find(AssociatedString); It != AssociatedEvaluator.m_BuiltinModules.end())
+        if( auto It = Context.GetEvaluator().m_BuiltinModules.find(AssociatedString); It != Context.GetEvaluator().m_BuiltinModules.end())
         {
             ReturnValue = Value(It->second->GetModuleScope());
         }
@@ -1902,7 +1934,7 @@ namespace MBLisp
     {
         List ReturnValue;
 
-        for(auto const& Module : AssociatedEvaluator.m_BuiltinModules)
+        for(auto const& Module : Context.GetEvaluator().m_BuiltinModules)
         {
             ReturnValue.push_back(Module.first);
         }
@@ -1938,8 +1970,8 @@ namespace MBLisp
             throw  std::runtime_error("Load requires first argument to be a string");   
         }
         std::filesystem::path SourceFilepath = Arguments[0].GetType<String>();
-        SymbolID LoadFilepathSymbol = AssociatedEvaluator.GetSymbolID("load-filepath");
-        Value* CurrentLoadFilepath = CurrentScope->TryGet(AssociatedEvaluator.GetSymbolID("load-filepath"));
+        SymbolID LoadFilepathSymbol = Context.GetEvaluator().GetSymbolID("load-filepath");
+        Value* CurrentLoadFilepath =  Context.GetCurrentScope()->TryGet(Context.GetEvaluator().GetSymbolID("load-filepath"));
         Value ValueToRestore = std::string("");
         if(CurrentLoadFilepath != nullptr)
         {
@@ -1947,16 +1979,16 @@ namespace MBLisp
         }
         try
         {
-          AssociatedEvaluator.p_LoadFile(CurrentScope,SourceFilepath);
+          Context.GetEvaluator().p_LoadFile(Context.GetCurrentScope(),SourceFilepath);
         }
         catch(LookupError const& e)
         {
-            CurrentScope->SetVariable(LoadFilepathSymbol,std::move(ValueToRestore));
-            throw std::runtime_error(e.what() + ( ": " + AssociatedEvaluator.GetSymbolString(e.GetSymbol())));
+            Context.GetCurrentScope()->SetVariable(LoadFilepathSymbol,std::move(ValueToRestore));
+            throw std::runtime_error(e.what() + ( ": " + Context.GetEvaluator().GetSymbolString(e.GetSymbol())));
         }
         catch(...)
         {
-            CurrentScope->SetVariable(LoadFilepathSymbol,std::move(ValueToRestore));
+            Context.GetCurrentScope()->SetVariable(LoadFilepathSymbol,std::move(ValueToRestore));
             throw;
         }
         return  ReturnValue;

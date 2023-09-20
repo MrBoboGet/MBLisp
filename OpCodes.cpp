@@ -30,7 +30,7 @@ namespace MBLisp
             ListToAppend.push_back(NewCode);
         }
     }
-    void OpCodeList::p_CreateFuncCall(List const& ListToConvert,std::vector<OpCode>& OutCodes,EncodingState& CurrentState)
+    void OpCodeList::p_CreateFuncCall(List const& ListToConvert,std::vector<OpCode>& OutCodes,EncodingState& CurrentState,bool Setting)
     {
         for(int i = 1; i < ListToConvert.size();i++)
         {
@@ -39,8 +39,7 @@ namespace MBLisp
         }
         p_CreateOpCodes(ListToConvert.front(),OutCodes,CurrentState);
         CurrentState.ArgumentStackCount -= ListToConvert.size()-1;
-        OpCode_CallFunc FunCall;
-        FunCall.ArgumentCount = ListToConvert.size()-1;
+        OpCode_CallFunc FunCall(ListToConvert.size()-1,Setting);
         m_OpCodes.push_back(FunCall);
            
     }
@@ -181,18 +180,32 @@ namespace MBLisp
                     {
                         throw std::runtime_error("Set requires exactly 2 arguments, the symbol to modify, and the new value");   
                     }
+                    p_CreateOpCodes(ListToConvert[2],ListToAppend,CurrentState);
                     if (!ListToConvert[1].IsType<List>())
                     {
+                        if(!ListToConvert[1].IsType<Symbol>())
+                        {
+                            throw std::runtime_error("set special form requires either a symbol or function-call as the first argument");
+                        }
                         OpCode_PushLiteral LiteralToPush;
                         LiteralToPush.Literal = ListToConvert[1];
                         ListToAppend.push_back(LiteralToPush);
+                        ListToAppend.push_back(OpCode_Set());
                     }
                     else 
                     {
-                        p_CreateOpCodes(ListToConvert[1], ListToAppend, CurrentState);
+                        auto& FirstForm = ListToConvert[1].GetType<List>();
+                        if(FirstForm.size() == 0)
+                        {
+                            throw std::runtime_error("empty form is not allowed");
+                        }
+                        if(FirstForm[0].IsType<Symbol>() && FirstForm[0].GetType<Symbol>().ID < uint_least32_t(PrimitiveForms::LAST))
+                        {
+                            throw std::runtime_error("set special form requires either a symbol or function-call as the first argument");
+                        }
+                        ListToAppend.push_back(OpCode_PreSet());
+                        p_CreateFuncCall(ListToConvert[1].GetType<List>(), ListToAppend, CurrentState,true);
                     }
-                    p_CreateOpCodes(ListToConvert[2],ListToAppend,CurrentState);
-                    ListToAppend.push_back(OpCode_Set());
                 }
                 else if(CurrentSymbol == SymbolID(PrimitiveForms::macro))
                 {
@@ -396,12 +409,12 @@ namespace MBLisp
             }
             else
             {
-                p_CreateFuncCall(ListToConvert,ListToAppend,CurrentState);
+                p_CreateFuncCall(ListToConvert,ListToAppend,CurrentState,false);
             }
         }
         else if(ListToConvert[0].IsType<List>())
         {
-            p_CreateFuncCall(ListToConvert, ListToAppend, CurrentState);
+            p_CreateFuncCall(ListToConvert, ListToAppend, CurrentState,false);
         }
         else
         {
@@ -480,13 +493,17 @@ namespace MBLisp
     {
         for(auto const& Slot : Initializers)
         {
+            EncodingState CurrentState;
+            p_CreateOpCodes(Slot.DefaultValue,m_OpCodes,CurrentState);
+
+            m_OpCodes.push_back(OpCode_PreSet());
+
             m_OpCodes.push_back(OpCode_PushVar(ArgID));
             m_OpCodes.push_back(OpCode_PushLiteral(Value(Symbol(Slot.Symbol))));
             m_OpCodes.push_back(OpCode_PushVar(IndexFunc));
-            m_OpCodes.push_back(OpCode_CallFunc(2));
-            EncodingState CurrentState;
-            p_CreateOpCodes(Slot.DefaultValue,m_OpCodes,CurrentState);
-            m_OpCodes.push_back(OpCode_Set());
+            m_OpCodes.push_back(OpCode_CallFunc(2,true));
+
+
             m_OpCodes.push_back(OpCode_Pop());
         }
         m_OpCodes.push_back(OpCode_PushVar(ArgID));

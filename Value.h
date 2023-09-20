@@ -85,8 +85,14 @@ namespace MBLisp
         std::shared_ptr<Scope> AssociatedScope;
         Symbol Name;
     };
-    class Evaluator;
-    typedef Value (*BuiltinFuncType)(Evaluator&,Ref<Scope>,FuncArgVector&);
+    //class Setter
+    //{
+    //public:
+    //    virtual void Set(Value const& ValueToSet) = 0;
+    //    virtual ~Setter(){};
+    //};
+    class CallContext;
+    typedef Value (*BuiltinFuncType)(CallContext&,FuncArgVector&);
     struct Function
     {
         BuiltinFuncType Func;
@@ -298,7 +304,7 @@ public:
         template<typename T>
         static constexpr bool IsReferenceType()
         {
-            return TypeIn<T,ClassDefinition,DynamicVariable,Macro,Lambda,GenericFunction,ClassInstance,List,Value,Scope
+            return TypeIn<T,ClassDefinition,DynamicVariable,Macro,Lambda,GenericFunction,ClassInstance,List,Scope
                 ,std::unordered_map<Value,Value,Value_Hasher>>;
         }
         template<typename T>
@@ -341,14 +347,7 @@ public:
                 {
                     return *std::get<Ref<ExternalValue>>(m_Data);
                 }
-                if(IsType<Value>())
-                {
-                    return std::get<Ref<Value>>(m_Data)->GetType<T>();
-                }
-                else
-                {
-                    return std::get<Ref<ExternalValue>>(m_Data)->GetType<T>();
-                }
+                return std::get<Ref<ExternalValue>>(m_Data)->GetType<T>();
             }
             throw std::runtime_error("Invalid type access: Value was not of type "+std::string(typeid(T).name()));
         }
@@ -383,37 +382,11 @@ public:
         Value(Value const& ) = default;
         Value() = default;
 
-        Value& operator=(Value const& ValueToCopy)
-        {
-            //reference, assign this value 
-            DataStorage* StorageToAssign = &m_Data;
-            Value const* PointerToCopy = &ValueToCopy;
-            if(ValueToCopy.IsType<Value>())
-            {
-                PointerToCopy = &ValueToCopy.GetType<Value>();
-            }
-            if(IsType<Value>())
-            {
-                StorageToAssign = &GetType<Value>().m_Data;
-            }
-            *StorageToAssign = PointerToCopy->m_Data;
-            return *this;
-        }
-    
+        Value& operator=(Value const& ValueToCopy) = default;
 
         bool operator==(Value const& OtherValue) const
         {
-            auto* LHSData = &m_Data;
-            auto* RHSData = &OtherValue.m_Data;
-            if(IsType<Value>())
-            {
-                LHSData = &GetType<Value>().m_Data;
-            }
-            if(OtherValue.IsType<Value>())
-            {
-                RHSData = &OtherValue.GetType<Value>().m_Data;
-            }
-            return *LHSData == *RHSData;
+            return m_Data == OtherValue.m_Data;
         }
         bool operator!=(Value const& OtherValue) const
         {
@@ -502,41 +475,17 @@ public:
             }
             return false;
         }
-        void MakeRef()
-        {
-            if(IsType<Value>())
-            {
-                return;   
-            }
-            Ref<Value> NewValue = std::make_shared<Value>();
-            NewValue->m_Data = std::move(m_Data);
-            m_Data = NewValue;
-        }
         template<typename T>
         Ref<T> GetRef()
         {
             static_assert(IsReferenceType<T>(),"Can only get reference to value type");
-            if(std::holds_alternative<Ref<Value>>(m_Data))
-            {
-                return std::get<Ref<Value>>(m_Data)->GetRef<T>();
-            }
-            else
-            {
-                return std::get<Ref<T>>(m_Data);
-            }
+            return std::get<Ref<T>>(m_Data);
         } 
         template<typename T>
         Ref<T> const GetRef() const
         {
             static_assert(IsReferenceType<T>(),"Can only get reference to value type");
-            if(std::holds_alternative<Ref<Value>>(m_Data))
-            {
-                return std::get<Ref<Value>>(m_Data)->GetRef<T>();
-            }
-            else
-            {
-                return std::get<Ref<T>>(m_Data);
-            }
+            return std::get<Ref<T>>(m_Data);
         } 
         template<typename T>
         T& GetType()
@@ -627,10 +576,6 @@ public:
                 if constexpr(IsValueType<T>())
                 {
                     m_Data = std::move(Rhs);
-                }
-                else if(IsType<Value>())
-                {
-                    GetType<Value>() = std::move(Rhs);
                 }
                 else if constexpr(std::is_same_v<T,String>)
                 {
@@ -723,11 +668,7 @@ public:
     inline ClassID Value::GetTypeID() const
     {
         ClassID ReturnValue = 0;
-        if(IsType<Value>())
-        {
-            ReturnValue = GetType<Value>().GetTypeID();
-        }
-        else if(std::holds_alternative<Ref<ExternalValue>>(m_Data))
+        if(std::holds_alternative<Ref<ExternalValue>>(m_Data))
         {
             ReturnValue = std::get<Ref<ExternalValue>>(m_Data)->GetTypeID();
         }

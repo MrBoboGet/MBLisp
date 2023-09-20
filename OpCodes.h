@@ -31,6 +31,9 @@ namespace MBLisp
     struct OpCode_Set
     {
     };
+    struct OpCode_PreSet
+    {
+    };
     struct OpCode_Pop
     {
            
@@ -58,10 +61,11 @@ namespace MBLisp
     {
         //determines the amount of vales to take from the stack when calling the function
         int ArgumentCount = 0;
-        OpCode_CallFunc() {};
-        OpCode_CallFunc(int ArgCount)
+        bool Setting = false;
+        OpCode_CallFunc(int ArgCount,bool IsSetting)
         {
             ArgumentCount = ArgCount;   
+            Setting = IsSetting;
         }
     };
     //signals and unwind stuff
@@ -149,6 +153,7 @@ namespace MBLisp
             OpCode_PushVar,
             OpCode_Macro,
             OpCode_Set,
+            OpCode_PreSet,
             OpCode_PushLiteral,
             OpCode_Pop,
             OpCode_Goto,
@@ -217,7 +222,7 @@ namespace MBLisp
             std::vector<IPIndex> UnresolvedReturns;
         };
         void p_CreateOpCodes(Value const& ValueToEncode,std::vector<OpCode>& ListToAppend,EncodingState& CurrentState);
-        void p_CreateFuncCall(List const& ValueToEncode,std::vector<OpCode>& OutCodes,EncodingState& CurrentState);
+        void p_CreateFuncCall(List const& ValueToEncode,std::vector<OpCode>& OutCodes,EncodingState& CurrentState,bool Setting);
         void p_CreateOpCodes(List const& ListToConvert,std::vector<OpCode>& ListToAppend,EncodingState& CurrentState);
 
         void p_WriteProgn(List const& ListToConvert,std::vector<OpCode>& ListToAppend,EncodingState& CurrentState,int Offset);

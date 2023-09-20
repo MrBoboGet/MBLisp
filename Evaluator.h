@@ -57,6 +57,21 @@ namespace MBLisp
         }
     };
 
+    class Evaluator;
+    struct ExecutionState;
+    class CallContext
+    {
+        friend class Evaluator;
+        ExecutionState* m_CurrentState = nullptr;
+        Evaluator*  m_AssociatedEvaluator = nullptr;
+        Value m_SetValue;
+        bool m_IsSetting = false;
+    public:
+        Evaluator& GetEvaluator();
+        Ref<Scope> GetCurrentScope();
+        bool IsSetting();
+        Value const& GetSetValue();
+    };
     struct ExecutionState
     {
         //-1 means last, other value entails being in a signal
@@ -64,6 +79,13 @@ namespace MBLisp
         int FrameTarget = -1;
         bool UnwindingStack = false;
         bool UnwindForced = false;
+
+        //these property are added mostly for efficiency,
+        //reducing the amount of parameters to builtin parameters
+        //and allowing for seamles setting/getting. Does however 
+        //depend on the single threadeadness use of ExecutionState
+        CallContext CurrentCallContext;
+        
         std::vector<StackFrame> StackFrames;
         std::unordered_map<DynamicVarID,std::vector<Value>> DynamicBindings;
         std::vector<std::vector<DynamicVarID>> BindingStack;
@@ -78,12 +100,12 @@ namespace MBLisp
    
 
 
-    class Evaluator;
     class Module
     {
     public:
         virtual Ref<Scope> GetModuleScope() =  0;
         virtual void SetEvaluator(Evaluator* AssociatedEvaluator) = 0;
+        virtual ~Module(){};
     };
 
 
@@ -105,10 +127,9 @@ namespace MBLisp
             return Message.c_str();
         }
     };
-    
     //TODO kinda hacky, should be temporary, but much more convenient when
     //iterating and prototyping
-#define BUILTIN_ARGLIST (Evaluator& AssociatedEvaluator,Ref<Scope> CurrentScope,FuncArgVector& Arguments)
+#define BUILTIN_ARGLIST (CallContext& Context ,FuncArgVector& Arguments)
     class Evaluator
     {
         SymbolID m_CurrentSymbolID = 1;
@@ -261,7 +282,7 @@ namespace MBLisp
         
         bool p_ValueIsType(ClassID TypeValue,Value const& ValueToInspect);
 
-        void p_Invoke(Value& ObjectToCall,FuncArgVector& Arguments,ExecutionState& CurrentState);
+        void p_Invoke(Value& ObjectToCall,FuncArgVector& Arguments,ExecutionState& CurrentState,bool Setting = false);
         void p_EmitSignal(ExecutionState& State,Value SignalToEmit,bool ForceUnwind);
         //The fundamental dispatch loop
         Value p_Eval(ExecutionState& CurrentState);
