@@ -128,7 +128,6 @@
 (defun type-eq (lhs rhs)
     (eq (type lhs) rhs)
 )
-
 (set overriden-extractors (make-dict 
                             ('if if-token-extractor)
                             ('try try-token-extractor)
@@ -416,6 +415,7 @@
           (doit new-term delayed-forms
                  (handle-form new-envir new-term semantic-tokens jump-symbols diagnostics)
           )
+          (clear new-envir)
     )    
     catch (symbol-location loc)
     (
@@ -435,4 +435,3 @@
     (lsp:add-on-open-handler handler open-handler)
     (lsp:handle-requests handler)
 )
-(defmacro test () `(asdasd))

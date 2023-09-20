@@ -21,6 +21,10 @@ int main(int argc,const char** argv)
     {
         std::cout<<e.what()<<": "<<Evaluator.GetSymbolString(e.GetSymbol())<<std::endl;
     }
+    catch (MBLisp::UncaughtSignal const& e)
+    {
+        std::cout << e.what();
+    }
     catch(std::exception const& e)
     {
         std::cout<<e.what()<<std::endl;
