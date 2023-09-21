@@ -28,11 +28,211 @@ namespace MBLisp
     typedef MBUtility::MBVector<Value,4,size_t,std::allocator<Value>> FuncArgVector;
     //typedef std::vector<Value> FuncArgVector;
     //typedef std::unordered_map<Value,Value> Dict;
-    template<typename T>
-    using Ref = std::shared_ptr<T>;
+    
     struct Any{};
     
     inline constexpr uint_least32_t RestSymbol = 1<<30;
+
+    class RefContent
+    {
+    protected:
+        int m_RefCount = 1;
+        RefContent()
+        {
+               
+        }
+    public:
+        ClassID StoredClass = 0;
+        int RefCount()
+        {
+            return m_RefCount;
+        }
+        ClassID GetTypeID()
+        {
+            return StoredClass;   
+        }
+        void Increment()
+        {
+            m_RefCount += 1;
+        }
+        void Decrement()
+        {
+            m_RefCount -= 1;
+        }
+
+
+        //no error checking, done higher up in the call stack
+        template<typename T>
+        T& GetContent();
+        template<typename T>
+        T const& GetContent() const;
+        virtual ~RefContent() { }
+    };
+
+    template<typename T>
+    class RefContent_Specialised : public RefContent
+    {
+    public:
+        T Content;
+        template<typename... Args>
+        RefContent_Specialised(Args&&... Arguments)
+            : Content(std::forward<Args>(Arguments)...)
+        {
+               
+        }
+        virtual ~RefContent_Specialised()
+        {
+               
+        }
+    };
+    template<typename T>
+    T& RefContent::GetContent()
+    {
+        return static_cast<RefContent_Specialised<T>&>(*this).Content;
+    }
+    template<typename T>
+    T const& RefContent::GetContent() const
+    {
+        return static_cast<RefContent_Specialised<T> const&>(*this).Content;
+    }
+    class RefBase
+    {
+        protected:
+        RefContent* m_AllocatedContent = nullptr;
+        RefBase()
+        {
+               
+        }
+        public:
+        ClassID GetTypeID() const
+        {
+            if(m_AllocatedContent == nullptr)
+            {
+                throw std::runtime_error("Trying to get TypeID from null  RefBase");   
+            }
+            return m_AllocatedContent->GetTypeID();
+        }
+
+        template<typename T>
+        T& GetType()
+        {
+            if(m_AllocatedContent == nullptr)
+            {
+                throw std::runtime_error("Trying to access type from null RefBase");   
+            }
+            return m_AllocatedContent->GetContent<T>();
+        }
+        template<typename T>
+        T const& GetType() const
+        {
+            if(m_AllocatedContent == nullptr)
+            {
+                throw std::runtime_error("Trying to access type from null RefBase");   
+            }
+            return m_AllocatedContent->GetContent<T>();
+        }
+        
+        bool operator==(RefBase const& Rhs) const
+        {
+            return m_AllocatedContent == Rhs.m_AllocatedContent;   
+        }
+        bool operator!=(RefBase const& Rhs) const
+        {
+            return m_AllocatedContent != Rhs.m_AllocatedContent;   
+        }
+        
+        RefBase(RefBase const& OtherRef)
+        {
+            m_AllocatedContent = OtherRef.m_AllocatedContent;
+            if(m_AllocatedContent != nullptr)
+            {
+                m_AllocatedContent->Increment();
+            }
+        }
+        RefBase(RefBase&& OtherRef) noexcept
+        {
+            m_AllocatedContent = OtherRef.m_AllocatedContent;
+            OtherRef.m_AllocatedContent = nullptr;
+        }
+        RefBase& operator=(RefBase ObjectToCopy)
+        {
+            m_AllocatedContent = ObjectToCopy.m_AllocatedContent;
+            ObjectToCopy.m_AllocatedContent = nullptr;
+            return *this;
+        }
+        ~RefBase()
+        {
+            if(m_AllocatedContent != nullptr)
+            {
+                m_AllocatedContent->Decrement();   
+                if(m_AllocatedContent->RefCount() == 0)
+                {
+                    delete m_AllocatedContent;   
+                }
+            }
+        }
+    };
+
+    template<typename T>
+    class Ref : public RefBase
+    {
+    private:
+        //template<typename A,typename... Args> 
+        //friend Ref<A> MakeRef(Args... Arguments);
+    public:
+        explicit Ref(RefContent* Content)
+        {
+            m_AllocatedContent = Content;
+        }
+        explicit Ref(RefBase& Content)
+        {
+            (RefBase&)*this = Content;
+        }
+        bool operator==(nullptr_t Rhs) const
+        {
+            return m_AllocatedContent == nullptr;
+        }
+        bool operator!=(nullptr_t Rhs) const
+        {
+            return m_AllocatedContent != nullptr;
+        }
+        T* operator->()
+        {
+            return &m_AllocatedContent->GetContent<T>();
+        }
+        T const* operator->() const
+        {
+            return &m_AllocatedContent->GetContent<T>();
+        }
+        T& operator*()
+        {
+            return m_AllocatedContent->GetContent<T>();
+        }
+        T const& operator*() const
+        {
+            return m_AllocatedContent->GetContent<T>();
+        }
+        T* get()
+        {
+            return &m_AllocatedContent->GetContent<T>();
+        }
+        T const* get() const
+        {
+            return &m_AllocatedContent->GetContent<T>();
+        }
+        Ref(nullptr_t Null)
+        {
+        }
+        Ref()
+        {
+        }
+        //template<typename... Args>
+        //Ref(Args&&... Arguments)
+        //{
+        //    m_AllocatedContent = new RefContent_Specialised<T>(std::forward<Args>(Arguments)...);
+        //}
+    };
+
     
     enum class ValueType
     {
@@ -76,13 +276,13 @@ namespace MBLisp
     {
         std::vector<Symbol> Arguments;
         SymbolID RestParameter = 0;
-        std::shared_ptr<OpCodeList> Instructions;
+        Ref<OpCodeList> Instructions;
     };
     //TODO add support for 
     struct Lambda
     {
-        std::shared_ptr<FunctionDefinition> Definition;
-        std::shared_ptr<Scope> AssociatedScope;
+        Ref<FunctionDefinition> Definition;
+        Ref<Scope> AssociatedScope;
         Symbol Name;
     };
     //class Setter
@@ -108,11 +308,11 @@ namespace MBLisp
     };
     struct Macro
     {
-        std::shared_ptr<Value> Callable;
+        Ref<Value> Callable;
         Symbol Name;
         bool operator==(Macro const& OtherMacro) const
         {
-            return Callable == OtherMacro.Callable;   
+            return (RefBase const&)Callable == (RefBase const&) OtherMacro.Callable;   
         }
     };
 
@@ -139,6 +339,28 @@ namespace MBLisp
     struct i_TypeIn<T,U>
     {
         static constexpr bool value = std::is_same<T,U>::value;
+    };
+
+    template<typename T,typename U,typename... OtherTypes>
+    struct i_MaxSize
+    {
+        static constexpr size_t value = sizeof(T) > i_MaxSize<U,OtherTypes...>::value ? sizeof(T) : i_MaxSize<U,OtherTypes...>::value;
+    };
+    template<typename T,typename U>
+    struct i_MaxSize<T,U>
+    {
+        static constexpr size_t value = sizeof(T) > sizeof(U) ? sizeof(T) : sizeof(U);
+    };
+
+    template<typename T,typename U,typename... OtherTypes>
+    struct i_MaxAlign
+    {
+        static constexpr size_t value = alignof(T) > i_MaxAlign<U,OtherTypes...>::value ? alignof(T) : i_MaxAlign<U,OtherTypes...>::value;
+    };
+    template<typename T,typename U>
+    struct i_MaxAlign<T,U>
+    {
+        static constexpr size_t value = alignof(T) > alignof(U) ? alignof(T) : alignof(U);
     };
 
 
@@ -235,9 +457,13 @@ namespace MBLisp
             return *static_cast<T const*>(m_ExternalData);
         }
     };
+  
+
     
     class Null 
     { 
+    private:
+        char PlaceHolder = 0;
     public:
         bool operator==(Null ) const
         {
@@ -281,20 +507,22 @@ public:
                 return ReturnValue;
             };
         };
-        typedef std::variant<Null,bool,Function,Int,Float,Symbol,ThreadHandle,MBUtility::Dynamic<String>,
-            Ref<Macro>,
-            Ref<Lambda>,
-            Ref<List>,
-            Ref<std::unordered_map<Value,Value,Value_Hasher>>,
-            Ref<GenericFunction>,
-            Ref<ClassDefinition>,
-            Ref<ClassInstance>,
-            Ref<Value>,
-            Ref<DynamicVariable>,
-            Ref<Scope>,
-            Ref<ExternalValue>> DataStorage;
-        DataStorage m_Data;
+   
+        //typedef std::variant<Null,bool,Function,Int,Float,Symbol,ThreadHandle,Null> ValueTypes; 
 
+        typedef std::variant<Null,bool,Function,Int,Float,Symbol,ThreadHandle> ValueTypes;
+        typedef std::variant<Null,bool,Function,Int,Float,Symbol,ThreadHandle,
+            String,
+            Macro,
+            Lambda,
+            List,
+            std::unordered_map<Value,Value,Value_Hasher>,
+            GenericFunction,
+            ClassDefinition,
+            ClassInstance,
+            Value,
+            DynamicVariable,
+            Scope> BuiltinTypes;
 
         template<typename T>
         static constexpr bool IsValueType()
@@ -304,53 +532,15 @@ public:
         template<typename T>
         static constexpr bool IsReferenceType()
         {
-            return TypeIn<T,ClassDefinition,DynamicVariable,Macro,Lambda,GenericFunction,ClassInstance,List,Scope
-                ,std::unordered_map<Value,Value,Value_Hasher>>;
+            return TypeIn<T,ClassDefinition,DynamicVariable,Macro,Lambda,GenericFunction,ClassInstance,List,Scope,String,
+                std::unordered_map<Value,Value,Value_Hasher>>;
         }
         template<typename T>
         static constexpr bool IsBuiltin()
         {
-            return IsValueType<T>() || IsReferenceType<T>() || std::is_same_v<T,String>;
+            return IsValueType<T>() || IsReferenceType<T>();
         }
-        
-        template<typename T>
-        T const& p_GetType() const
-        {
-            if constexpr(IsBuiltin<T>())
-            {
-                if constexpr (std::is_same_v<T, Value>)
-                {
-                    return *std::get<Ref<Value>>(m_Data);
-                }
-                if (std::holds_alternative<Ref<Value>>(m_Data))
-                {
-                    return std::get<Ref<Value>>(m_Data)->p_GetType<T>();
-                }
-                if constexpr(IsValueType<T>())
-                {
-                    return std::get<T>(m_Data);
-                }
-                else if constexpr(IsReferenceType<T>())
-                {
-                    auto Reference = std::get<Ref<T>>(m_Data);
-                    assert(Reference != nullptr);
-                    return *Reference;
-                }
-                else if constexpr(std::is_same_v<T,String>)
-                {
-                    return *std::get<MBUtility::Dynamic<String>>(m_Data);
-                }
-            }
-            else
-            {
-                if constexpr (std::is_same_v<ExternalValue, T>)
-                {
-                    return *std::get<Ref<ExternalValue>>(m_Data);
-                }
-                return std::get<Ref<ExternalValue>>(m_Data)->GetType<T>();
-            }
-            throw std::runtime_error("Invalid type access: Value was not of type "+std::string(typeid(T).name()));
-        }
+
         template<typename VariantType, typename T, std::size_t Index = 0>
         static constexpr std::size_t VariantIndex() 
         {
@@ -368,6 +558,217 @@ public:
                 return VariantIndex<VariantType, T, Index + 1>();
             }
         } 
+        //template<typename VariantType, std::size_t Index = 0>
+        //static constexpr std::size_t MaxAlign() 
+        //{
+        //    //if(std::variant_size_v<VariantType> > Index)
+        //    //{
+        //    //    return 0;
+        //    //}
+        //    //size_t ReturnValue = std::max(alignof(decltype(std::get<Index>(VariantType()))),MaxAlign<VariantType,Index+1>());
+        //    return 1;
+        //} 
+        //template<typename VariantType, std::size_t Index = 0>
+        //static constexpr std::size_t MaxSize() 
+        //{
+        //    //if(std::variant_size_v<VariantType> > Index)
+        //    //{
+        //    //    return 0;
+        //    //}
+        //    //size_t ReturnValue = std::max(sizeof(decltype(std::get<Index>(VariantType()))),MaxAlign<VariantType,Index+1>());
+        //    return 1;
+        //} 
+        class ValueVariant
+        {
+            alignas(i_MaxAlign<bool,Function,Int,Float,Symbol,ThreadHandle,Null>::value) char m_Content[i_MaxSize<bool,Function,Int,Float,Symbol,ThreadHandle,Null>::value];
+            uint_least8_t m_BuiltinClassID = 1u;//Null type
+            //Null,bool,Function,Int,Float,Symbol,ThreadHandle
+            static constexpr char m_BuiltinTypeSize[] = {0,sizeof(Null),sizeof(bool),sizeof(Function),sizeof(Int),sizeof(Float),sizeof(Symbol),sizeof(ThreadHandle)};
+             
+            ///static constexpr int p_BuiltinByteSize(uint_least8_t ClassID) 
+            ///{
+            ///    return (ClassID >> 4)& 
+            ///}
+            bool p_BuiltinStored() const
+            {
+                return !(m_BuiltinClassID & 1u<<7);
+            }
+            template<typename T>
+            T& p_GetType()
+            {
+                return *std::launder(reinterpret_cast<T*>(m_Content));
+            }
+            template<typename T>
+            T const& p_GetType() const
+            {
+                return *std::launder(reinterpret_cast<T const*>(m_Content));
+            }
+            public:
+            ValueVariant()
+            {
+                new (m_Content) Null();
+            }
+            ValueVariant(RefBase&& ObjectToCopy)
+            {
+                m_BuiltinClassID = 1u<<7;
+                new (m_Content)RefBase(std::move(ObjectToCopy));
+            }
+            template<typename T,typename = std::enable_if_t<IsValueType<T>(),T>>
+            ValueVariant(T ValueType)
+            {
+                m_BuiltinClassID = VariantIndex<BuiltinTypes,T>()+1;
+                new (m_Content)T(ValueType);
+            }
+            ValueVariant(ValueVariant const& OtherVariant)
+            {
+                if(OtherVariant.p_BuiltinStored())
+                {
+                    std::memcpy( (char*)this,(char const*)&OtherVariant,sizeof(ValueVariant));
+                }
+                else
+                {
+                    m_BuiltinClassID = 1<<7u;
+                    new(m_Content)RefBase(OtherVariant.p_GetType<RefBase>());
+                }
+            }
+            ValueVariant(ValueVariant&& OtherVariant) noexcept
+            { 
+                if(OtherVariant.p_BuiltinStored())
+                {
+                    std::memcpy( (char*)this,(char const*)&OtherVariant,sizeof(ValueVariant));
+                }
+                else
+                {
+                    m_BuiltinClassID = 1<<7u;
+                    new(m_Content)RefBase(std::move(OtherVariant.p_GetType<RefBase>()));
+                }
+            }
+            ValueVariant& operator=(ValueVariant VariantToCopy)
+            {
+                if(!p_BuiltinStored())
+                {
+                    std::launder<RefBase>(reinterpret_cast<RefBase*>(m_Content))->~RefBase();
+                }
+                if(VariantToCopy.p_BuiltinStored())
+                {
+                    std::memcpy( (char*)this,(char const*)&VariantToCopy,sizeof(ValueVariant));
+                }
+                else
+                {
+                    m_BuiltinClassID = 1<<7u;
+                    new(m_Content)RefBase(std::move(VariantToCopy.p_GetType<RefBase>()));
+                }
+                return *this;
+            }
+            ~ValueVariant()
+            {
+                if(!p_BuiltinStored())
+                {
+                    std::launder<RefBase>(reinterpret_cast<RefBase*>(m_Content))->~RefBase();
+                }
+            }
+            bool operator==(ValueVariant const& VariantToCompare) const
+            {
+                bool ReturnValue = false;
+                if(m_BuiltinClassID != VariantToCompare.m_BuiltinClassID)
+                {
+                    return false;
+                }
+                else if(p_BuiltinStored())
+                {
+                    int BytesToCompare = m_BuiltinTypeSize[m_BuiltinClassID & (~(1u<<7))];
+                    return std::memcmp(m_Content,VariantToCompare.m_Content,BytesToCompare) == 0;;
+                }
+                return ReturnValue;
+            }
+            bool operator!=(ValueVariant const& VariantToCompare) const
+            {
+                return !(*this == VariantToCompare);
+            }
+            ClassID GetTypeID() const
+            {
+                if(p_BuiltinStored())
+                {
+                    return m_BuiltinClassID;
+                }
+                else
+                {
+                    return p_GetType<RefBase>().GetTypeID();
+                }
+            }
+            
+            template<typename T>
+            T const& GetType() const
+            {
+                if constexpr(IsValueType<T>())
+                {
+                    if(!(p_BuiltinStored() || VariantIndex<BuiltinTypes,T>()+1 != m_BuiltinClassID))
+                    {
+                        throw std::runtime_error("Invalid type dereference: type of \""+ std::string(typeid(T).name())+ "\" not stored");
+                    }
+                    return p_GetType<T>();
+                }
+                else if constexpr(std::is_same_v<T,RefBase>)
+                {
+                    if(p_BuiltinStored())
+                    {
+                        throw std::runtime_error("Invalid type dereference: type of \""+ std::string(typeid(T).name())+ "\" not stored");
+                    }
+                    return p_GetType<RefBase>();
+                }
+                else
+                {
+                    static_assert(!std::is_same_v<T,T>,"Only builtin types and RefBase can be stored in a ValueVariant");
+                    return p_GetType<T>();
+                }
+            }
+            template<typename T>
+            T& GetType()
+            {
+                if constexpr(IsValueType<T>())
+                {
+                    if(!(p_BuiltinStored() || VariantIndex<BuiltinTypes,T>()+1 != m_BuiltinClassID))
+                    {
+                        throw std::runtime_error("Invalid type dereference: type of \""+ std::string(typeid(T).name())+ "\" not stored");
+                    }
+                    return p_GetType<T>();
+                }
+                else if constexpr(std::is_same_v<T,RefBase>)
+                {
+                    if(p_BuiltinStored())
+                    {
+                        throw std::runtime_error("Invalid type dereference: type of \""+ std::string(typeid(T).name())+ "\" not stored");
+                    }
+                    return p_GetType<RefBase>();
+                }
+                else
+                {
+                    static_assert(!std::is_same_v<T,T>,"Only builtin types and RefBase can be stored in a ValueVariant");   
+                    return p_GetType<T>();
+                }
+            }
+        };
+
+        ValueVariant m_Data;
+
+
+        
+        template<typename T>
+        T const& p_GetType() const
+        {
+            if(m_Data.GetTypeID() != GetTypeTypeID<T>())
+            {
+               throw std::runtime_error("Invalid type dereference: type of \""+ std::string(typeid(T).name())+ "\" not stored");
+            }
+            if constexpr(IsValueType<T>())
+            {
+                return m_Data.GetType<T>();
+            }
+            else
+            {
+                return m_Data.GetType<RefBase>().GetType<T>();
+            }
+        }
 
         template<template<class...> class Template, class Instance>
         struct IsTemplateInstance_t : std::false_type {};
@@ -392,15 +793,6 @@ public:
         {
             return(!(*this==OtherValue));   
         }
-        
-        bool IsBuiltin()
-        {
-            return TypeIsBuiltin(GetTypeID());
-        } 
-        static constexpr bool TypeIsBuiltin(ClassID IDToInspect)
-        {
-            return IDToInspect <= std::variant_size_v<DataStorage>;
-        } 
         template<typename T> 
         static constexpr ClassID GetTypeTypeID()
         {
@@ -414,26 +806,21 @@ public:
             }
             else if constexpr(IsBuiltin<T>())
             {
-                if constexpr (std::is_same_v<T, String>)
-                {
-                    return VariantIndex<DataStorage, MBUtility::Dynamic<String>>()+1;
-                }
-                else if constexpr(IsValueType<T>())
-                {
-                    return VariantIndex<DataStorage,T>()+1;
-                }
-                else
-                {
-                    return VariantIndex<DataStorage,Ref<T>>()+1;
-                }
-
+                return VariantIndex<BuiltinTypes,T>()+1;
             }
             else
             {
                 return GetClassID<T>();   
             }
         }
-        
+        bool IsBuiltin() const
+        {
+            return TypeIsBuiltin(GetTypeID());
+        }
+        static bool TypeIsBuiltin(ClassID ID)
+        {
+            return !(ID & (1u<<ExternalClassBit | 1u<<UserClassBit));
+        } 
         bool IsSameType(Value const& OtherValue) const
         {
             return GetTypeID() == OtherValue.GetTypeID();
@@ -443,49 +830,27 @@ public:
         template<typename T>
         bool IsType() const
         {
-            if constexpr(IsBuiltin<T>())
-            {
-                if constexpr (std::is_same_v<T, Value>)
-                {
-                    return std::holds_alternative < Ref<Value>>(m_Data);
-                }
-                if (std::holds_alternative <Ref<Value>>(m_Data))
-                {
-                    return std::get<Ref<Value>>(m_Data)->IsType<T>();
-                }
-                if constexpr(IsValueType<T>())
-                {
-                    return std::holds_alternative<T>(m_Data);
-                }
-                else
-                {
-                    if constexpr(IsReferenceType<T>())
-                    {
-                        return std::holds_alternative<Ref<T>>(m_Data);
-                    }
-                    else if constexpr(std::is_same_v<T,String>)
-                    {
-                        return std::holds_alternative<MBUtility::Dynamic<String>>(m_Data);
-                    }
-                }
-            }
-            else
-            {
-                return GetType<ExternalValue>().IsType<T>();
-            }
-            return false;
+            return m_Data.GetTypeID() == GetTypeTypeID<T>();
         }
         template<typename T>
         Ref<T> GetRef()
         {
-            static_assert(IsReferenceType<T>(),"Can only get reference to value type");
-            return std::get<Ref<T>>(m_Data);
+            static_assert(!IsValueType<T>(),"Can only get reference to refernce type");
+            if(!IsType<T>())
+            {
+                throw std::runtime_error("Error getting reference to type in value: type of \""+std::string(typeid(T).name())+"\" not stored");
+            }
+            return Ref<T>(m_Data.GetType<RefBase>());
         } 
         template<typename T>
         Ref<T> const GetRef() const
         {
-            static_assert(IsReferenceType<T>(),"Can only get reference to value type");
-            return std::get<Ref<T>>(m_Data);
+            static_assert(!IsValueType<T>(),"Can only get reference to refernce type");
+            if(!IsType<T>())
+            {
+                throw std::runtime_error("Error getting reference to type in value: type of \""+std::string(typeid(T).name())+"\" not stored");
+            }
+            return Ref<T>(m_Data.GetType<RefBase>());
         } 
         template<typename T>
         T& GetType()
@@ -502,33 +867,29 @@ public:
         {
             if constexpr (std::is_same_v<T,BuiltinFuncType>)
             {
-                m_Data = Function(Rhs);
+                m_Data = ValueVariant(Function(Rhs));
             }
             else if constexpr (std::is_same_v<T,const char*>)
             {
-                m_Data = String(Rhs);
+                m_Data = ValueVariant(MakeRef<String>(Rhs));
             }
             else if constexpr(std::is_same_v<T,bool>)
             {
-                m_Data = Rhs;
+                m_Data = ValueVariant(Rhs);
             }
             else if constexpr (std::is_integral_v<T>)
             {
-                m_Data = Int(Rhs);
+                m_Data = ValueVariant(Int(Rhs));
             }
             else if constexpr(IsBuiltin<T>())
             {
                 if constexpr(IsValueType<T>())
                 {
-                    m_Data = std::move(Rhs);
-                }
-                else if constexpr(std::is_same_v<T,String>)
-                {
-                    m_Data = MBUtility::Dynamic(std::move(Rhs));
+                    m_Data = ValueVariant(std::move(Rhs));
                 }
                 else if constexpr(IsReferenceType<T>())
                 {
-                    m_Data = std::make_shared<T>(std::move(Rhs));
+                    m_Data = ValueVariant(MakeRef<T>(std::move(Rhs)));
                 }
                 else
                 {
@@ -543,14 +904,7 @@ public:
         template<typename T>
         Value(Ref<T> Rhs)
         {
-            if constexpr(IsReferenceType<T>())
-            {
-                m_Data = Rhs;
-            }
-            else
-            {
-                static_assert(!std::is_same<T,T>::value,"Can only initialize refernce type with reference");
-            }
+            m_Data = ValueVariant(std::move(Rhs));
         }
 
 
@@ -558,14 +912,14 @@ public:
         static Value MakeExternal(T ExternalObject)
         {
             Value ReturnValue;
-            ReturnValue.m_Data = std::make_shared<ExternalValue>(std::move(ExternalObject));
+            ReturnValue.m_Data = ValueVariant(MakeRef<T>(std::move(ExternalObject)));
             return ReturnValue;
         }
         template<typename T,typename... ArgTypes>
         static Value EmplaceExternal(ArgTypes&&... Args)
         {
             Value ReturnValue;
-            ReturnValue.m_Data = std::shared_ptr<ExternalValue>(new ExternalValue(ExternalValue::Emplace<T,ArgTypes...>(std::forward<ArgTypes>(Args)...)));
+            ReturnValue.m_Data = ValueVariant(MakeRef<T>(std::forward<ArgTypes>(Args)...));
             return ReturnValue;
         }
         template<typename T>
@@ -575,19 +929,11 @@ public:
             {
                 if constexpr(IsValueType<T>())
                 {
-                    m_Data = std::move(Rhs);
-                }
-                else if constexpr(std::is_same_v<T,String>)
-                {
-                    m_Data = MBUtility::Dynamic(std::move(Rhs));
-                }
-                else if constexpr(IsReferenceType<T>())
-                {
-                    m_Data = std::make_shared<T>(std::move(Rhs));
+                    m_Data = ValueVariant(std::move(Rhs));
                 }
                 else
                 {
-                    static_assert(!std::is_same<T,T>::value,"Assignment of value doesnt take into consideration all builtin types");
+                    m_Data = MakeRef<T>(std::move(Rhs));
                 }
             }
             else
@@ -597,6 +943,14 @@ public:
             return *this;
         }
     };
+    template<typename T,typename... Args>
+    Ref<T> MakeRef(Args... Arguments)
+    {
+        RefContent* NewContent =  new RefContent_Specialised<T>(std::forward<Args>(Arguments)...);
+        NewContent->StoredClass = Value::GetTypeTypeID<T>();
+        return Ref<T>(NewContent);
+    }
+
     typedef std::unordered_map<Value,Value,Value::Value_Hasher> Dict;
     struct SlotDefinition
     {
@@ -625,12 +979,12 @@ public:
         std::vector<SlotDefinition> SlotDefinitions;
         Ref<FunctionDefinition> SlotInitializers;
         //constructor is optionally run after slot initializers, which are always run
-        std::shared_ptr<Value> Constructor;
+        Ref<Value> Constructor;
     };
     class ClassInstance
     {
         public:
-        std::shared_ptr<ClassDefinition> AssociatedClass;
+        Ref<ClassDefinition> AssociatedClass;
         //binary search to find
         std::vector<std::pair<SymbolID,Value>> Slots;
     };
@@ -668,17 +1022,13 @@ public:
     inline ClassID Value::GetTypeID() const
     {
         ClassID ReturnValue = 0;
-        if(std::holds_alternative<Ref<ExternalValue>>(m_Data))
-        {
-            ReturnValue = std::get<Ref<ExternalValue>>(m_Data)->GetTypeID();
-        }
-        else if(std::holds_alternative<Ref<ClassInstance>>(m_Data))
+        if(IsType<ClassInstance>())
         {
             ReturnValue = GetType<ClassInstance>().AssociatedClass->ID;
         }
         else
         {
-            return m_Data.index()+1;
+            return m_Data.GetTypeID();
         }
         return ReturnValue;
     }
@@ -705,14 +1055,14 @@ public:
     {
         struct ParentScope
         {
-            std::shared_ptr<Scope> AssociatedScope;   
+            Ref<Scope> AssociatedScope;   
             bool Shadowing = false;
         };
         ParentScope m_ParentScope;
         std::unordered_map<SymbolID,Value> m_Variables;
     public:
-        void SetParentScope(std::shared_ptr<Scope> ParentScope);
-        void SetShadowingParent(std::shared_ptr<Scope> ParentScope);
+        void SetParentScope(Ref<Scope> ParentScope);
+        void SetShadowingParent(Ref<Scope> ParentScope);
         Value FindVariable(SymbolID Variable);
         void SetVariable(SymbolID Variable,Value NewValue);
         void OverrideVariable(SymbolID Variable,Value NewValue);

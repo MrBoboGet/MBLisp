@@ -4,6 +4,7 @@
 (set slash-reader (lambda (stream) (list (symbol (quote quote) -1) (symbol (read-term stream) -1))))
 (add-reader-character *READTABLE* "\\" slash-reader)
 
+
 (set while (macro (lambda (condition &rest body)
                     (list 'tagbody 'begin (list 'cond condition (flatten-1 'progn body (list (list 'go 'begin)) ) (list 'go 'end)) 'end true))
                     ))

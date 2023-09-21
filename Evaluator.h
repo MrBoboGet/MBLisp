@@ -39,7 +39,7 @@ namespace MBLisp
         int PopExtra = 0;
 
 
-        std::shared_ptr<Scope> StackScope;
+        Ref<Scope> StackScope;
         OpCodeExtractor ExecutionPosition;
         StackArgVector ArgumentStack;
 
@@ -276,7 +276,7 @@ namespace MBLisp
             m_GlobalScope->SetVariable(p_GetSymbolID(Name),ClassDefinition(Value::GetTypeTypeID<T>()));
             m_BuiltinTypeDefinitions[Value::GetTypeTypeID<T>()] = m_GlobalScope->FindVariable(p_GetSymbolID(Name));
         }
-        std::shared_ptr<Scope> m_GlobalScope = std::make_shared<Scope>();
+        Ref<Scope> m_GlobalScope = MakeRef<Scope>();
         //easiest possible testable variant
 
         
@@ -287,22 +287,22 @@ namespace MBLisp
         //The fundamental dispatch loop
         Value p_Eval(ExecutionState& CurrentState);
         Value p_Eval(std::vector<StackFrame> CurrentCallStack);
-        Value p_Eval(std::shared_ptr<Scope> CurrentScope,Ref<OpCodeList> OpCodes,IPIndex  Offset = 0);
-        //Value p_Eval(std::shared_ptr<Scope> AssociatedScope,FunctionDefinition& FunctionToExecute,std::vector<Value> Arguments);
+        Value p_Eval(Ref<Scope> CurrentScope,Ref<OpCodeList> OpCodes,IPIndex  Offset = 0);
+        //Value p_Eval(Ref<Scope> AssociatedScope,FunctionDefinition& FunctionToExecute,std::vector<Value> Arguments);
 
         void p_SkipWhiteSpace(MBUtility::StreamReader& Content);
         
 
-        Value p_Expand(std::shared_ptr<Scope> ExpandScope,Value ValueToExpand);
-        Value p_Expand(std::shared_ptr<Scope> ExpandScope,List const& ListToExpand);
+        Value p_Expand(Ref<Scope> ExpandScope,Value ValueToExpand);
+        Value p_Expand(Ref<Scope> ExpandScope,List const& ListToExpand);
 
         //reading
         String p_ReadString(MBUtility::StreamReader& Content);
         Value p_ReadSymbol(Ref<Scope> ReadScope, SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content);
         Int p_ReadInteger(MBUtility::StreamReader& Content);
-        List p_ReadList(std::shared_ptr<Scope> AssociatedScope,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
-        Value p_ReadTerm(std::shared_ptr<Scope> AssociatedScope,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
-        List p_Read(std::shared_ptr<Scope> AssociatedScope,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
+        List p_ReadList(Ref<Scope> AssociatedScope,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
+        Value p_ReadTerm(Ref<Scope> AssociatedScope,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
+        List p_Read(Ref<Scope> AssociatedScope,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
         
         SymbolID p_GetSymbolID(std::string const& SymbolString);
         

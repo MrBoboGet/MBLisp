@@ -145,7 +145,7 @@ namespace MBLisp
                         throw std::runtime_error("lambda arguments has to be specified in a list");
                     }
                     Lambda NewLambda;
-                    NewLambda.Definition = std::make_shared<FunctionDefinition>();
+                    NewLambda.Definition = MakeRef<FunctionDefinition>();
                     List const& ArgumentList = ListToConvert[1].GetType<List>();
                     for(int i = 0; i < ArgumentList.size();i++)
                     {
@@ -169,7 +169,7 @@ namespace MBLisp
                             NewLambda.Definition->Arguments.push_back(Argument.GetType<Symbol>());
                         }
                     }
-                    NewLambda.Definition->Instructions = std::make_shared<OpCodeList>(ListToConvert,2,true);
+                    NewLambda.Definition->Instructions = MakeRef<OpCodeList>(ListToConvert,2,true);
                     OpCode_PushLiteral NewCode;
                     NewCode.Literal = std::move(NewLambda);
                     ListToAppend.push_back(std::move(NewCode));

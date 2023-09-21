@@ -108,7 +108,7 @@ namespace MBLisp
     }
     Value Evaluator::CreateList BUILTIN_ARGLIST
     {
-        Ref<List> ReturnValue = std::make_shared<List>();
+        Ref<List> ReturnValue = MakeRef<List>();
         for(auto& Elem : Arguments)
         {
             ReturnValue->push_back(Elem);
@@ -300,12 +300,12 @@ namespace MBLisp
 
         if(Arguments.size() == 3)
         {
-            NewClass.Constructor = std::make_shared<Value>(Arguments[2]);   
+            NewClass.Constructor = MakeRef<Value>(Arguments[2]);   
         }
         
-        Ref<FunctionDefinition> SlotInitializers = std::make_shared<FunctionDefinition>();
+        Ref<FunctionDefinition> SlotInitializers = MakeRef<FunctionDefinition>();
         SlotInitializers->Arguments = {Context.GetEvaluator().GetSymbolID("INIT")};
-        SlotInitializers->Instructions = std::make_shared<OpCodeList>(OpCodeList(Context.GetEvaluator().GetSymbolID("INIT"),Context.GetEvaluator().GetSymbolID("index"),
+        SlotInitializers->Instructions = MakeRef<OpCodeList>(OpCodeList(Context.GetEvaluator().GetSymbolID("INIT"),Context.GetEvaluator().GetSymbolID("index"),
                 NewClass.SlotDefinitions));
         NewClass.SlotInitializers = SlotInitializers;
         i___CurrentClassID++;
@@ -382,7 +382,7 @@ namespace MBLisp
         MBUtility::StreamReader& Reader = Arguments[0].GetType<MBUtility::StreamReader>();
         ReadTable& Table = Context.GetCurrentScope()->FindVariable(Context.GetEvaluator().GetSymbolID("*READTABLE*")).GetType<ReadTable>();
         SymbolID URI = Context.GetEvaluator().p_GetSymbolID(Context.GetCurrentScope()->FindVariable(Context.GetEvaluator().p_GetSymbolID("load-filepath")).GetType<String>());
-        std::shared_ptr<Scope> NewScope = std::make_shared<Scope>();
+        Ref<Scope> NewScope = MakeRef<Scope>();
         ReturnValue = Context.GetEvaluator().p_ReadTerm(NewScope,URI,Table,Reader,Arguments[0]);
         return ReturnValue;
     }
@@ -600,7 +600,7 @@ namespace MBLisp
     }
     Value Evaluator::NewEnvironment BUILTIN_ARGLIST
     {
-        Ref<Scope> NewScope = std::make_shared<Scope>();
+        Ref<Scope> NewScope = MakeRef<Scope>();
         NewScope->SetShadowingParent(Context.GetEvaluator().m_GlobalScope);
         return NewScope;
     }
@@ -860,7 +860,7 @@ namespace MBLisp
                 }
             }
             StackFrame NewStackFrame(OpCodeExtractor(AssociatedLambda.Definition->Instructions));
-            NewStackFrame.StackScope = std::make_shared<Scope>();
+            NewStackFrame.StackScope = MakeRef<Scope>();
             NewStackFrame.StackScope->SetParentScope(AssociatedLambda.AssociatedScope);
             for(int i = 0; i < AssociatedLambda.Definition->Arguments.size();i++)
             {
@@ -879,7 +879,7 @@ namespace MBLisp
         }
         else if(ObjectToCall.IsType<ClassDefinition>())
         {
-            Ref<ClassInstance> NewInstance = std::make_shared<ClassInstance>();
+            Ref<ClassInstance> NewInstance = MakeRef<ClassInstance>();
             NewInstance->AssociatedClass = ObjectToCall.GetRef<ClassDefinition>();
 
             for(auto const& Slot : NewInstance->AssociatedClass->SlotDefinitions)
@@ -887,7 +887,7 @@ namespace MBLisp
                 NewInstance->Slots.push_back(std::make_pair(Slot.Symbol,Value()));
             }
             StackFrame NewStackFrame(OpCodeExtractor(NewInstance->AssociatedClass->SlotInitializers->Instructions));
-            NewStackFrame.StackScope = std::make_shared<Scope>();
+            NewStackFrame.StackScope = MakeRef<Scope>();
             NewStackFrame.StackScope->SetParentScope(m_GlobalScope);
             Value NewValue = NewInstance;
             NewStackFrame.StackScope->OverrideVariable(p_GetSymbolID("INIT"),NewValue);
@@ -1098,7 +1098,7 @@ namespace MBLisp
                 Value ValueToConvert = std::move(CurrentFrame.ArgumentStack.back());
                 CurrentFrame.ArgumentStack.pop_back();
                 Macro MacroToCreate;
-                MacroToCreate.Callable = std::make_shared<Value>(std::move(ValueToConvert));
+                MacroToCreate.Callable = MakeRef<Value>(std::move(ValueToConvert));
                 CurrentFrame.ArgumentStack.push_back(std::move(MacroToCreate));
             }
             else if(CurrentCode.IsType<OpCode_PreSet>())
@@ -1316,7 +1316,7 @@ namespace MBLisp
                 Value ValueToEvaluate = CurrentFrame.ArgumentStack.back();
                 CurrentFrame.ArgumentStack.pop_back();
                 ValueToEvaluate = p_Expand(ScopeToUse,std::move(ValueToEvaluate));
-                Ref<OpCodeList> NewOpcodes = std::make_shared<OpCodeList>(ValueToEvaluate);
+                Ref<OpCodeList> NewOpcodes = MakeRef<OpCodeList>(ValueToEvaluate);
                 StackFrame NewFrame = StackFrame(OpCodeExtractor(NewOpcodes));
                 NewFrame.StackScope = ScopeToUse;
                 CurrentState.StackFrames.push_back(std::move(NewFrame));
@@ -1351,14 +1351,14 @@ namespace MBLisp
         }
         return ReturnValue;
     }
-    Value Evaluator::p_Eval(std::shared_ptr<Scope> CurrentScope,Ref<OpCodeList> OpCodes,IPIndex Offset)
+    Value Evaluator::p_Eval(Ref<Scope> CurrentScope,Ref<OpCodeList> OpCodes,IPIndex Offset)
     {
         std::vector<StackFrame> StackFrames = {StackFrame(OpCodeExtractor(OpCodes))};
         StackFrames.back().ExecutionPosition.SetIP(Offset);
         StackFrames.back().StackScope = CurrentScope;
         return p_Eval(std::move(StackFrames));
     }
-    Value Evaluator::p_Expand(std::shared_ptr<Scope> ExpandScope,Value ValueToExpand)
+    Value Evaluator::p_Expand(Ref<Scope> ExpandScope,Value ValueToExpand)
     {
         if(ValueToExpand.IsType<List>())
         {
@@ -1366,7 +1366,7 @@ namespace MBLisp
         }
         return ValueToExpand;
     }
-    Value Evaluator::p_Expand(std::shared_ptr<Scope> ExpandScope,List const& ListToExpand)
+    Value Evaluator::p_Expand(Ref<Scope> ExpandScope,List const& ListToExpand)
     {
         Value ReturnValue;
         if(ListToExpand.size() == 0)
@@ -1402,6 +1402,10 @@ namespace MBLisp
             else
             {
                 NewList.push_back(ListToExpand[i]);
+            }
+            if (NewList[i].IsType<Null>())
+            {
+                std::cout << "Sussy";
             }
         }
         return NewList;
@@ -1522,7 +1526,7 @@ namespace MBLisp
         ReturnValue = std::stoi(NumberString);
         return ReturnValue;
     }
-    List Evaluator::p_ReadList(std::shared_ptr<Scope> AssociatedScope,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue)
+    List Evaluator::p_ReadList(Ref<Scope> AssociatedScope,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue)
     {
         List ReturnValue;
         Content.ReadByte();
@@ -1543,7 +1547,7 @@ namespace MBLisp
         }
         return ReturnValue;
     }
-    Value Evaluator::p_ReadTerm(std::shared_ptr<Scope> AssociatedScope,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue)
+    Value Evaluator::p_ReadTerm(Ref<Scope> AssociatedScope,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue)
     {
         Value ReturnValue;
         p_SkipWhiteSpace(Content);
@@ -1576,7 +1580,7 @@ namespace MBLisp
         }
         return ReturnValue;
     }
-    List Evaluator::p_Read(std::shared_ptr<Scope> AssociatedScope, SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue)
+    List Evaluator::p_Read(Ref<Scope> AssociatedScope, SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue)
     {
         List ReturnValue;
         while(!Content.EOFReached())
@@ -2042,7 +2046,7 @@ namespace MBLisp
     //
     void Evaluator::p_LoadFile(Ref<Scope> CurrentScope,std::filesystem::path const& LoadFilePath)
     {
-        Ref<OpCodeList> OpCodes = std::make_shared<OpCodeList>();
+        Ref<OpCodeList> OpCodes = MakeRef<OpCodeList>();
         if(!std::filesystem::exists(LoadFilePath))
         {
             throw std::runtime_error("Source file \"" +LoadFilePath.generic_string() +"\" doesn't exist");
@@ -2108,7 +2112,7 @@ namespace MBLisp
         m_GlobalScope->SetVariable(p_GetSymbolID("is-repl"),true);
         ReplScope->SetVariable( p_GetSymbolID("load-filepath"),MBUnicode::PathToUTF8(std::filesystem::current_path()));
         SymbolID URI = p_GetSymbolID(MBUnicode::PathToUTF8(std::filesystem::current_path()));
-        Ref<OpCodeList> OpCodes = std::make_shared<OpCodeList>();
+        Ref<OpCodeList> OpCodes = MakeRef<OpCodeList>();
         while(true)
         {
             try
@@ -2139,7 +2143,7 @@ namespace MBLisp
     }
     Ref<Scope> Evaluator::CreateDefaultScope()
     {
-        Ref<Scope> ReturnValue = std::make_shared<Scope>();
+        Ref<Scope> ReturnValue = MakeRef<Scope>();
         ReturnValue->SetShadowingParent(m_GlobalScope);
         ReturnValue->SetVariable(p_GetSymbolID("*READTABLE*"),Value::MakeExternal(
                     ReadTable(m_GlobalScope->FindVariable(p_GetSymbolID("*READTABLE*")).GetType<ReadTable>())));
