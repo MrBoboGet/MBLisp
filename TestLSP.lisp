@@ -16,7 +16,6 @@
    return-value
 )
 
-
 (defun if-diagnostics (envir ast)
   (set return-value (list))
   (doit e ast
@@ -133,7 +132,6 @@
                             ('try try-token-extractor)
                             ('. dot-token-extractor)
 ))
-
 (defun default-extractor (envir ast)
     (set return-value (list))
     (if (eq (type ast) symbol_t)
@@ -182,7 +180,19 @@
 (defun quote-diagnostics (envir ast)
     (list)
 )
-
+(defun signal-handlers-diagnostics (envir ast)
+    (set return-value (list))
+    (insert-elements return-value (get-diagnostics envir (. ast 1)))
+    (set i 2)
+    (while (< i (len ast))
+        (set case-envir (new-environment))
+        (shadow case-envir (. ast i 1))
+        (set-parent case-envir envir)
+        (insert-elements return-value (get-diagnostics case-envir (. ast (+ i 1))))
+        (incr i 2)
+    )
+    return-value
+)
 (defun catch-diagnostics (envir ast)
   (set return-value (list))
   (doit e ast
@@ -213,10 +223,14 @@
     (insert-elements return-value (get-diagnostics new-envir (. ast i)))
   )
 )
-(defun defclass-diagnostics (envir ast)
+(defun class-diagnostics (envir ast)
   (set return-value (list))
-  (doit e ast
-    (insert-elements return-value (get-diagnostics envir (. e 1)))
+  (insert-elements return-value (get-diagnostics envir (. ast 1)))
+  (doit slot-def (. ast 2 1)
+    (insert-elements return-value (get-diagnostics envir (. slot-def 1)))
+  )
+  (if (eq (len ast) 4)
+    (insert-elements return-value (get-diagnostics envir (. ast 3)))
   )
   return-value
 )
@@ -233,15 +247,13 @@
 (defun doit-envir (envir ast)
   (set return-value (new-environment))
   (set-parent return-value envir)
-  (shadow return-value (index ast 1))
-  return-value
+  (shadow return-value (index ast 1)) return-value
 )
 (set envir-modifiers (make-dict 
                         ('lambda lambda-envir) 
 ))
 
 (set pre-expand-diagnostics (make-dict 
-        ('defclass defclass-diagnostics)
 ))
 (set pre-expand-tokens (make-dict 
         ('if if-token-extractor)
@@ -252,6 +264,8 @@
 (set diagnostics-overrides (make-dict 
                         ('go go-diagnostics) 
                         ('quote quote-diagnostics)
+                        ('signal-handlers signal-handlers-diagnostics)
+                        ('class class-diagnostics)
 ))
 
 (defun get-diagnostics (envir ast)
@@ -327,7 +341,6 @@
     (constructor (lambda (res source dest) (set (slot res symbols) (list source dest)) res))
 )
 
-
 (defclass file-data ()
     (jump-symbols (list))
     (constructor (lambda (res) res))
@@ -339,7 +352,9 @@
 (defun extract-macros (envir ast tokens jumps diagnostics) 
     (set return-value (list))
     (if (type-eq ast list_t)
+        (set macro-offset 0)
         (if (&& (not (eq (len ast) 0)) (type-eq (. ast 0) symbol_t))
+            (set macro-offset 1)
             (set sym (. ast 0))
             (if (in sym pre-expand-diagnostics)
                 (insert-elements diagnostics ((. pre-expand-diagnostics sym) envir ast))
@@ -353,7 +368,7 @@
                 (signal (symbol-location sym (name value)))
             )
         )
-        (doit i (range 1 (len ast))
+        (doit i (range macro-offset (len ast))
             (insert-elements return-value (extract-macros envir (. ast i) tokens jumps diagnostics))
         )
     )

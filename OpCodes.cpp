@@ -275,7 +275,7 @@ namespace MBLisp
                 {
                     if((ListToConvert.size() & 1) != 0)
                     {
-                        throw std::runtime_error("signal requires exactly an even amount of arguments: the form to execute, and pairs of handlers");
+                        throw std::runtime_error("signal requires an even amount of arguments: the form to execute, and pairs of handlers");
                     }
                     int CurrentIndex = 2;
                     std::vector<OpCode_AddSignalHandlers::SignalHandler> Handlers;

@@ -1,16 +1,21 @@
 (set quote-reader (lambda (stream) (list (symbol (quote quote) -1) (read-term stream))))
 (add-reader-character *READTABLE* "'" quote-reader)
-
 (set slash-reader (lambda (stream) (list (symbol (quote quote) -1) (symbol (read-term stream) -1))))
 (add-reader-character *READTABLE* "\\" slash-reader)
 
 
 (set while (macro (lambda (condition &rest body)
-                    (list 'tagbody 'begin (list 'cond condition (flatten-1 'progn body (list (list 'go 'begin)) ) (list 'go 'end)) 'end true))
+                    (list \tagbody \begin (list \cond condition (flatten-1 \progn body (list (list \go \begin)) ) (list \go \end)) \end true))
                     ))
 (set error (lambda (error-signal) (signal error-signal true)))
 (set continue (macro (lambda () (quote (go begin)))))
 (set break (macro (lambda () (quote (go end)))))
+
+(set read-clean-term (lambda (stream) (set return-value (read-term stream)) 
+        (cond (eq (type return-value) symbol_t) (set return-value (symbol return-value -1)) false)
+    return-value)  
+)
+
 (set backtick-read-list
      (lambda (stream) 
         (set return-value (list \flatten-1))
@@ -29,7 +34,7 @@
                      )
                      (cond (eq current-byte "(")
                            (append return-value (list \list (backtick-read-list stream)))
-                           (append return-value (list \list (list \quote (read-term stream)))))
+                           (append return-value (list \list (list \quote (read-clean-term stream)))))
                )
         )
         return-value
