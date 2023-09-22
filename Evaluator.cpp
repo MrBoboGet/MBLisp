@@ -1403,10 +1403,6 @@ namespace MBLisp
             {
                 NewList.push_back(ListToExpand[i]);
             }
-            if (NewList[i].IsType<Null>())
-            {
-                std::cout << "Sussy";
-            }
         }
         return NewList;
     }
@@ -1775,7 +1771,7 @@ namespace MBLisp
         AddMethod<String,String>("in",In_String);
         AddMethod<String>("len",Len_String);
         AddMethod<Symbol,Scope>("in",In_Environment);
-        AddMethod<Symbol>("clear",Clear_Environment);
+        AddMethod<Scope>("clear",Clear_Environment);
         AddMethod<Symbol>("str",Str_Symbol);
         AddMethod<bool>("str",Str_Bool);
         AddMethod<Null>("str",Str_Null);

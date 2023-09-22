@@ -676,8 +676,26 @@ public:
                 }
                 else if(p_BuiltinStored())
                 {
+                    if(m_BuiltinClassID == GetTypeTypeID<Symbol>())
+                    {
+                        return p_GetType<Symbol>() == VariantToCompare.p_GetType<Symbol>();
+                    }
                     int BytesToCompare = m_BuiltinTypeSize[m_BuiltinClassID & (~(1u<<7))];
                     return std::memcmp(m_Content,VariantToCompare.m_Content,BytesToCompare) == 0;;
+                }
+                else
+                {
+                    RefBase const& ThisRef = p_GetType<RefBase>();
+                    RefBase const& OtherRef = VariantToCompare.p_GetType<RefBase>();
+                    if(ThisRef.GetTypeID() !=  OtherRef.GetTypeID())
+                    {
+                        return false;   
+                    }
+                    if(ThisRef.GetTypeID() == GetTypeTypeID<String>())
+                    {
+                        return ThisRef.GetType<String>() == OtherRef.GetType<String>();
+                    }
+                    return ThisRef == OtherRef;
                 }
                 return ReturnValue;
             }
@@ -791,7 +809,7 @@ public:
         }
         bool operator!=(Value const& OtherValue) const
         {
-            return(!(*this==OtherValue));   
+            return(!(*this == OtherValue));
         }
         template<typename T> 
         static constexpr ClassID GetTypeTypeID()

@@ -395,7 +395,6 @@
   (set diagnostics (list))
   (set delayed-forms (list))
   (set diagnostics (list))
-
   (catch-signals
     (
           (while (not (eof file-stream))
@@ -415,7 +414,6 @@
           (doit new-term delayed-forms
                  (handle-form new-envir new-term semantic-tokens jump-symbols diagnostics)
           )
-          (clear new-envir)
     )    
     catch (symbol-location loc)
     (
@@ -426,6 +424,7 @@
       false
     )
   )
+  (clear new-envir)
   (set (. open-documents uri) new-file-data)
   (lsp:set-document-tokens handler uri semantic-tokens)
   (lsp:set-document-diagnostics handler uri diagnostics)
