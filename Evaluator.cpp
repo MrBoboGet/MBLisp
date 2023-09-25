@@ -44,6 +44,15 @@ namespace MBLisp
     {
         return m_SetValue;
     }
+    void CallContext::PauseThread()
+    {
+        m_ThreadPaused = true;
+        m_AssociatedEvaluator->m_ThreadingState.Pause(m_CurrentState->ThreadID);
+    }
+    bool CallContext::IsMultiThreaded()
+    {
+        return m_AssociatedEvaluator->m_ThreadingState.MultipleThreadsActive();
+    }
     //
 
 
@@ -182,6 +191,10 @@ namespace MBLisp
         {
             std::cout<<ValueToPrint.GetType<bool>();
         }
+        else if(ValueToPrint.IsType<Null>())
+        {
+            std::cout<<"null";
+        }
         else if(ValueToPrint.IsType<bool>())
         {
             std::cout<<bool(ValueToPrint.GetType<bool>());
@@ -203,6 +216,24 @@ namespace MBLisp
                 }
             }
             std::cout<< ")";
+        }
+        else if(ValueToPrint.IsType<Dict>())
+        {
+            std::cout<<"{";
+            auto const& DictToPrint = ValueToPrint.GetType<Dict>();
+            int i = 0;
+            for(auto const& Element : DictToPrint)
+            {
+                Print(AssociatedEvaluator,Element.first);
+                std::cout<<": ";
+                Print(AssociatedEvaluator,Element.second);
+                if(i + 1 < DictToPrint.size())
+                {
+                    std::cout<<" ";
+                }
+                i  += 1;
+            }
+            std::cout<< "}";
         }
     }
     Value Evaluator::Print BUILTIN_ARGLIST
@@ -370,6 +401,12 @@ namespace MBLisp
     }
     Value Evaluator::Stream_ReadTerm BUILTIN_ARGLIST
     {
+        BuiltinLock Lock;
+        if(Context.IsMultiThreaded())
+        {
+            Lock = Arguments[0].GetLock();   
+            Context.PauseThread();
+        }
         Value ReturnValue;
         if(Arguments.size() != 1)
         {
@@ -388,10 +425,22 @@ namespace MBLisp
     }
     Value Evaluator::Stream_ReadString BUILTIN_ARGLIST
     {
+        BuiltinLock Lock;
+        if(Context.IsMultiThreaded())
+        {
+            Lock = Arguments[0].GetLock();   
+            Context.PauseThread();
+        }
         return Context.GetEvaluator().p_ReadString(Arguments[0].GetType<MBUtility::StreamReader>());
     }
     Value Evaluator::Stream_ReadNumber BUILTIN_ARGLIST
     {
+        BuiltinLock Lock;
+        if(Context.IsMultiThreaded())
+        {
+            Lock = Arguments[0].GetLock();   
+            Context.PauseThread();
+        }
         Value ReturnValue;
         std::string NumberString = Arguments[0].GetType<MBUtility::StreamReader>().ReadWhile([]
                 (char NextChar)
@@ -402,6 +451,12 @@ namespace MBLisp
     }
     Value Evaluator::Stream_ReadBytes BUILTIN_ARGLIST
     {
+        BuiltinLock Lock;
+        if(Context.IsMultiThreaded())
+        {
+            Lock = Arguments[0].GetLock();   
+            Context.PauseThread();
+        }
         int BytesToRead = Arguments[1].GetType<Int>();
         if(BytesToRead < 0)
         {
@@ -418,6 +473,12 @@ namespace MBLisp
     }
     Value Evaluator::Stream_ReadLine BUILTIN_ARGLIST
     {
+        BuiltinLock Lock;
+        if(Context.IsMultiThreaded())
+        {
+            Lock = Arguments[0].GetLock();   
+            Context.PauseThread();
+        }
         auto& Reader = Arguments[0].GetType<MBUtility::StreamReader>();
         std::string ReturnValue = Reader.ReadWhile([]
                 (char NextByte)
@@ -428,22 +489,50 @@ namespace MBLisp
         {
             Reader.ReadByte();
         }
+        if(ReturnValue.size() > 0 && ReturnValue.back() == '\r')
+        {
+            ReturnValue.resize(ReturnValue.size()-1);
+        }
         return ReturnValue;
     }
     Value Evaluator::Stream_EOF BUILTIN_ARGLIST
     {
+        BuiltinLock Lock;
+        if(Context.IsMultiThreaded())
+        {
+            Lock = Arguments[0].GetLock();   
+            Context.PauseThread();
+        }
         return Arguments[0].GetType<MBUtility::StreamReader>().EOFReached();
     }
     Value Evaluator::Stream_PeakByte BUILTIN_ARGLIST
     {
+        BuiltinLock Lock;
+        if(Context.IsMultiThreaded())
+        {
+            Lock = Arguments[0].GetLock();   
+            Context.PauseThread();
+        }
         return String(1,Arguments[0].GetType<MBUtility::StreamReader>().PeekByte());
     }
     Value Evaluator::Stream_ReadByte BUILTIN_ARGLIST
     {
+        BuiltinLock Lock;
+        if(Context.IsMultiThreaded())
+        {
+            Lock = Arguments[0].GetLock();   
+            Context.PauseThread();
+        }
         return String(1,Arguments[0].GetType<MBUtility::StreamReader>().ReadByte());
     }
     Value Evaluator::Stream_SkipWhitespace BUILTIN_ARGLIST
     {
+        BuiltinLock Lock;
+        if(Context.IsMultiThreaded())
+        {
+            Lock = Arguments[0].GetLock();   
+            Context.PauseThread();
+        }
         Context.GetEvaluator().p_SkipWhiteSpace(Arguments[0].GetType<MBUtility::StreamReader>());
         return false;
     }
@@ -544,7 +633,7 @@ namespace MBLisp
     }
     Value Evaluator::In_String BUILTIN_ARGLIST
     {
-        return Arguments[0].GetType<String>().find(Arguments[0].GetType<String>()) != std::string::npos;
+        return Arguments[1].GetType<String>().find(Arguments[0].GetType<String>()) != std::string::npos;
     }
     Value Evaluator::In_Environment BUILTIN_ARGLIST
     {
@@ -559,6 +648,30 @@ namespace MBLisp
     Value Evaluator::Str_Int BUILTIN_ARGLIST
     {
         return std::to_string(Arguments[0].GetType<Int>());
+    }
+    Value Evaluator::Int_Str BUILTIN_ARGLIST
+    {
+        return  std::stoi(Arguments[0].GetType<String>());
+    }
+    Value Evaluator::IndexOf_StrStr BUILTIN_ARGLIST
+    {
+        auto Result = Arguments[1].GetType<String>().find(Arguments[0].GetType<String>());
+        if(Result == String::npos)
+        {
+            Result = -1;   
+        }
+        return Int(Result);
+    }
+    Value Evaluator::Substr BUILTIN_ARGLIST
+    {
+        String const& OriginalString = Arguments[0].GetType<String>();
+        int Offset = Arguments[1].GetType<Int>();
+        auto Length = String::npos;
+        if(Arguments.size() > 2)
+        {
+            Length = Arguments[2].GetType<Int>();
+        }
+        return OriginalString.substr(Offset,Length);
     }
     Value Evaluator::Str_Bool BUILTIN_ARGLIST
     {
@@ -712,13 +825,14 @@ namespace MBLisp
     {
         SymbolID NewSymbol = m_CurrentSymbolID;
         m_CurrentSymbolID++;
-        std::string SymbolString = "g:"+std::to_string(NewSymbol);
-        while(m_InternedSymbols.find(SymbolString) != m_InternedSymbols.end())
-        {
-            SymbolString += "_";
-        }
-        m_SymbolToString[NewSymbol] = SymbolString;
-        m_InternedSymbols[SymbolString] = NewSymbol;
+        NewSymbol |= GeneratedSymbol;
+        //std::string SymbolString = "g:"+std::to_string(NewSymbol);
+        //while(m_InternedSymbols.find(SymbolString) != m_InternedSymbols.end())
+        //{
+        //    SymbolString += "_";
+        //}
+        //m_SymbolToString[NewSymbol] = SymbolString;
+        //m_InternedSymbols[SymbolString] = NewSymbol;
         return NewSymbol;
     }
     Value Evaluator::Index_ClassInstance BUILTIN_ARGLIST
@@ -830,6 +944,10 @@ namespace MBLisp
             {
                 CurrentState.CurrentCallContext.m_IsSetting = Setting;
                 CurrentCallStack.back().ArgumentStack.push_back(AssociatedFunc(CurrentState.CurrentCallContext,Arguments));
+                if(CurrentState.CurrentCallContext.m_ThreadPaused)
+                {
+                    m_ThreadingState.Resume(CurrentState.ThreadID);
+                }
             }
             catch(std::exception const& e)
             {
@@ -1603,6 +1721,10 @@ namespace MBLisp
     }
     std::string Evaluator::GetSymbolString(SymbolID SymbolToConvert)
     {
+        if(SymbolToConvert & GeneratedSymbol)
+        {
+            return "g:"+std::to_string(SymbolToConvert  & ~GeneratedSymbol);
+        }
         return m_SymbolToString[SymbolToConvert];
     }
     SymbolID Evaluator::GetSymbolID(std::string const& SymbolString)
@@ -1777,6 +1899,10 @@ namespace MBLisp
         AddMethod<Null>("str",Str_Null);
         AddMethod<Float>("str",Str_Float);
         AddMethod<Int>("str",Str_Int);
+        AddMethod<String>("int",Int_Str);
+        AddMethod<String,Int>("substr",Substr);
+        AddMethod<String,Int,Int>("substr",Substr);
+        AddMethod<String,String>("index-of",IndexOf_StrStr);
 
 
         //operators
@@ -1805,6 +1931,11 @@ namespace MBLisp
 
         AddMethod<Symbol>("is-special",IsSpecial_Symbol);
         AddMethod<Symbol>("position",Position_Symbol);
+       
+        //Filesystem stuff
+        AddMethod<String>("canonical",Canonical);
+        AddMethod<String>("is-file",IsFile);
+
         
         m_GlobalScope->SetVariable(p_GetSymbolID("*READTABLE*"),Value::MakeExternal(ReadTable()));
         //Readtables
@@ -2004,7 +2135,7 @@ namespace MBLisp
     }
     Value Evaluator::Cwd BUILTIN_ARGLIST
     {
-        return MBUnicode::PathToUTF8(std::filesystem::current_path());
+        return MBUnicode::PathToUTF8(std::filesystem::current_path())+"/";
     }
     Value Evaluator::ParentPath BUILTIN_ARGLIST
     {
@@ -2013,6 +2144,10 @@ namespace MBLisp
             throw std::runtime_error("parent-path requires exactly 1 argument of type string");
         }
         return MBUnicode::PathToUTF8(std::filesystem::path(Arguments[0].GetType<String>()).parent_path());
+    }
+    Value Evaluator::Canonical BUILTIN_ARGLIST
+    {
+        return MBUnicode::PathToUTF8(std::filesystem::canonical(Arguments[0].GetType<String>()));
     }
     Value Evaluator::UserHomeDir BUILTIN_ARGLIST
     {
@@ -2038,6 +2173,10 @@ namespace MBLisp
             throw std::runtime_error("list-dir requires exactly 1 argument of type string");
         }
         return std::filesystem::is_directory(Arguments[0].GetType<String>());
+    }
+    Value Evaluator::IsFile BUILTIN_ARGLIST
+    {
+        return std::filesystem::is_regular_file(Arguments[0].GetType<String>());
     }
     //
     void Evaluator::p_LoadFile(Ref<Scope> CurrentScope,std::filesystem::path const& LoadFilePath)

@@ -11,6 +11,8 @@
 #include <assert.h>
 
 #include <MBUtility/MBVector.h>
+
+#include <mutex>
 namespace MBLisp
 {
     typedef int_least64_t Int;
@@ -30,8 +32,11 @@ namespace MBLisp
     //typedef std::unordered_map<Value,Value> Dict;
     
     struct Any{};
+
+    typedef std::unique_ptr<std::lock_guard<std::recursive_mutex>>  BuiltinLock;
     
     inline constexpr uint_least32_t RestSymbol = 1<<30;
+    inline constexpr uint_least32_t GeneratedSymbol = 1<<29;
 
     class RefContent
     {
@@ -41,7 +46,16 @@ namespace MBLisp
         {
                
         }
+        mutable std::unique_ptr<std::recursive_mutex> m_ReferenceMutex = nullptr;
     public:
+        BuiltinLock GetLock() const
+        {
+            if(m_ReferenceMutex == nullptr)
+            {
+                m_ReferenceMutex = std::make_unique<std::recursive_mutex>();
+            }
+            return std::make_unique<std::lock_guard<std::recursive_mutex>>(*m_ReferenceMutex);
+        }
         ClassID StoredClass = 0;
         int RefCount()
         {
@@ -104,6 +118,14 @@ namespace MBLisp
                
         }
         public:
+        BuiltinLock GetLock() const
+        {
+            if(m_AllocatedContent == nullptr)
+            {
+                throw std::runtime_error("Cannot aquire lock of null RefBase");
+            }
+            return m_AllocatedContent->GetLock();
+        }
         ClassID GetTypeID() const
         {
             if(m_AllocatedContent == nullptr)
@@ -474,6 +496,8 @@ namespace MBLisp
             return false;   
         }
     };
+    template<typename T,typename... Args> Ref<T> MakeRef(Args... Arguments);
+
     template<typename TypeToCheck,typename... OtherType>
     inline constexpr bool TypeIn = i_TypeIn<TypeToCheck,OtherType...>::value;
     class Value
@@ -714,7 +738,10 @@ public:
                     return p_GetType<RefBase>().GetTypeID();
                 }
             }
-            
+            bool IsReference() const
+            {
+                return !p_BuiltinStored();
+            }
             template<typename T>
             T const& GetType() const
             {
@@ -918,6 +945,14 @@ public:
             {
                 static_assert(!std::is_same<T,T>::value,"Can only initialize value with builtin types");
             }
+        }
+        BuiltinLock GetLock() const
+        {
+            if(!m_Data.IsReference())
+            {
+                throw std::runtime_error("Can only aquire lock reference type");   
+            }
+            return m_Data.GetType<RefBase>().GetLock();
         }
         template<typename T>
         Value(Ref<T> Rhs)

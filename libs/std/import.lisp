@@ -1,9 +1,25 @@
 (set user-libs-path (+ (user-home-dir) "/.mblisp/libs"))
 (set user-libs (list-dir user-libs-path))
 (set builtin-modules (internal-modules))
+(set loaded-modules (make-dict))
+
+
 (defun module-specifier-to-string (module-symbol)
   (+ "/" (foldl (split (str module-symbol) ".") _(+ _ "/"  _1)))
 )
+
+
+
+(defun get-scope (file-path)
+    `(load ,file-path)
+)
+
+(defun set-get-scope-func (new-func)
+    (set get-scope-func new-func)
+)
+
+(set get-scope-func get-scope)
+
 (defmacro import (value &rest binding)
   (set file-to-load "")
   (set is-internal false)
@@ -22,7 +38,7 @@
         (error (+ "Cannot find module in working directory or user libs: " (str value)))
     )
    else if (eq (type value) string_t)
-      (set file-to-load (+ (cwd) (str value)))
+      (set file-to-load (+ (cwd) value))
       (if (in value builtin-modules)
          (set is-internal true)
          (set internal-string value)
@@ -44,14 +60,17 @@
   (if (not (in ".lisp" file-to-load))
      (set file-to-load (+ file-to-load ".lisp")) 
   )
+  (if (not (is-file file-to-load))
+    (error (+ "No file with name " file-to-load)  )
+  )
   (set scope-to-eval '(environment))
   (if (eq (len binding) 0)
-    `(eval (load ,file-to-load))
+    `(eval ,(get-scope file-to-load))
    else
     (set scope-sym (index binding 0))
     `(progn
         (set ,scope-sym (environment))
-        (eval (load ,file-to-load) ,scope-sym)
+        (eval ,(get-scope file-to-load) ,scope-sym)
      )
   )
 )

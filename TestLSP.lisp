@@ -395,6 +395,25 @@
     )
    )
 )
+
+
+(set loaded-files (make-dict))
+
+(defun lsp-get-scope (file-to-load)
+    (set canonical-uri (canonical file-to-load))
+    (if (in canonical-uri loaded-files) (return (. loaded-files canonical-uri)))
+    (open-file canonical-uri)
+    (. loaded-files canonical-uri)
+)
+(defun open-file (uri)
+    (set content (read-bytes (open uri) 123123123))
+    (try 
+        (open-handler uri content)
+    catch (any_t e)
+        null
+    )
+)
+
 (defun open-handler (handler uri content)
   (set new-envir (new-environment))
   (set (index new-envir 'load-filepath) uri)

@@ -66,11 +66,14 @@ namespace MBLisp
         Evaluator*  m_AssociatedEvaluator = nullptr;
         Value m_SetValue;
         bool m_IsSetting = false;
+        bool m_ThreadPaused = false;
     public:
         Evaluator& GetEvaluator();
         Ref<Scope> GetCurrentScope();
         bool IsSetting();
         Value const& GetSetValue();
+        void PauseThread();
+        bool IsMultiThreaded();
     };
     struct ExecutionState
     {
@@ -134,7 +137,9 @@ namespace MBLisp
     {
         SymbolID m_CurrentSymbolID = 1;
         SymbolID m_PrimitiveSymbolMax = 0;
-
+        
+        friend class CallContext;
+        
         static void Print(Evaluator& AssociatedEvaluator,Value const& ValueToPrint);
         static Value Print BUILTIN_ARGLIST;
         static Value Less BUILTIN_ARGLIST;
@@ -163,8 +168,9 @@ namespace MBLisp
         static Value Flatten_1 BUILTIN_ARGLIST;
         //class instance
         static Value Index_ClassInstance BUILTIN_ARGLIST;
-        //Streams
         static Value Expand BUILTIN_ARGLIST;
+
+        //Streams
         static Value Stream_ReadTerm BUILTIN_ARGLIST;
         static Value Stream_ReadString BUILTIN_ARGLIST;
         static Value Stream_ReadNumber BUILTIN_ARGLIST;
@@ -174,6 +180,9 @@ namespace MBLisp
         static Value Stream_PeakByte BUILTIN_ARGLIST;
         static Value Stream_ReadByte BUILTIN_ARGLIST;
         static Value Stream_SkipWhitespace BUILTIN_ARGLIST;
+        //Blocking
+        
+        //Non-blocking
 
         //Various
         static Value Eq_String BUILTIN_ARGLIST;
@@ -194,6 +203,9 @@ namespace MBLisp
         static Value Symbol_SymbolInt BUILTIN_ARGLIST;
         static Value GenSym BUILTIN_ARGLIST;
 
+        static Value Int_Str BUILTIN_ARGLIST;
+        static Value IndexOf_StrStr BUILTIN_ARGLIST;
+        static Value Substr BUILTIN_ARGLIST;
 
         //Dict
         static Value Index_Dict BUILTIN_ARGLIST;
@@ -229,9 +241,11 @@ namespace MBLisp
         static Value Exists BUILTIN_ARGLIST;
         static Value Cwd BUILTIN_ARGLIST;
         static Value ParentPath BUILTIN_ARGLIST;
+        static Value Canonical BUILTIN_ARGLIST;
         static Value UserHomeDir BUILTIN_ARGLIST;
         static Value ListDir BUILTIN_ARGLIST;
         static Value IsDirectory BUILTIN_ARGLIST;
+        static Value IsFile BUILTIN_ARGLIST;
         
         //IO
         static Value Write_OutStream BUILTIN_ARGLIST;
