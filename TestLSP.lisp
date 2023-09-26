@@ -1,11 +1,10 @@
-(import lsp lsp)
+(import lsp-internal lsp)
 (set handler (lsp:create-lsp-server))
 (defun insert-elements (out-list in-list)
   (doit e in-list
     (append out-list e)
   )
 )
-(defun test-func () (print "hello world"))
 (defun if-token-extractor (envir ast)
    (set return-value (list)) 
    (doit e ast
@@ -16,18 +15,6 @@
    return-value
 )
 
-(defun if-diagnostics (envir ast)
-  (set return-value (list))
-  (doit e ast
-    (if (is-trivial-set-form e)
-      (set-var envir (. e 1) null)
-    )
-    (if (not (|| (eq e 'if) (eq e 'else)))
-      (insert-elements return-value (get-diagnostics envir  e))
-    )
-  )
-  return-value
-)
 (defun go-diagnostics (envir ast)
     (list)
 )
@@ -41,29 +28,6 @@
    )
    return-value
 )
-(defun try-diagnostics (envir ast)
-  (set return-value (list))
-  (set i 1)
-  (while (< i (len ast))
-    (set e (. ast i))
-    (if (is-trivial-set-form e)
-      (set-var envir (. e 1) null)
-    )
-    (if (eq e 'catch)
-      (set catch-envir (new-environment))
-      (set-parent catch-envir envir)
-      (shadow catch-envir (. (. ast (+ i 1)) 1))
-      (insert-elements return-value (get-diagnostics catch-envir  (. ast (+ i 1))))
-      (insert-elements return-value (get-diagnostics catch-envir  (. ast (+ i 2))))
-      (incr i 2)
-     else 
-      (insert-elements return-value (get-diagnostics envir  e))
-    )
-    (incr i 1)
-  )
-  return-value
-)
-
 
 (defun all (iterable)
     (set return-value true)
@@ -90,48 +54,10 @@
   return-value
 )
 
-
-
-
-(defun dot-token-extractor (envir ast)
-   (set return-value (list)) 
-   (if (is-compile-time-dot envir ast)
-        (set map-like (. envir (. ast 1)))
-        (insert-elements return-value (default-extractor envir (. ast 1)))
-        (doit e (map _(eval (. ast _)) (range 2 (len ast)))
-            (catch-signals
-             (
-                (insert-elements return-value (default-extractor map-like e))
-                (set map-like (. map-like e))
-             )
-             catch (any_t except)
-             (
-                false
-             )
-            )
-        )
-    else 
-        (doit e ast
-            (insert-elements return-value (default-extractor envir e))
-        )
-   )
-   return-value
-)
-
-
-(defun dot-diagnostics (envir ast)
-  (set return-value (list))
-  return-value
-)
-
 (defun type-eq (lhs rhs)
     (eq (type lhs) rhs)
 )
-(set overriden-extractors (make-dict 
-                            ('if if-token-extractor)
-                            ('try try-token-extractor)
-                            ('. dot-token-extractor)
-))
+
 (defun default-extractor (envir ast)
     (set return-value (list))
     (if (eq (type ast) symbol_t)
@@ -163,20 +89,12 @@
           (append return-value (list ast "var"))
       )
      else if (eq (type ast) list_t)
-       (if (not (< (len ast) 1))
-           (set head (index ast 0))
-           (if (&& (eq (type head) symbol_t) (in head overriden-extractors))
-             (return ((index overriden-extractors head) envir ast))
-           )
-       )
-
        (doit sub-form ast
          (insert-elements return-value (default-extractor envir sub-form))
        )
     )  
     return-value
 )
-
 (defun quote-diagnostics (envir ast)
     (list)
 )
@@ -192,18 +110,6 @@
         (incr i 2)
     )
     return-value
-)
-(defun catch-diagnostics (envir ast)
-  (set return-value (list))
-  (doit e ast
-    (if (is-trivial-set-form e)
-      (set-var envir (. e 1) null)
-    )
-    (if (not (|| (eq e 'if) (eq e 'else)))
-      (insert-elements return-value (get-diagnostics envir  e))
-    )
-  )
-  return-value
 )
 
 (defun lambda-envir (envir ast)
@@ -235,20 +141,6 @@
   return-value
 )
 
-(defun method-envir (envir ast)
-  (set return-value (new-environment))
-  (set-parent return-value envir)
-  (doit arg (. ast 2)
-    (if (eq (type arg) symbol_t) (shadow return-value arg))
-    (if (eq (type arg) list_t) (shadow return-value (. arg  0)))
-  )
-  return-value
-)
-(defun doit-envir (envir ast)
-  (set return-value (new-environment))
-  (set-parent return-value envir)
-  (shadow return-value (index ast 1)) return-value
-)
 (set envir-modifiers (make-dict 
                         ('lambda lambda-envir) 
 ))
@@ -287,13 +179,26 @@
     )
     (doit e ast
       (if (is-trivial-set-form e)
-        (set-var envir (. e 1) null)
+        (if (not (in (. e 1) envir))
+            (set-var envir (. e 1) null)
+        )
       )
       (insert-elements return-value (get-diagnostics envir  e))
     )
   )
   return-value
 )
+(defmacro eval-lsp (&rest body)
+    `(progn ,@body)
+)
+(set read-time-forms (make-dict 
+                    ('defun true) 
+                    ('defmacro true)
+                    ('defgeneric true)
+                    ('defclass true)
+                    ('import true)
+                    ('eval-lsp true)
+))
 
 (defun should-execute-form (form)
   (if (not (eq (type form) list_t))
@@ -303,7 +208,7 @@
   (if (not (eq (type form-head) symbol_t))
     (return false)
   )
-  (if (in form-head `(defun defmacro defgeneric defclass import))
+  (if (in form-head read-time-forms)
     (return true)
   )
   false
@@ -325,28 +230,16 @@
     (incr return-value ")")
     return-value
 )
-(defun in-rec (thing-to-inspect target)
-    (set return-value false)
-    (if (eq (type thing-to-inspect) list_t)
-        (doit e thing-to-inspect
-            (cond (in-rec e target) (return true) false)
-        )
-    )
-    (eq thing-to-inspect target)
-)
 (set delayed-map (make-dict ('defun true) ('defmacro true) ('defmethod true) ('defclass true)))
 
 (defclass symbol-location ()
     (symbols (list))
     (constructor (lambda (res source dest) (set (slot res symbols) (list source dest)) res))
 )
-
-(defclass file-data ()
-    (jump-symbols (list))
-    (constructor (lambda (res) res))
+(defclass semantic-token ()
+    (content null)
+    (constructor (lambda (res token token-type) (set (slot res content) (list token token-type)) res))
 )
-
-
 
 (defun extract-macros (envir ast tokens jumps diagnostics) 
     (set return-value (list))
@@ -420,7 +313,6 @@
   (set input-stream-symbol (gensym))
   (set (index new-envir input-stream-symbol) file-stream)
 
-  (set new-file-data (file-data))
 
   (set jump-symbols (list))
 
@@ -434,15 +326,15 @@
                  (set new-term (eval `(read-term ,file-stream) new-envir))
                  (skip-whitespace file-stream)
                  (if (should-execute-form new-term)
-                   (eval new-term new-envir)
+                   (catch-all (eval new-term new-envir))
                   else if (is-trivial-set-form new-term)
                    (set-var new-envir (index new-term 1) null)
                  )
                  (if (&& (type-eq new-term list_t) (< 0 (len new-term)) (type-eq (. new-term 0) symbol_t) (in (. new-term 0) delayed-map))
                         (append delayed-forms new-term)
-                        (continue)
+                  else
+                        (handle-form new-envir new-term semantic-tokens jump-symbols diagnostics)
                  )
-                 (handle-form new-envir new-term semantic-tokens jump-symbols diagnostics)
           )
           (doit new-term delayed-forms
                  (handle-form new-envir new-term semantic-tokens jump-symbols diagnostics)
@@ -451,6 +343,10 @@
     catch (symbol-location loc)
     (
        (append jump-symbols (slot loc symbols))
+    )
+    catch (semantic-token new-token)
+    (
+       (append semantic-tokens (slot semantic-tokens content))
     )
     catch (any_t e)
     (
@@ -462,7 +358,8 @@
   (lsp:set-document-diagnostics handler uri diagnostics)
   (lsp:set-document-jumps handler uri jump-symbols)
 )
-(if (not is-repl)
+(defun main ()
     (lsp:add-on-open-handler handler open-handler)
     (lsp:handle-requests handler)
 )
+(main)

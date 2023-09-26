@@ -2136,8 +2136,8 @@ namespace MBLisp
     }
     void Evaluator::p_LoadModules()
     {
-        m_BuiltinModules["lsp"] = std::make_unique<LSPModule>();
-        m_BuiltinModules["lsp"]->SetEvaluator(this);
+        m_BuiltinModules["lsp-internal"] = std::make_unique<LSPModule>();
+        m_BuiltinModules["lsp-internal"]->SetEvaluator(this);
     }
     Value Evaluator::Load BUILTIN_ARGLIST
     {
