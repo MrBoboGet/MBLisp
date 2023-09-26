@@ -176,6 +176,8 @@ namespace MBLisp
         static Value Stream_ReadNumber BUILTIN_ARGLIST;
         static Value Stream_ReadBytes BUILTIN_ARGLIST;
         static Value Stream_ReadLine BUILTIN_ARGLIST;
+        static Value Stream_Position BUILTIN_ARGLIST;
+        static Value Stream_ReadUntil BUILTIN_ARGLIST;
         static Value Stream_EOF BUILTIN_ARGLIST;
         static Value Stream_PeakByte BUILTIN_ARGLIST;
         static Value Stream_ReadByte BUILTIN_ARGLIST;

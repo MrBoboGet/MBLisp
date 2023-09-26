@@ -347,7 +347,6 @@
 )
 
 
-(set open-documents (dict))
 
 (defun extract-macros (envir ast tokens jumps diagnostics) 
     (set return-value (list))
@@ -459,7 +458,6 @@
     )
   )
   (clear new-envir)
-  (set (. open-documents uri) new-file-data)
   (lsp:set-document-tokens handler uri semantic-tokens)
   (lsp:set-document-diagnostics handler uri diagnostics)
   (lsp:set-document-jumps handler uri jump-symbols)

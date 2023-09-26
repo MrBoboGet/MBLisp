@@ -55,13 +55,7 @@
 
 
 
-
-(defun read-comma-delimted-object (begin end read-element-func stream)
-  (skip-whitespace stream)
-  (if (not (eq (peek-byte stream) begin))
-    (error (+ "object must begin with a " begin))
-  )
-  (read-byte stream)
+(defun read-comma-delimited-body (end read-element-func stream)
   (skip-whitespace stream)
   (while (&& (not (eof stream)) (not (eq (peek-byte stream) end)))
     (read-element-func stream)
@@ -76,6 +70,15 @@
       (error (+ "unexpected character in json object: " (peek-byte stream)))
     )
   )
+)
+
+(defun read-comma-delimited-object (begin end read-element-func stream)
+  (skip-whitespace stream)
+  (if (not (eq (peek-byte stream) begin))
+    (error (+ "object must begin with a " begin))
+  )
+  (read-byte stream)
+  (read-comma-delimited-body (end read-element-func stream))
   (if (eof stream)
     (error "eof while reading json object")
   )
@@ -84,7 +87,7 @@
 
 (defun read-json-object (stream)
   (set return-value (dict))
-  (read-comma-delimted-object "{" "}" 
+  (read-comma-delimited-object "{" "}" 
     (lambda (stream)
       (set new-key (read-string stream))
       (skip-whitespace stream)
@@ -101,7 +104,7 @@
 
 (defun read-json-list (stream)
   (set return-value (list))
-  (read-comma-delimted-object "[" "]" (lambda (stream) (append return-value (read-json stream))) stream)
+  (read-comma-delimited-object "[" "]" (lambda (stream) (append return-value (read-json stream))) stream)
   return-value
 )
 
@@ -151,4 +154,35 @@
     (print content)
     (if (< (len content) content-length) (error "Insufficient bytes sent for message"))
     (read-json (in-stream content))
+)
+
+
+
+(defun read-json-dict-body (stream out-dict)
+    (set current-offset (position stream))
+    (set key-string (read-until stream ":"))
+    (set key-value (read-term stream))
+    (set (index out-dict key-string) key-value)
+)
+(defun list-literal-reader (stream) 
+    (set return-value (list 'list))
+    (read-comma-delimited-body "]" (lambda (new-stream) (append return-value (read-term new-stream))) stream)
+    (read-byte stream)
+    return-value
+)
+(defun json-literal-reader  (stream)
+    (set return-value `(make-dict ))
+    (set parsed-dict (dict))
+    (skip-whitespace stream)
+    (set first-byte (peek-byte stream))
+    (read-comma-delimited-body "}" (lambda (new-stream) (read-json-dict-body new-stream parsed-dict))  stream)
+    (read-byte stream)
+    (doit key (keys parsed-dict)
+        (append return-value (list key (. parsed-dict key)))
+    )
+    return-value
+)
+(defun add-readers (read-table)
+    (add-reader-character read-table "{" json-literal-reader)
+    (add-reader-character read-table "[" list-literal-reader)
 )

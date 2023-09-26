@@ -495,6 +495,54 @@ namespace MBLisp
         }
         return ReturnValue;
     }
+    Value Evaluator::Stream_Position BUILTIN_ARGLIST
+    {
+        auto const& Reader = Arguments[0].GetType<MBUtility::StreamReader>();
+        return  Int(Reader.Position());
+    }
+    Value Evaluator::Stream_ReadUntil BUILTIN_ARGLIST
+    {
+        BuiltinLock Lock;
+        if(Context.IsMultiThreaded())
+        {
+            Lock = Arguments[0].GetLock();   
+            Context.PauseThread();
+        }
+        auto& Reader = Arguments[0].GetType<MBUtility::StreamReader>();
+        String const& SearchedString = Arguments[1].GetType<String>();
+        std::string ReturnValue;
+        size_t EarliestPossibleOffset = 0;
+        //kinda trivial implementation, might be 
+        //possible to optimise for longer string, but most likely not so necccessary
+        Reader.DoWhile([&]
+                (char NextByte)
+                {
+                    bool Result = true;
+                    if(ReturnValue.find(SearchedString,EarliestPossibleOffset) != std::string::npos)
+                    {
+                        Result = false;
+                    }
+                    else
+                    {
+                        if(ReturnValue.size() >= SearchedString.size())
+                        {
+                            EarliestPossibleOffset = (ReturnValue.size()-SearchedString.size())+1;
+                        }
+                    }
+                    return Result;
+                },
+                [&](char CurrentByte){ReturnValue += CurrentByte;}
+                );
+        if(EarliestPossibleOffset ==  (ReturnValue.size() - SearchedString.size()))
+        {
+            ReturnValue.resize(ReturnValue.size()-SearchedString.size());
+        }
+        else 
+        {
+            throw std::runtime_error("Error in read-until: searched string \""+SearchedString+"\" was not found");
+        }
+        return ReturnValue;
+    }
     Value Evaluator::Stream_EOF BUILTIN_ARGLIST
     {
         BuiltinLock Lock;
@@ -1877,6 +1925,7 @@ namespace MBLisp
         AddMethod<MBUtility::StreamReader>("read-string",Stream_ReadString);
         AddMethod<MBUtility::StreamReader>("read-number",Stream_ReadNumber);
         AddMethod<MBUtility::StreamReader>("read-line",Stream_ReadLine);
+        AddMethod<MBUtility::StreamReader,String>("read-until",Stream_ReadUntil);
         AddMethod<String,std::unique_ptr<MBUtility::MBOctetOutputStream>>("write",Write_OutStream);
         AddMethod<String>("out-stream",OutStream_String);
         AddMethod<String>("in-stream",InStream_String);
@@ -1931,6 +1980,7 @@ namespace MBLisp
 
         AddMethod<Symbol>("is-special",IsSpecial_Symbol);
         AddMethod<Symbol>("position",Position_Symbol);
+        AddMethod<MBUtility::StreamReader>("position",Stream_Position);
        
         //Filesystem stuff
         AddMethod<String>("canonical",Canonical);
