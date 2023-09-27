@@ -5,14 +5,34 @@ namespace MBLisp
 {
        
     //Begin Scope
-    void Scope::SetParentScope(Ref<Scope> ParentScope)
+    void Scope::SetParentScope(Ref<Scope> NewScope)
     {
-        m_ParentScope.AssociatedScope = ParentScope;
+        //ghetto clear
+        while(m_ParentScope.size() > 0)
+        {
+            m_ParentScope.pop_back();   
+        }
+        ParentScope NewParent;
+        NewParent.AssociatedScope = NewScope;
+        m_ParentScope.push_back(std::move(NewParent));
     }
-    void Scope::SetShadowingParent(Ref<Scope> ParentScope)
+    void Scope::AddParentScope(Ref<Scope> NewScope)
     {
-        m_ParentScope.AssociatedScope = ParentScope;
-        m_ParentScope.Shadowing = true;
+        ParentScope NewParent;
+        NewParent.AssociatedScope = NewScope;
+        m_ParentScope.push_back(NewParent);
+    }
+    void Scope::SetShadowingParent(Ref<Scope> NewScope)
+    {
+        //ghetto clear
+        while(m_ParentScope.size() > 0)
+        {
+            m_ParentScope.pop_back();   
+        }
+        ParentScope NewParent;
+        NewParent.AssociatedScope = NewScope;
+        NewParent.Shadowing = true;
+        m_ParentScope.push_back(std::move(NewParent));
     }
     Value Scope::FindVariable(SymbolID Variable)
     {
@@ -30,9 +50,16 @@ namespace MBLisp
         {
             return &VarIt->second;
         }
-        else if(m_ParentScope.AssociatedScope != nullptr)
+        else if(m_ParentScope.size() != 0)
         {
-            ReturnValue = m_ParentScope.AssociatedScope->TryGet(Variable);
+            for(auto& Parent : m_ParentScope)
+            {
+                ReturnValue = Parent.AssociatedScope->TryGet(Variable);
+                if(ReturnValue != nullptr)
+                {
+                    break;   
+                }
+            }
         }
         return ReturnValue;
     }
@@ -42,9 +69,11 @@ namespace MBLisp
     }
     void Scope::SetVariable(SymbolID Variable,Value NewValue)
     {
-        if(m_ParentScope.AssociatedScope != nullptr && !m_ParentScope.Shadowing)
+        for(auto& Parent : m_ParentScope)  ///m_ParentScope.AssociatedScope != nullptr && !m_ParentScope.Shadowing)
         {
-            if(auto It = m_ParentScope.AssociatedScope->TryGet(Variable); It != nullptr)
+            if(Parent.Shadowing) 
+                continue;
+            if(auto It = Parent.AssociatedScope->TryGet(Variable); It != nullptr)
             {
                 *It = std::move(NewValue);
                 return;

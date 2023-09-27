@@ -404,5 +404,3 @@
 (defun =< (lhs rhs)
     (leq lhs rhs)
 )
-
-

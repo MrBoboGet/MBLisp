@@ -69,6 +69,8 @@ namespace MBLisp
         bool m_ThreadPaused = false;
     public:
         Evaluator& GetEvaluator();
+        //kinda sussy
+        ExecutionState& GetState();
         Ref<Scope> GetCurrentScope();
         bool IsSetting();
         Value const& GetSetValue();
@@ -190,6 +192,8 @@ namespace MBLisp
         static Value Eq_String BUILTIN_ARGLIST;
         static Value Eq_Symbol BUILTIN_ARGLIST;
         static Value Eq_Int BUILTIN_ARGLIST;
+        static Value Eq_Bool BUILTIN_ARGLIST;
+        static Value Eq_Null BUILTIN_ARGLIST;
         static Value Eq_Type BUILTIN_ARGLIST;
         static Value Eq_Any BUILTIN_ARGLIST;
         static Value Minus_Int BUILTIN_ARGLIST;
@@ -227,6 +231,7 @@ namespace MBLisp
         static Value SetVar_Environment BUILTIN_ARGLIST;
         static Value Shadow_Environment BUILTIN_ARGLIST;
         static Value SetParent_Environment BUILTIN_ARGLIST;
+        static Value AddParent_Environment BUILTIN_ARGLIST;
         static Value Clear_Environment BUILTIN_ARGLIST;
        
         //Readtable

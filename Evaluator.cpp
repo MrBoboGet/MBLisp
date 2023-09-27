@@ -31,6 +31,10 @@ namespace MBLisp
         assert(m_AssociatedEvaluator != nullptr);
         return *m_AssociatedEvaluator;
     }
+    ExecutionState& CallContext::GetState()
+    {
+        return *m_CurrentState;
+    }
     Ref<Scope> CallContext::GetCurrentScope()
     {
         assert(m_CurrentState != nullptr);
@@ -419,7 +423,8 @@ namespace MBLisp
         MBUtility::StreamReader& Reader = Arguments[0].GetType<MBUtility::StreamReader>();
         ReadTable& Table = Context.GetCurrentScope()->FindVariable(Context.GetEvaluator().GetSymbolID("*READTABLE*")).GetType<ReadTable>();
         SymbolID URI = Context.GetEvaluator().p_GetSymbolID(Context.GetCurrentScope()->FindVariable(Context.GetEvaluator().p_GetSymbolID("load-filepath")).GetType<String>());
-        Ref<Scope> NewScope = MakeRef<Scope>();
+        //TODO think through this functionality again, how needed is it for ":" expander, and could it be implemented in a more clean way
+        Ref<Scope> NewScope = Context.GetState().StackFrames.front().StackScope;
         ReturnValue = Context.GetEvaluator().p_ReadTerm(NewScope,URI,Table,Reader,Arguments[0]);
         return ReturnValue;
     }
@@ -652,6 +657,10 @@ namespace MBLisp
     {
         return Arguments[0].GetType<Int>() == Arguments[1].GetType<Int>();
     }
+    Value Evaluator::Eq_Bool BUILTIN_ARGLIST
+    {
+        return Arguments[0].GetType<bool>() == Arguments[1].GetType<bool>();
+    }
     Value Evaluator::Eq_Type BUILTIN_ARGLIST
     {
         return (Arguments[0].GetType<ClassDefinition>().ID == Arguments[1].GetType<ClassDefinition>().ID)
@@ -660,6 +669,10 @@ namespace MBLisp
     Value Evaluator::Eq_Any BUILTIN_ARGLIST
     {
         return false;
+    }
+    Value Evaluator::Eq_Null BUILTIN_ARGLIST
+    {
+        return true;
     }
     Value Evaluator::Minus_Int BUILTIN_ARGLIST
     {
@@ -808,6 +821,12 @@ namespace MBLisp
     {
         Scope& ScopeToModify = Arguments[0].GetType<Scope>();
         ScopeToModify.SetParentScope(Arguments[1].GetRef<Scope>());
+        return Value();
+    }
+    Value Evaluator::AddParent_Environment BUILTIN_ARGLIST
+    {
+        Scope& ScopeToModify = Arguments[0].GetType<Scope>();
+        ScopeToModify.AddParentScope(Arguments[1].GetRef<Scope>());
         return Value();
     }
     Value Evaluator::Clear_Environment BUILTIN_ARGLIST
@@ -1040,6 +1059,10 @@ namespace MBLisp
                     RestList.push_back(Arguments[i]);
                 }
                 NewStackFrame.StackScope->OverrideVariable(AssociatedLambda.Definition->RestParameter,std::move(RestList));
+            }
+            if(AssociatedLambda.Definition->EnvirParameter != 0)
+            {
+                NewStackFrame.StackScope->OverrideVariable(AssociatedLambda.Definition->EnvirParameter,CurrentCallStack.back().StackScope);
             }
             CurrentCallStack.push_back(std::move(NewStackFrame));
         }
@@ -1763,6 +1786,10 @@ namespace MBLisp
             {
                 ReturnValue |= RestSymbol;
             }
+            else if(SymbolString == "&envir")
+            {
+                ReturnValue |= EnvirSymbol;
+            }
             m_SymbolToString[ReturnValue] = SymbolString;
         }
         return ReturnValue;
@@ -1907,13 +1934,16 @@ namespace MBLisp
         AddMethod<Scope,Symbol>("index",Index_Environment);
         AddMethod<Scope,Symbol,Any>("set-var",SetVar_Environment);
         AddMethod<Scope,Scope>("set-parent",SetParent_Environment);
+        AddMethod<Scope,Scope>("add-parent",AddParent_Environment);
         AddMethod<Scope,Symbol>("shadow",Shadow_Environment);
         //comparisons
         AddMethod<String,String>("eq",Eq_String);
         AddMethod<Symbol,Symbol>("eq",Eq_Symbol);
+        AddMethod<bool,bool>("eq",Eq_Bool);
         AddMethod<Int,Int>("eq",Eq_Int);
         AddMethod<ClassDefinition,ClassDefinition>("eq",Eq_Type);
         AddMethod<Any,Any>("eq",Eq_Any);
+        AddMethod<Null,Null>("eq",Eq_Null);
         AddMethod<Int,Int>("minus",Minus_Int);
 
         //streams

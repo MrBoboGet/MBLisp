@@ -5,13 +5,22 @@
 
 
 (defun module-specifier-to-string (module-symbol)
-  (+ "/" (foldl (split (str module-symbol) ".") _(+ _ "/"  _1)))
+  (+ "/" (foldl (split (str module-symbol) ".") _(+ _ (+ "/"  _1))))
 )
 
 
+(set loaded-scopes (dict))
 
 (defun get-scope (file-path)
-    `(load ,file-path)
+    (set canonical-path (canonical file-path))
+    (if (in canonical-path loaded-scopes)
+        (. loaded-scopes canonical-path)
+     else 
+        (set new-scope (new-environment))
+        (eval `(load ,file-path) new-scope)
+        (set (index loaded-scopes canonical-path) new-scope)
+        new-scope
+    )
 )
 
 (defun set-get-scope-func (new-func)
@@ -19,22 +28,27 @@
 )
 
 (set get-scope-func get-scope)
-
 (defmacro import (value &rest binding)
   (set file-to-load "")
   (set is-internal false)
   (set internal-string "")
-
   (if (eq (type value) symbol_t)
     (set module-path (module-specifier-to-string value))
-    (if (exists (+ user-libs-path module-path))
-        (set file-to-load (+ user-libs-path module-path))
-     else if (exists (+ (cwd) module-path))
-        (set file-to-load (+ (cwd) module-path))
-     else if (in (str value) builtin-modules)
-        (set is-internal true)
-        (set internal-string (str value))
-     else 
+    (set alternatives (list module-path (+ module-path ".lisp")))
+    (doit alternative alternatives
+        (if (exists (+ user-libs-path alternative))
+            (set file-to-load (+ user-libs-path alternative))
+            (break)
+         else if (exists (+ (cwd) alternative))
+            (set file-to-load (+ (cwd) alternative))
+            (break)
+         else if (in (str value) builtin-modules)
+            (set is-internal true)
+            (set internal-string (str  value))
+            (break)
+        )
+    )
+    (if (&& (eq is-internal false) (eq file-to-load ""))
         (error (+ "Cannot find module in working directory or user libs: " (str value)))
     )
    else if (eq (type value) string_t)
@@ -48,12 +62,11 @@
   )
   (if is-internal
     (if (< (len binding) 1)
-        (return `(set-parent (environment) (get-internal-module ,binding)))
+        (return `(set-parent (environment) (get-internal-module ,internal-string)))
      else 
         (return `(set ,(. binding 0) (get-internal-module ,internal-string)))
     )
   )
-
   (if (is-directory file-to-load)
     (set file-to-load (+ file-to-load "/index.lisp"))
   )
@@ -65,25 +78,10 @@
   )
   (set scope-to-eval '(environment))
   (if (eq (len binding) 0)
-    `(eval ,(get-scope file-to-load))
+     `(add-parent (environment) ,(get-scope file-to-load))
    else
     (set scope-sym (index binding 0))
-    `(progn
-        (set ,scope-sym (environment))
-        (eval ,(get-scope file-to-load) ,scope-sym)
-     )
+   `(set ,scope-sym ,(get-scope file-to-load))
   )
 )
-(defun expand-sym-string (symbol-to-expand)
-   (set current-pos (position symbol-to-expand))
-   (set symbol-parts (map _(symbol (symbol _) (++ current-pos (+ (len _) 1))) (split (str symbol-to-expand) ":")))
-   (if (eq (len symbol-parts) 1)
-     (return symbol-to-expand)
-   )
-   (set symbol-symbols (list))
-   (doit i (range 1 (len symbol-parts))
-         (append symbol-symbols `(,\quote ,(index symbol-parts i)))
-   )
-  `(,\. ,@(index symbol-parts 0) ,@symbol-symbols)
-)
-(add-character-expander *READTABLE* ":" expand-sym-string)
+(load (+ (parent-path load-filepath) "/import-expander.lisp"))

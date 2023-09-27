@@ -164,6 +164,15 @@ namespace MBLisp
                             NewLambda.Definition->RestParameter = ArgumentList[i+1].GetType<Symbol>().ID;
                             i+=1;
                         }
+                        else if(CurrentSymbol.ID & EnvirSymbol)
+                        {
+                            if(!(i + 1 < ArgumentList.size()) || !ArgumentList[i+1].IsType<Symbol>())
+                            {
+                                throw std::runtime_error("&envir parameter requires a symbol as the next value in the parameter list");
+                            }
+                            NewLambda.Definition->EnvirParameter = ArgumentList[i+1].GetType<Symbol>().ID;
+                            i+=1;
+                        }
                         else
                         {
                             NewLambda.Definition->Arguments.push_back(Argument.GetType<Symbol>());

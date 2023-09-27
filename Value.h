@@ -36,6 +36,7 @@ namespace MBLisp
     typedef std::unique_ptr<std::lock_guard<std::recursive_mutex>>  BuiltinLock;
     
     inline constexpr uint_least32_t RestSymbol = 1<<30;
+    inline constexpr uint_least32_t EnvirSymbol = 1<<28;
     inline constexpr uint_least32_t GeneratedSymbol = 1<<29;
 
     class RefContent
@@ -298,6 +299,7 @@ namespace MBLisp
     {
         std::vector<Symbol> Arguments;
         SymbolID RestParameter = 0;
+        SymbolID EnvirParameter = 0;
         Ref<OpCodeList> Instructions;
     };
     //TODO add support for 
@@ -1111,10 +1113,11 @@ public:
             Ref<Scope> AssociatedScope;   
             bool Shadowing = false;
         };
-        ParentScope m_ParentScope;
+        MBUtility::MBVector<ParentScope,4> m_ParentScope;
         std::unordered_map<SymbolID,Value> m_Variables;
     public:
         void SetParentScope(Ref<Scope> ParentScope);
+        void AddParentScope(Ref<Scope> ParentScope);
         void SetShadowingParent(Ref<Scope> ParentScope);
         Value FindVariable(SymbolID Variable);
         void SetVariable(SymbolID Variable,Value NewValue);
