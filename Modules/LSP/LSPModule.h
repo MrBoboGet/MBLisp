@@ -87,8 +87,8 @@ namespace MBLisp
         std::unordered_map<std::string,Value> m_RequestHandlers; 
         std::vector<Value> m_OnOpenHandlers;
         Evaluator* m_Evaluator = nullptr;
+        ExecutionState* m_ExecutionState = nullptr;
         MBLSP::LSP_ServerHandler* m_LSPServer = nullptr;
-        Ref<Scope> m_Scope = nullptr;
         Value m_This;
         DocumentInfo p_CreateDocumentInfo(std::string const& Content);
         

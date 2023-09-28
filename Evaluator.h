@@ -55,6 +55,11 @@ namespace MBLisp
         StackFrame(OpCodeExtractor Extractor) : ExecutionPosition(std::move(Extractor))
         {
         }
+        //in order to bootstrap the first stack frame
+        StackFrame()
+        {
+               
+        }
     };
 
     class Evaluator;
@@ -71,7 +76,6 @@ namespace MBLisp
         Evaluator& GetEvaluator();
         //kinda sussy
         ExecutionState& GetState();
-        Ref<Scope> GetCurrentScope();
         bool IsSetting();
         Value const& GetSetValue();
         void PauseThread();
@@ -79,6 +83,9 @@ namespace MBLisp
     };
     struct ExecutionState
     {
+        friend class Evaluator;
+        friend class CallContext;
+        private:
         //-1 means last, other value entails being in a signal
         ThreadID ThreadID = 0;
         int FrameTarget = -1;
@@ -90,10 +97,20 @@ namespace MBLisp
         //and allowing for seamles setting/getting. Does however 
         //depend on the single threadeadness use of ExecutionState
         CallContext CurrentCallContext;
-        
+       
         std::vector<StackFrame> StackFrames;
         std::unordered_map<DynamicVarID,std::vector<Value>> DynamicBindings;
         std::vector<std::vector<DynamicVarID>> BindingStack;
+
+    public:
+        Scope& GetCurrentScope()
+        {
+            return *StackFrames.back().StackScope;
+        }
+        Ref<Scope> GetScopeRef()
+        {
+            return StackFrames.back().StackScope;
+        }
     };
    
 
@@ -306,24 +323,26 @@ namespace MBLisp
         void p_Invoke(Value& ObjectToCall,FuncArgVector& Arguments,ExecutionState& CurrentState,bool Setting = false);
         void p_EmitSignal(ExecutionState& State,Value SignalToEmit,bool ForceUnwind);
         //The fundamental dispatch loop
-        Value p_Eval(ExecutionState& CurrentState);
-        Value p_Eval(std::vector<StackFrame> CurrentCallStack);
-        Value p_Eval(Ref<Scope> CurrentScope,Ref<OpCodeList> OpCodes,IPIndex  Offset = 0);
+        //Return index is the stack frame index where the value of the previous call should be returned instead of continuing evaluating 
+        //further down the stack.
+        //As a dummy stack is always present of bootstraping scopes, so is the lowest value this can take 1
+        Value p_Eval(ExecutionState& CurrentState,int ReturnIndex);
+        Value p_Eval(ExecutionState& CurrentState,Ref<OpCodeList> OpCodes,IPIndex  Offset = 0);
         //Value p_Eval(Ref<Scope> AssociatedScope,FunctionDefinition& FunctionToExecute,std::vector<Value> Arguments);
 
         void p_SkipWhiteSpace(MBUtility::StreamReader& Content);
         
 
-        Value p_Expand(Ref<Scope> ExpandScope,Value ValueToExpand);
-        Value p_Expand(Ref<Scope> ExpandScope,List const& ListToExpand);
+        Value p_Expand(ExecutionState&  CurrentState,Scope& Namespace,Value ValueToExpand);
+        Value p_Expand(ExecutionState&  CurrentState,Scope& Namespace,List const& ListToExpand);
 
         //reading
         String p_ReadString(MBUtility::StreamReader& Content);
-        Value p_ReadSymbol(Ref<Scope> ReadScope, SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content);
+        Value p_ReadSymbol(ExecutionState&  CurrentState, SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content);
         Int p_ReadInteger(MBUtility::StreamReader& Content);
-        List p_ReadList(Ref<Scope> AssociatedScope,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
-        Value p_ReadTerm(Ref<Scope> AssociatedScope,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
-        List p_Read(Ref<Scope> AssociatedScope,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
+        List p_ReadList(ExecutionState&  CurrentState,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
+        Value p_ReadTerm(ExecutionState&  CurrentState,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
+        List p_Read(ExecutionState&  CurrentState,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
         
         SymbolID p_GetSymbolID(std::string const& SymbolString);
         
@@ -352,7 +371,7 @@ namespace MBLisp
         }
 
 
-        void p_LoadFile(Ref<Scope> AssocatedScope,std::filesystem::path const& LoadFilePath);
+        void p_LoadFile(ExecutionState&  CurrentState,std::filesystem::path const& LoadFilePath);
 
 
         template<typename ClassToConvert, Value (ClassToConvert::*MemberMethod)()>
@@ -412,6 +431,6 @@ namespace MBLisp
         void LoadStd();
         void Eval(std::filesystem::path const& SourceFile);
         void Repl();
-        Value Eval(Ref<Scope> CurrentScope,Value Callable,FuncArgVector Arguments);
+        Value Eval(ExecutionState& CurrentState,Value Callable,FuncArgVector Arguments);
     };
 }

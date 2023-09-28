@@ -240,7 +240,7 @@ namespace MBLisp
         {
             for(auto const& Handler : HandlersCopy)
             {
-                m_Evaluator->Eval(m_Scope,Handler,{m_This,URI,Content});
+                m_Evaluator->Eval(*m_ExecutionState,Handler,{m_This,URI,Content});
             }
         }
         catch(...)
@@ -257,13 +257,12 @@ namespace MBLisp
     {
         Value ReturnValue;
         LSPHandler& Handler = Arguments[0].GetType<LSPHandler>();
-        auto CurrentScope = Context.GetCurrentScope();
         Handler.m_Evaluator = &Context.GetEvaluator();
-        Handler.m_Scope = CurrentScope;
+        Handler.m_ExecutionState = &Context.GetState();
         Handler.m_This  = Arguments[0];
 
-        MBUtility::StreamReader& Input = Context.GetCurrentScope()->FindVariable(Context.GetEvaluator().GetSymbolID("*standard-input*")).GetType<MBUtility::StreamReader>();
-        std::unique_ptr<MBUtility::MBOctetOutputStream>& Output = CurrentScope->FindVariable(Context.GetEvaluator().GetSymbolID("*standard-output*")).
+        MBUtility::StreamReader& Input = Context.GetState().GetCurrentScope().FindVariable(Context.GetEvaluator().GetSymbolID("*standard-input*")).GetType<MBUtility::StreamReader>();
+        std::unique_ptr<MBUtility::MBOctetOutputStream>& Output = Context.GetState().GetCurrentScope().FindVariable(Context.GetEvaluator().GetSymbolID("*standard-output*")).
             GetType<std::unique_ptr<MBUtility::MBOctetOutputStream>>();
 
         MBLSP::LSP_ServerHandler Server  = MBLSP::LSP_ServerHandler(
