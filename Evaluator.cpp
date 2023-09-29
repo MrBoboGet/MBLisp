@@ -771,8 +771,7 @@ namespace MBLisp
     }
     Value Evaluator::NewEnvironment BUILTIN_ARGLIST
     {
-        Ref<Scope> NewScope = MakeRef<Scope>();
-        NewScope->SetShadowingParent(Context.GetEvaluator().m_GlobalScope);
+        Ref<Scope> NewScope = Context.GetEvaluator().CreateDefaultScope();
         return NewScope;
     }
     Value Evaluator::Index_Environment BUILTIN_ARGLIST
@@ -1010,6 +1009,10 @@ namespace MBLisp
                     m_ThreadingState.Resume(CurrentState.ThreadID);
                 }
             }
+            catch(ContinueUnwind const& e)
+            {
+                   
+            }
             catch(std::exception const& e)
             {
                 p_EmitSignal(CurrentState,e.what(),true);
@@ -1111,6 +1114,7 @@ namespace MBLisp
         auto& StackFrames = CurrentState.StackFrames;
         while(StackFrames.size() != 0)
         {
+            assert(StackFrames.size() >=  ReturnIndex);
             if(m_ThreadingState.MultipleThreadsActive())
             {
                 m_ThreadingState.WaitForTurn(CurrentState.ThreadID);
@@ -1128,6 +1132,10 @@ namespace MBLisp
                     if (CurrentState.StackFrames.back().ActiveUnwindProtectorsBegin.size() == 0)
                     {
                         CurrentState.StackFrames.pop_back();
+                        if(StackFrames.size() == ReturnIndex)
+                        {
+                            throw ContinueUnwind();
+                        }
                         continue;
                     }
                     else if (CurrentState.StackFrames.back().Unwinding == false)
@@ -1210,6 +1218,10 @@ namespace MBLisp
                 if(LiteralToPush.IsType<Lambda>())
                 {
                     LiteralToPush.GetType<Lambda>().AssociatedScope = CurrentFrame.StackScope;
+                }
+                else if(LiteralToPush.IsType<String>())
+                {
+                    LiteralToPush = Value(LiteralToPush.GetType<String>());
                 }
                 CurrentFrame.ArgumentStack.push_back(LiteralToPush);
             }
@@ -1653,7 +1665,9 @@ namespace MBLisp
         //TODO improve...
         std::string SymbolString = Content.ReadWhile([](char CharToRead)
                 {
-                    return (CharToRead > ' ' && CharToRead < 0x7f) && CharToRead != '"' && CharToRead != '(' && CharToRead != ')';
+                    return (CharToRead > ' ' && CharToRead < 0x7f) && CharToRead != '"' && CharToRead != '(' && CharToRead != ')' 
+                    //kinda hacky/temporary, maybe should add the ability to alter which characters can appear within a symbol, like in common lisp...
+                    && CharToRead != '{' && CharToRead != '}' && CharToRead != '[' && CharToRead != ']' && CharToRead != ',';
                 });
         if (SymbolString == "")
         {
@@ -1946,7 +1960,7 @@ namespace MBLisp
         AddMethod<MBUtility::StreamReader>("read-number",Stream_ReadNumber);
         AddMethod<MBUtility::StreamReader>("read-line",Stream_ReadLine);
         AddMethod<MBUtility::StreamReader,String>("read-until",Stream_ReadUntil);
-        AddMethod<String,std::unique_ptr<MBUtility::MBOctetOutputStream>>("write",Write_OutStream);
+        AddMethod<std::unique_ptr<MBUtility::MBOctetOutputStream>,String>("write",Write_OutStream);
         AddMethod<String>("out-stream",OutStream_String);
         AddMethod<String>("in-stream",InStream_String);
         AddMethod<String>("open",Open_URI);
@@ -2024,8 +2038,8 @@ namespace MBLisp
     Value Evaluator::Write_OutStream BUILTIN_ARGLIST
     {
         Value ReturnValue;
-        std::unique_ptr<MBUtility::MBOctetOutputStream>& OutStream = Arguments[1].GetType<std::unique_ptr<MBUtility::MBOctetOutputStream>>();
-        String& StringToWrite = Arguments[0].GetType<String>();
+        std::unique_ptr<MBUtility::MBOctetOutputStream>& OutStream = Arguments[0].GetType<std::unique_ptr<MBUtility::MBOctetOutputStream>>();
+        String& StringToWrite = Arguments[1].GetType<String>();
         OutStream->Write(StringToWrite.data(),StringToWrite.size());
         return ReturnValue;
     }

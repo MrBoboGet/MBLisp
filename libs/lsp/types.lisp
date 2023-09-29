@@ -6,6 +6,10 @@
     (content null)
     (constructor (lambda (res token token-type) (set (slot res content) (list token token-type)) res))
 )
+(defclass jump-location ()
+    (content null)
+    (constructor (lambda (res token token-type) (set (slot res content) (list token token-type)) res))
+)
 (defun type-to-string (type-to-check)
     (set return-value "var")
     (if (eq type-to-check macro_t)
@@ -22,4 +26,12 @@
         (set return-value "var")
     )
     return-value
+)
+(set current-scope (new-environment))
+
+(defun get-current-scope ()
+    current-scope
+)
+(defun set-current-scope (new-scope)
+    (set current-scope new-scope)
 )

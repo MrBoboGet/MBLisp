@@ -317,6 +317,7 @@ namespace MBLisp
         Ref<Scope> m_GlobalScope = MakeRef<Scope>();
         //easiest possible testable variant
 
+        class ContinueUnwind{};
         
         bool p_ValueIsType(ClassID TypeValue,Value const& ValueToInspect);
 

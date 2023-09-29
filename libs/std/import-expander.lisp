@@ -1,5 +1,5 @@
 (import lsp.types types)
-(defun expand-sym-string (symbol-to-expand &envir envir)
+(defun expand-sym-string (symbol-to-expand)
    (set current-pos (position symbol-to-expand))
    (set symbol-parts (map _(symbol (symbol _) (++ current-pos (+ (len _) 1))) (split (str symbol-to-expand) ":")))
    (if (eq (len symbol-parts) 1)
@@ -7,9 +7,9 @@
    )
    (set symbol-symbols (list))
    (doit i (range 1 (len symbol-parts))
-         (append symbol-symbols `(,\quote ,(index symbol-parts i)))
+         (append symbol-symbols `(,\quote ,(symbol (index symbol-parts i) -1)))
    )
-   (set current-envir envir)
+   (set current-envir ((index types 'get-current-scope)))
    (set current-sym null)
    (catch-all  
        (doit sym symbol-parts
@@ -24,7 +24,6 @@
    )
    (if (not (eq current-sym null))
         (set res (signal ((index types 'semantic-token) current-sym  ((index types 'type-to-string) (type current-envir) ) )))
-        (if (eq res "ligma") (print "yippieee"))
    )
   `(,\. ,@(index symbol-parts 0) ,@symbol-symbols)
 )

@@ -317,6 +317,7 @@
   (set diagnostics (list))
   (set delayed-forms (list))
   (set diagnostics (list))
+  (set-current-scope new-envir)
   (catch-signals
     (
           (while (not (eof file-stream))
