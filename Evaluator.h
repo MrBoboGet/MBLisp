@@ -444,6 +444,39 @@ namespace MBLisp
             return Value::EmplaceExternal<ReturnType>(p_InvokeMemberMethod(InvokingObject,Func,Arguments));
         }
 
+        template <
+            typename ReturnType,
+            typename... TotalArgTypes,
+            typename... SuppliedArgTypes>
+        static ReturnType p_InvokeFunction(
+                ReturnType (*Function)(TotalArgTypes...),
+                FuncArgVector& LispArgs,
+                SuppliedArgTypes&&... Args)
+        {
+            if constexpr(sizeof...(TotalArgTypes) == sizeof...(SuppliedArgTypes))
+            {
+                return Function(std::forward<SuppliedArgTypes>(Args)...);
+            }
+            else
+            {
+                //+1 beccause the first argument  is always the type of the invoking object
+                return p_InvokeFunction(Function,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
+                    LispArgs[sizeof...(SuppliedArgTypes)].GetType<
+                    typename std::remove_cv<
+                        typename std::remove_reference<typename i_TypeIndex<0,sizeof...(SuppliedArgTypes),TotalArgTypes...>::type>::type>::type>());
+            }
+        }
+
+        template<typename ReturnType,auto Func>
+        static Value p_FunctionConverter BUILTIN_ARGLIST
+        {
+            if constexpr(Value::IsBuiltin<ReturnType>())
+            {
+                return p_InvokeFunction(Func,Arguments);   
+            }
+            return Value::EmplaceExternal<ReturnType>(p_InvokeFunction(Func,Arguments));
+        }
+
 
         template<auto Func,typename ClassType,typename ReturnType,typename... ArgTypes>
         void AddObjectMethod(Ref<Scope>& ScopeToModify,std::string const& MethodName,ReturnType (ClassType::*MemberMethod)(ArgTypes...))
@@ -461,7 +494,34 @@ namespace MBLisp
             AssociatedFunction.Name = p_GetSymbolID(MethodName);
             AssociatedFunction.AddMethod(std::move(Types),Value(p_MemberMethodConverter<ClassType,ReturnType,Func>));
         }
+
+
+        template<auto Func,typename ReturnType,typename... ArgTypes>
+        void AddGeneric(Ref<Scope>& ScopeToModify,std::string const& MethodName,ReturnType (*MemberMethod)(ArgTypes...))
+        {
+            static_assert(std::is_same_v<decltype(Func),decltype(MemberMethod)>,"Func and supplied func has to be of the same argument");
+            std::vector<ClassID> Types;
+            p_AddTypes<ArgTypes...>(Types);
+            SymbolID GenericSymbol = p_GetSymbolID(MethodName);
+            if(ScopeToModify->TryGet(GenericSymbol) == nullptr)
+            {
+                 ScopeToModify->SetVariable(GenericSymbol,GenericFunction());
+            }
+            GenericFunction& AssociatedFunction = ScopeToModify->FindVariable(GenericSymbol).GetType<GenericFunction>();
+            AssociatedFunction.Name = p_GetSymbolID(MethodName);
+            AssociatedFunction.AddMethod(std::move(Types),Value(p_FunctionConverter<ReturnType,Func>));
+        }
     public:
+        template<auto  Func>
+        void AddGeneric(std::string const& MethodName)
+        {
+            AddGeneric<Func>(m_GlobalScope,MethodName);
+        }
+        template<auto  Func>
+        void AddGeneric(Ref<Scope>& ScopeToModify,std::string const& FunctionName)
+        {
+            AddGeneric<Func>(ScopeToModify,FunctionName,Func);
+        }
 
         template<auto  Func>
         void AddObjectMethod(std::string const& MethodName)
@@ -529,6 +589,10 @@ namespace MBLisp
                 return Test1+std::to_string(Test2)+" "+m_InteralString;
             }
         };
+        static String GenericTest(Int Hello,String World)
+        {
+            return "Hello world! "+std::to_string(Hello)+World;   
+        }
 
         SymbolID GenerateSymbol();
 

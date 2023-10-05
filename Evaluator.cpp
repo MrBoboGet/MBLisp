@@ -2041,6 +2041,7 @@ namespace MBLisp
         //TEST
         AddObjectMethod<&TestClass::TestTest>("test-test");
         m_GlobalScope->SetVariable(p_GetSymbolID("test"), TestTest);
+        AddGeneric<GenericTest>("test-func");
     }
 
     Value Evaluator::TestTest BUILTIN_ARGLIST
