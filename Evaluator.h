@@ -293,6 +293,10 @@ namespace MBLisp
         static Value Name_Generic BUILTIN_ARGLIST;
         static Value Name_ClassDefinition BUILTIN_ARGLIST;
 
+
+
+        static Value TestTest BUILTIN_ARGLIST;
+
         //Threading
         ThreadingState m_ThreadingState;
 
@@ -353,9 +357,8 @@ namespace MBLisp
 
 
 
-
-        template<typename T,typename... Extra>
-        void p_AddTypes(std::vector<ClassID>& Types)
+        template<typename T>
+        void p_AddType(std::vector<ClassID>& Types)
         {
             if constexpr(std::is_same_v<T,Any>)
             {
@@ -365,6 +368,11 @@ namespace MBLisp
             {
                 Types.push_back(Value::GetTypeTypeID<T>());
             }
+        }
+        template<typename T,typename... Extra>
+        void p_AddTypes(std::vector<ClassID>& Types)
+        {
+            p_AddType<T>(Types);
             if constexpr(sizeof...(Extra) > 0)
             {
                 p_AddTypes<Extra...>(Types);
@@ -380,7 +388,92 @@ namespace MBLisp
         {
             return (Arguments[0].GetType<ClassToConvert>().*MemberMethod)();
         }
+        struct i_Empty{};
+        template <int CurrentIndex,int TargetIndex,typename... Types>
+        struct i_TypeIndex 
+        { 
+        };
+        template <int CurrentIndex,int TargetIndex,typename T>
+        struct i_TypeIndex<CurrentIndex,TargetIndex,T>
+        { 
+            typedef T type;
+        };
+        template <int CurrentIndex,int TargetIndex,typename T,typename... Rest>
+        struct i_TypeIndex<CurrentIndex,TargetIndex,T,Rest...> : 
+        std::conditional_t<CurrentIndex == TargetIndex,
+            i_TypeIndex<0,0,T>, 
+            i_TypeIndex<CurrentIndex+1,TargetIndex,Rest...>>
+        {
+
+        };
+
+
+        template <
+            typename ObjectType,
+            typename ReturnType,
+            typename... TotalArgTypes,
+            typename... SuppliedArgTypes>
+        static ReturnType p_InvokeMemberMethod(
+                ObjectType& InvokingObject,
+                ReturnType (ObjectType::*MemberMethod)(TotalArgTypes...),
+                FuncArgVector& LispArgs,
+                SuppliedArgTypes&&... Args)
+        {
+            if constexpr(sizeof...(TotalArgTypes) == sizeof...(SuppliedArgTypes))
+            {
+                return (InvokingObject.*MemberMethod)(std::forward<SuppliedArgTypes>(Args)...);
+            }
+            else
+            {
+                //+1 beccause the first argument  is always the type of the invoking object
+                return p_InvokeMemberMethod(InvokingObject,MemberMethod,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
+                    LispArgs[sizeof...(SuppliedArgTypes)+1].GetType<
+                    typename std::remove_cv<
+                        typename std::remove_reference<typename i_TypeIndex<0,sizeof...(SuppliedArgTypes),TotalArgTypes...>::type>::type>::type>());
+            }
+        }
+
+        template<typename ObjectType,typename ReturnType,auto Func>
+        static Value p_MemberMethodConverter BUILTIN_ARGLIST
+        {
+            ObjectType InvokingObject = Arguments[0].GetType<ObjectType>();
+            if constexpr(Value::IsBuiltin<ReturnType>())
+            {
+                return p_InvokeMemberMethod(InvokingObject,Func,Arguments);   
+            }
+            return Value::EmplaceExternal<ReturnType>(p_InvokeMemberMethod(InvokingObject,Func,Arguments));
+        }
+
+
+        template<auto Func,typename ClassType,typename ReturnType,typename... ArgTypes>
+        void AddObjectMethod(Ref<Scope>& ScopeToModify,std::string const& MethodName,ReturnType (ClassType::*MemberMethod)(ArgTypes...))
+        {
+            static_assert(std::is_same_v<decltype(Func),decltype(MemberMethod)>,"Func and supplied func has to be of the same argument");
+            std::vector<ClassID> Types;
+            p_AddType<ClassType>(Types);
+            p_AddTypes<ArgTypes...>(Types);
+            SymbolID GenericSymbol = p_GetSymbolID(MethodName);
+            if(ScopeToModify->TryGet(GenericSymbol) == nullptr)
+            {
+                 ScopeToModify->SetVariable(GenericSymbol,GenericFunction());
+            }
+            GenericFunction& AssociatedFunction = ScopeToModify->FindVariable(GenericSymbol).GetType<GenericFunction>();
+            AssociatedFunction.Name = p_GetSymbolID(MethodName);
+            AssociatedFunction.AddMethod(std::move(Types),Value(p_MemberMethodConverter<ClassType,ReturnType,Func>));
+        }
     public:
+
+        template<auto  Func>
+        void AddObjectMethod(std::string const& MethodName)
+        {
+            AddObjectMethod<Func>(m_GlobalScope,MethodName);
+        }
+        template<auto  Func>
+        void AddObjectMethod(Ref<Scope>& ScopeToModify,std::string const& MethodName)
+        {
+            AddObjectMethod<Func>(ScopeToModify,MethodName,Func);
+        }
+
         Evaluator();
 
         Evaluator(Evaluator&&) = delete;
@@ -424,6 +517,19 @@ namespace MBLisp
         {
             AddMethod<ClassType>(m_GlobalScope,MethodName,p_MemberConverter<ClassType,MemberMethod>);
         }
+
+        
+
+        class TestClass
+        {
+            String m_InteralString =  "UwU";
+            public:
+            String TestTest(String Test1,Int Test2)
+            {
+                return Test1+std::to_string(Test2)+" "+m_InteralString;
+            }
+        };
+
         SymbolID GenerateSymbol();
 
         SymbolID GetSymbolID(std::string const& SymbolString);

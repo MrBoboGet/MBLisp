@@ -2033,8 +2033,20 @@ namespace MBLisp
         m_GlobalScope->SetVariable(p_GetSymbolID("*standard-output*"),Value::MakeExternal(
                     std::unique_ptr<MBUtility::MBOctetOutputStream>( new MBUtility::TerminalOutput())));
         m_GlobalScope->SetVariable(p_GetSymbolID("is-repl"),false);
+
+
+
+
+
+        //TEST
+        AddObjectMethod<&TestClass::TestTest>("test-test");
+        m_GlobalScope->SetVariable(p_GetSymbolID("test"), TestTest);
     }
 
+    Value Evaluator::TestTest BUILTIN_ARGLIST
+    {
+        return Value::EmplaceExternal<TestClass>();
+    }
     Value Evaluator::Write_OutStream BUILTIN_ARGLIST
     {
         Value ReturnValue;
