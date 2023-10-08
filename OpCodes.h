@@ -212,6 +212,23 @@ namespace MBLisp
     {
         friend class OpCodeExtractor;
         std::vector<OpCode> m_OpCodes;
+        struct LocationInfo
+        {
+            Location Loc;
+            LocationInfo()
+            {
+                   
+            }
+            LocationInfo(Location NewLoc)
+            {
+                Loc = NewLoc;
+            }
+        };
+        std::unordered_map<IPIndex,LocationInfo> m_OpcodeDebugInfo;
+
+        std::vector<bool> m_Trapped;
+
+        int m_DebugID = 0;
         struct EncodingState
         {
             std::vector<std::pair<SymbolID,IPIndex>> UnResolvedGotos;
@@ -255,6 +272,13 @@ namespace MBLisp
         void Pop();
         bool Finished() const;
         void SetEnd();
+        
+        //Debug stuff
+        void SetTrap(Location TrapLocation);
+        void ClearTraps();
+        void SetDebugID(int ID);
+        int GetDebugID();
+        bool IsTrapped(IPIndex Position);
     };
 }
 

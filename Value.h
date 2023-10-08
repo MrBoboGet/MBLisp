@@ -13,6 +13,7 @@
 #include <MBUtility/MBVector.h>
 
 #include <mutex>
+
 namespace MBLisp
 {
     typedef int_least64_t Int;
@@ -26,7 +27,58 @@ namespace MBLisp
     typedef uint_least32_t ThreadID;
     typedef std::string String;
     class Value;
-    typedef std::vector<Value> List;
+    //Defined in Evaluator.h
+    class CallContext;
+
+#define BUILTIN_ARGLIST (CallContext& Context ,FuncArgVector& Arguments)
+
+    struct Location
+    {
+        PositionType Position = -1;
+        SymbolID URI = -1;
+        bool operator==(Location Rhs) const
+        {
+            return std::tie(Position,URI) == std::tie(Rhs.Position,Rhs.URI);   
+        }
+        bool IsEmpty()
+        {
+            return Position == -1 && URI == -1;   
+        }
+    };
+
+    struct LocationHasher
+    {
+        size_t operator()(Location ObjectToHash) const
+        {
+            size_t FirstValue = std::hash<PositionType>()(ObjectToHash.Position);
+            size_t SecondValue = std::hash<SymbolID>()(ObjectToHash.URI);
+            //seed ^= hasher(v) + 0x9e3779b9 + (seed<<6) + (seed>>2);
+            FirstValue ^= SecondValue+0x9e3779b9+(FirstValue<<6)+(FirstValue>>2);
+            return FirstValue;
+        }
+    };
+    template<typename T>
+    class ListImpl : public std::vector<T>
+    {
+        Location m_Location;
+public:
+        ListImpl(std::initializer_list<T> Elems) : std::vector<T>(Elems)
+        {
+               
+        }
+        ListImpl(){};
+        void SetLocation(Location NewLoc)
+        {
+            m_Location = NewLoc;
+        }
+        Location GetLocation() const
+        {
+            return m_Location;   
+        }
+    };
+
+
+    typedef ListImpl<Value> List;
     typedef MBUtility::MBVector<Value,4,size_t,std::allocator<Value>> FuncArgVector;
     //typedef std::vector<Value> FuncArgVector;
     //typedef std::unordered_map<Value,Value> Dict;
@@ -266,11 +318,6 @@ namespace MBLisp
     };
 
 
-    struct Location
-    {
-        PositionType Position = -1;
-        SymbolID URI = -1;
-    };
     struct Symbol
     {
         SymbolID ID;
@@ -1125,5 +1172,4 @@ public:
         Value* TryGet(SymbolID Variable);
         void Clear();
     };
-
 };

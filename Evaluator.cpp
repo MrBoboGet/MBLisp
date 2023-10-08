@@ -419,7 +419,7 @@ namespace MBLisp
         }
         MBUtility::StreamReader& Reader = Arguments[0].GetType<MBUtility::StreamReader>();
         ReadTable& Table = Context.GetState().GetCurrentScope().FindVariable(Context.GetEvaluator().GetSymbolID("*READTABLE*")).GetType<ReadTable>();
-        SymbolID URI = Context.GetEvaluator().p_GetSymbolID(Context.GetState().GetCurrentScope().FindVariable(Context.GetEvaluator().p_GetSymbolID("load-filepath")).GetType<String>());
+        SymbolID URI = p_PathURI(Context.GetEvaluator(),Context.GetState().GetCurrentScope().FindVariable(Context.GetEvaluator().p_GetSymbolID("load-filepath")).GetType<String>());
         //TODO think through this functionality again, how needed is it for ":" expander, and could it be implemented in a more clean way
         //Ref<Scope> NewScope = Context.GetState().StackFrames.front().StackScope;
         ReturnValue = Context.GetEvaluator().p_ReadTerm(Context.GetState(),URI,Table,Reader,Arguments[0]);
@@ -759,6 +759,10 @@ namespace MBLisp
         Symbol ReturnValue;
         ReturnValue.ID = Arguments[0].GetType<Symbol>().ID;
         ReturnValue.SymbolLocation.Position = Arguments[1].GetType<Int>();
+        if(Arguments.size() > 2)
+        {
+            ReturnValue.SymbolLocation.URI = Arguments[2].GetType<Symbol>().ID;   
+        }
         return ReturnValue;
     }
     Value Evaluator::GenSym BUILTIN_ARGLIST
@@ -1175,7 +1179,39 @@ namespace MBLisp
                 }
                 CurrentFrame.PopExtra = 0;
             }
+
             OpCode& CurrentCode = CurrentFrame.ExecutionPosition.GetCurrentCode();
+    
+            //Next opcode to execute determine, also determine wheter or not we want to invoke the debugger
+            if(m_DebugState.DebuggingActive())
+            {
+                //trap handler cannot invoke another trap handler
+                //both convenience for implementation, and for removing problematic
+                //infinite loops
+                if(!(CurrentState.TraphandlerIndex == CurrentState.StackFrames.size()))
+                {
+                    if(!(CurrentState.TraphandlerIndex == CurrentState.StackFrames.size() +1  ))
+                    {
+                        m_DebugState.UpdateTraps(CurrentFrame.ExecutionPosition);
+                        if(CurrentFrame.ExecutionPosition.IsTrapped(CurrentFrame.ExecutionPosition.GetIP()))
+                        {
+                            Value Handler = m_DebugState.GetTrapHandler();
+                            FuncArgVector Args;
+                            CurrentFrame.PopExtra = 1;
+                            p_Invoke(Handler,Args,CurrentState);
+                            CurrentState.TraphandlerIndex = CurrentState.StackFrames.size();
+                            continue;
+                        }
+                    }
+                    else
+                    {
+                        //entering hear means that  this opcode previously triggered a trap handle for the current call stack, now we simply 
+                        //allow it to continue executing
+                        CurrentState.TraphandlerIndex = -1;
+                    }
+                }
+            }
+            
             CurrentFrame.ExecutionPosition.Pop();
             if(CurrentCode.IsType<OpCode_Pop>())
             {
@@ -1577,12 +1613,18 @@ namespace MBLisp
                     {
                         Arguments.push_back(ListToExpand[i]);
                     }
-                    return p_Expand(CurrentState,Namespace,Eval(CurrentState,*AssociatedMacro.Callable,std::move(Arguments)));
+                    ReturnValue =  p_Expand(CurrentState,Namespace,Eval(CurrentState,*AssociatedMacro.Callable,std::move(Arguments)));
+                    if(ReturnValue.IsType<List>())
+                    {
+                        ReturnValue.GetType<List>().SetLocation(ListToExpand.GetLocation());   
+                    }
+                    return ReturnValue;
                 }
             }
         }
         //head wasn't macro, try to expand children
         List NewList;
+        NewList.SetLocation(ListToExpand.GetLocation());
         NewList.push_back(ListToExpand[0]);
         for(int i = 1; i < ListToExpand.size();i++)
         {
@@ -1718,6 +1760,10 @@ namespace MBLisp
     List Evaluator::p_ReadList(ExecutionState&  CurrentState,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue)
     {
         List ReturnValue;
+        Location CurrentLocation;
+        CurrentLocation.URI = URI;
+        CurrentLocation.Position = Content.Position();
+        ReturnValue.SetLocation(CurrentLocation);
         Content.ReadByte();
         p_SkipWhiteSpace(Content);
         if(Content.EOFReached())
@@ -2001,6 +2047,7 @@ namespace MBLisp
         //Symbols
         AddMethod<String>("symbol",Symbol_String);
         AddMethod<Symbol,Int>("symbol",Symbol_SymbolInt);
+        AddMethod<Symbol,Int,Symbol>("symbol",Symbol_SymbolInt);
         //stuff
         AddMethod<Macro,Symbol>("set-name",SetName_Macro);
         AddMethod<Lambda,Symbol>("set-name",SetName_Lambda);
@@ -2019,6 +2066,7 @@ namespace MBLisp
         //Filesystem stuff
         AddMethod<String>("canonical",Canonical);
         AddMethod<String>("is-file",IsFile);
+        AddMethod<String>("path-id",PathID);
 
         
         m_GlobalScope->SetVariable(p_GetSymbolID("*READTABLE*"),Value::MakeExternal(ReadTable()));
@@ -2152,7 +2200,7 @@ namespace MBLisp
         String& AssociatedString = Arguments[0].GetType<String>();
         if( auto It = Context.GetEvaluator().m_BuiltinModules.find(AssociatedString); It != Context.GetEvaluator().m_BuiltinModules.end())
         {
-            ReturnValue = Value(It->second->GetModuleScope());
+            ReturnValue = Value(It->second->GetModuleScope(Context.GetEvaluator()));
         }
         else
         {
@@ -2186,7 +2234,7 @@ namespace MBLisp
     void Evaluator::p_LoadModules()
     {
         m_BuiltinModules["lsp-internal"] = std::make_unique<LSPModule>();
-        m_BuiltinModules["lsp-internal"]->SetEvaluator(this);
+        m_BuiltinModules["debug"] = std::make_unique<DebugModule>();
     }
     Value Evaluator::Load BUILTIN_ARGLIST
     {
@@ -2244,6 +2292,10 @@ namespace MBLisp
         }
         return MBUnicode::PathToUTF8(std::filesystem::path(Arguments[0].GetType<String>()).parent_path());
     }
+    Value Evaluator::PathID BUILTIN_ARGLIST
+    {
+        return Symbol(p_PathURI(Context.GetEvaluator(),Arguments[0].GetType<String>()));
+    }
     Value Evaluator::Canonical BUILTIN_ARGLIST
     {
         return MBUnicode::PathToUTF8(std::filesystem::canonical(Arguments[0].GetType<String>()));
@@ -2287,7 +2339,7 @@ namespace MBLisp
         }
         //updates  the load-filepath
         CurrentState.GetCurrentScope().SetVariable(p_GetSymbolID("load-filepath"),LoadFilePath.generic_string());
-        SymbolID URI = p_GetSymbolID(LoadFilePath.generic_string());
+        SymbolID URI = p_PathURI(*this,LoadFilePath);
         std::string Content = MBUtility::ReadWholeFile(LoadFilePath.generic_string());
         Value ReaderValue = Value::MakeExternal(MBUtility::StreamReader(std::make_unique<MBUtility::IndeterminateStringStream>(Content)));
         MBUtility::StreamReader& Reader = ReaderValue.GetType<MBUtility::StreamReader>();
@@ -2351,7 +2403,7 @@ namespace MBLisp
         ReadTable const& Table = TableValue.GetType<ReadTable>();
         m_GlobalScope->SetVariable(p_GetSymbolID("is-repl"),true);
         ReplScope->SetVariable( p_GetSymbolID("load-filepath"),MBUnicode::PathToUTF8(std::filesystem::current_path()));
-        SymbolID URI = p_GetSymbolID(MBUnicode::PathToUTF8(std::filesystem::current_path()));
+        SymbolID URI = p_PathURI(*this,std::filesystem::current_path());
         Ref<OpCodeList> OpCodes = MakeRef<OpCodeList>();
         ExecutionState CurrentState;
         CurrentState.StackFrames.push_back(StackFrame());
@@ -2384,6 +2436,14 @@ namespace MBLisp
             }
         }
     }
+    SymbolID Evaluator::p_PathURI(Evaluator& AssociatedEvaluator,std::string const& Path)
+    {
+        return p_PathURI(AssociatedEvaluator,std::filesystem::path(Path));
+    }
+    SymbolID Evaluator::p_PathURI(Evaluator& AssociatedEvaluator,std::filesystem::path const& Path)
+    {
+        return AssociatedEvaluator.p_GetSymbolID(MBUnicode::PathToUTF8(std::filesystem::canonical(Path)));
+    }
     Ref<Scope> Evaluator::CreateDefaultScope()
     {
         Ref<Scope> ReturnValue = MakeRef<Scope>();
@@ -2391,6 +2451,10 @@ namespace MBLisp
         ReturnValue->SetVariable(p_GetSymbolID("*READTABLE*"),Value::MakeExternal(
                     ReadTable(m_GlobalScope->FindVariable(p_GetSymbolID("*READTABLE*")).GetType<ReadTable>())));
         return ReturnValue;
+    }
+    DebugState&  Evaluator::GetDebugState()
+    {
+        return m_DebugState;   
     }
     Value Evaluator::SetName_Macro BUILTIN_ARGLIST
     {

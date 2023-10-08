@@ -138,9 +138,9 @@ namespace MBLisp
         Evaluator* m_Evaluator = nullptr;
 
     public:
-        void SetEvaluator(Evaluator* AssociatedEvaluator) override
+        Ref<Scope> GetModuleScope(Evaluator& AssociatedEvaluator) override
         {
-            m_Evaluator = AssociatedEvaluator;
+            m_Evaluator = &AssociatedEvaluator;
             m_ModuleScope->SetVariable(m_Evaluator->GetSymbolID("create-lsp-server"),LSPHandler::CreateLSPHandler);
             m_Evaluator->AddMethod<LSPHandler,Any>(m_ModuleScope,"add-generic-request-handler",LSPHandler::AddGenericRequestHandler);
             m_Evaluator->AddMethod<LSPHandler,Any>(m_ModuleScope,"add-on-open-handler",LSPHandler::AddOnOpenHandler);
@@ -148,10 +148,7 @@ namespace MBLisp
             m_Evaluator->AddMethod<LSPHandler,String,List>(m_ModuleScope,"set-document-diagnostics",LSPHandler::SetDocumentDiagnostics);
             m_Evaluator->AddMethod<LSPHandler,String,List>(m_ModuleScope,"set-document-jumps",LSPHandler::SetDocumentJumps);
             m_Evaluator->AddMethod<LSPHandler>(m_ModuleScope,"handle-requests",LSPHandler::HandleRequests);
-        }
-        Ref<Scope> GetModuleScope() override
-        {
-            return m_ModuleScope;   
+            return m_ModuleScope;
         }
     };
 }

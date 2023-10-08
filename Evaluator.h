@@ -14,6 +14,9 @@
 #include <condition_variable>
 
 #include "Threading.h"
+#include "DebugInternals.h"
+
+#include "Module.h"
 namespace MBLisp
 {
    
@@ -92,6 +95,8 @@ namespace MBLisp
         bool UnwindingStack = false;
         bool UnwindForced = false;
 
+        //Debug Stuff
+        int TraphandlerIndex = -1;
         //these property are added mostly for efficiency,
         //reducing the amount of parameters to builtin parameters
         //and allowing for seamles setting/getting. Does however 
@@ -122,15 +127,6 @@ namespace MBLisp
    
 
 
-    class Module
-    {
-    public:
-        virtual Ref<Scope> GetModuleScope() =  0;
-        virtual void SetEvaluator(Evaluator* AssociatedEvaluator) = 0;
-        virtual ~Module(){};
-    };
-
-
     class UncaughtSignal : public std::exception 
     {
     public:
@@ -149,9 +145,12 @@ namespace MBLisp
             return Message.c_str();
         }
     };
+
+
+
+
     //TODO kinda hacky, should be temporary, but much more convenient when
     //iterating and prototyping
-#define BUILTIN_ARGLIST (CallContext& Context ,FuncArgVector& Arguments)
     class Evaluator
     {
         SymbolID m_CurrentSymbolID = 1;
@@ -265,6 +264,7 @@ namespace MBLisp
         static Value Exists BUILTIN_ARGLIST;
         static Value Cwd BUILTIN_ARGLIST;
         static Value ParentPath BUILTIN_ARGLIST;
+        static Value PathID BUILTIN_ARGLIST;
         static Value Canonical BUILTIN_ARGLIST;
         static Value UserHomeDir BUILTIN_ARGLIST;
         static Value ListDir BUILTIN_ARGLIST;
@@ -299,6 +299,8 @@ namespace MBLisp
 
         //Threading
         ThreadingState m_ThreadingState;
+        //Debugging
+        DebugState m_DebugState;
 
         static Value Thread BUILTIN_ARGLIST;
         static Value This_Thread BUILTIN_ARGLIST;
@@ -511,6 +513,9 @@ namespace MBLisp
             AssociatedFunction.Name = p_GetSymbolID(MethodName);
             AssociatedFunction.AddMethod(std::move(Types),Value(p_FunctionConverter<ReturnType,Func>));
         }
+
+        static SymbolID p_PathURI(Evaluator& AssociatedEvaluator,std::string const& Path);
+        static SymbolID p_PathURI(Evaluator& AssociatedEvaluator,std::filesystem::path const& Path);
     public:
         template<auto  Func>
         void AddGeneric(std::string const& MethodName)
@@ -541,6 +546,8 @@ namespace MBLisp
         Evaluator& operator==(Evaluator const&) = delete;
 
         Ref<Scope> CreateDefaultScope();
+        //is this sussy or not...
+        DebugState&  GetDebugState();
 
         template<typename... ArgTypes>
         void AddMethod(Ref<Scope> ScopeToModify,std::string const& MethodName,Value Callable)
