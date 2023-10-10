@@ -331,7 +331,9 @@ namespace MBLisp
         
         bool p_ValueIsType(ClassID TypeValue,Value const& ValueToInspect);
 
-        void p_Invoke(Value& ObjectToCall,FuncArgVector& Arguments,ExecutionState& CurrentState,bool Setting = false);
+        void p_Invoke(Value& ObjectToCall,FuncArgVector& Arguments,ExecutionState& CurrentState,bool Setting = false,bool IsTrapHandler = false);
+        void p_InvokeTrapHandler(ExecutionState& State);
+        bool p_InTrapHandler(ExecutionState& State);
         void p_EmitSignal(ExecutionState& State,Value SignalToEmit,bool ForceUnwind);
         //The fundamental dispatch loop
         //Return index is the stack frame index where the value of the previous call should be returned instead of continuing evaluating 

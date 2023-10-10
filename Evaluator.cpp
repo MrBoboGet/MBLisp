@@ -994,6 +994,11 @@ namespace MBLisp
                 }
             }
         }
+        //TODO fix case where stack gets unwound
+        if(m_DebugState.DebuggingActive() && m_DebugState.TrappingSignals())
+        {
+            p_InvokeTrapHandler(CurrentState);
+        }
         if(!SignalFound)
         {
             CurrentFrame.ArgumentStack.push_back(false);
@@ -1005,7 +1010,19 @@ namespace MBLisp
             }
         }
     }
-    void Evaluator::p_Invoke(Value& ObjectToCall,FuncArgVector& Arguments,ExecutionState& CurrentState,bool Setting)
+    void Evaluator::p_InvokeTrapHandler(ExecutionState& State)
+    {
+        Value Handler = m_DebugState.GetTrapHandler();
+        FuncArgVector Args;
+        State.StackFrames.back().PopExtra = 1;
+        p_Invoke(Handler,Args,State,false,true);
+        State.TraphandlerIndex = State.StackFrames.size();
+    }
+    bool Evaluator::p_InTrapHandler(ExecutionState& State)
+    {
+        return State.TraphandlerIndex == State.StackFrames.size();
+    }
+    void Evaluator::p_Invoke(Value& ObjectToCall,FuncArgVector& Arguments,ExecutionState& CurrentState,bool Setting,bool IsTrapHandler)
     {
         auto& CurrentCallStack = CurrentState.StackFrames;
         if(ObjectToCall.IsType<Function>())
@@ -1102,7 +1119,7 @@ namespace MBLisp
                 {
                     Args.push_back(Arg);
                 }
-                p_Invoke(*NewInstance->AssociatedClass->Constructor,Args,CurrentState);
+                p_Invoke(*NewInstance->AssociatedClass->Constructor,Args,CurrentState,Setting,IsTrapHandler);
                 CurrentCallStack.back().PopExtra = 1;
             }
             CurrentCallStack.push_back(std::move(NewStackFrame));
@@ -1117,11 +1134,21 @@ namespace MBLisp
                 p_EmitSignal(CurrentState,"No method associated with the argument list for generic \""+GetSymbolString(GenericToInvoke.Name.ID)+"\"",true);
                 return;
             }
-            p_Invoke(*Callable,Arguments,CurrentState,Setting);
+            p_Invoke(*Callable,Arguments,CurrentState,Setting,IsTrapHandler);
+            //should only invoke trap handler at the lowest point of the recursive call to p_Invoke
+            return;
         }
         else
         {
             throw std::runtime_error("Cannot invoke object");   
+        }
+        //after function invoked, trap it
+        if(m_DebugState.DebuggingActive() && m_DebugState.TrappingNewFunctions() && !IsTrapHandler && !p_InTrapHandler(CurrentState))
+        {
+            if(!ObjectToCall.IsType<Function>())
+            {
+                p_InvokeTrapHandler(CurrentState);
+            }
         }
     }
     Value Evaluator::p_Eval(ExecutionState& CurrentState,int ReturnIndex)
@@ -1166,6 +1193,15 @@ namespace MBLisp
 
 
             StackFrame& CurrentFrame = CurrentState.StackFrames.back();
+            if(CurrentFrame.PopExtra != 0)
+            {
+                assert(CurrentFrame.ArgumentStack.size() >= CurrentFrame.PopExtra);
+                for(int i = 0; i < CurrentFrame.PopExtra;i++)
+                {
+                    CurrentFrame.ArgumentStack.pop_back();
+                }
+                CurrentFrame.PopExtra = 0;
+            }
             if(CurrentFrame.ExecutionPosition.Finished())
             {
                 assert(CurrentFrame.ArgumentStack.size() == 1);
@@ -1184,15 +1220,6 @@ namespace MBLisp
                 }
                 continue;
             }
-            if(CurrentFrame.PopExtra != 0)
-            {
-                assert(CurrentFrame.ArgumentStack.size() >= CurrentFrame.PopExtra);
-                for(int i = 0; i < CurrentFrame.PopExtra;i++)
-                {
-                    CurrentFrame.ArgumentStack.pop_back();
-                }
-                CurrentFrame.PopExtra = 0;
-            }
 
             OpCode& CurrentCode = CurrentFrame.ExecutionPosition.GetCurrentCode();
     
@@ -1208,11 +1235,7 @@ namespace MBLisp
                     {
                         if(m_DebugState.IsTrapped(CurrentFrame.ExecutionPosition))
                         {
-                            Value Handler = m_DebugState.GetTrapHandler();
-                            FuncArgVector Args;
-                            CurrentFrame.PopExtra = 1;
-                            p_Invoke(Handler,Args,CurrentState);
-                            CurrentState.TraphandlerIndex = CurrentState.StackFrames.size();
+                            p_InvokeTrapHandler(CurrentState);
                             continue;
                         }
                     }
