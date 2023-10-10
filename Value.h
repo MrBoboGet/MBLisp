@@ -61,6 +61,7 @@ namespace MBLisp
     class ListImpl : public std::vector<T>
     {
         Location m_Location;
+        int m_Depth = -1;
 public:
         ListImpl(std::initializer_list<T> Elems) : std::vector<T>(Elems)
         {
@@ -74,6 +75,14 @@ public:
         Location GetLocation() const
         {
             return m_Location;   
+        }
+        void SetDepth(int Depth)
+        {
+            m_Depth = Depth;
+        }
+        int GetDepth() const
+        {
+            return m_Depth;   
         }
     };
 

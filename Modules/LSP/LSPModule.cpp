@@ -162,7 +162,7 @@ namespace MBLisp
     }
     void LSPHandler::OpenedDocument(std::string const& URI,std::string const& Content)
     {
-        DocumentInfo& Newdocument = m_OpenedDocuments[URI];
+        DocumentInfo& Newdocument = m_OpenedDocuments[p_CanonURI(URI)];
         Newdocument = p_CreateDocumentInfo(Content);
         p_RunOpenHandlers(Newdocument,URI,Content);
     }
@@ -179,21 +179,21 @@ namespace MBLisp
     {
         MBLSP::SemanticToken_Response ReturnValue;
         ReturnValue.result = MBLSP::SemanticTokens();
-        ReturnValue.result->data = MBLSP::CalculateSemanticTokens(m_OpenedDocuments[Request.params.textDocument.uri].Tokens);
+        ReturnValue.result->data = MBLSP::CalculateSemanticTokens(m_OpenedDocuments[p_CanonURI(Request.params.textDocument.uri)].Tokens);
         return ReturnValue;
     }
     MBLSP::SemanticTokensRange_Response LSPHandler::HandleRequest(MBLSP::SemanticTokensRange_Request const& Request)
     {
         MBLSP::SemanticTokensRange_Response ReturnValue;
         ReturnValue.result = MBLSP::SemanticTokens();
-        ReturnValue.result->data = MBLSP::GetTokenRange(MBLSP::CalculateSemanticTokens(m_OpenedDocuments[Request.params.textDocument.uri].Tokens),Request.params.range);
+        ReturnValue.result->data = MBLSP::GetTokenRange(MBLSP::CalculateSemanticTokens(m_OpenedDocuments[p_CanonURI(Request.params.textDocument.uri)].Tokens),Request.params.range);
         return ReturnValue;
     }
     MBLSP::GotoDefinition_Response LSPHandler::HandleRequest(MBLSP::GotoDefinition_Request const& Request)
     {
         MBLSP::GotoDefinition_Response ReturnValue;
         ReturnValue.result = std::vector<MBLSP::Location>();
-        auto& DocumentIt = m_OpenedDocuments[Request.params.textDocument.uri];
+        auto& DocumentIt = m_OpenedDocuments[p_CanonURI(Request.params.textDocument.uri)];
         auto const& Jumps = DocumentIt.Jumps;
         auto TargetIt = std::lower_bound(Jumps.begin(),Jumps.end(),Request.params.position,[](JumpSymbol const& lhs,MBLSP::Position const& rhs)
                 {
@@ -215,15 +215,16 @@ namespace MBLisp
                 MBLSP::LineIndex Index(FileData);
                 NewLocation.range.start = Index.ByteOffsetToPosition(TargetIt->Target.SymbolLocation.Position);
                 NewLocation.range.end = NewLocation.range.start + m_Evaluator->GetSymbolString(TargetIt->Target.ID).size();
-                NewLocation.uri = MBLSP::URLEncodePath(std::filesystem::absolute(NewLocation.uri));
+                NewLocation.uri = MBUnicode::PathToUTF8(std::filesystem::absolute(NewLocation.uri));
             }
+            NewLocation.uri = MBLSP::URLEncodePath(NewLocation.uri);
             ReturnValue.result->push_back(NewLocation);
         }
         return ReturnValue;
     }
     void LSPHandler::DocumentChanged(std::string const& URI,std::string const& NewContent, std::vector<MBLSP::TextChange> const& Changes)
     {
-        DocumentInfo& Document = m_OpenedDocuments[URI];
+        DocumentInfo& Document = m_OpenedDocuments[p_CanonURI(URI)];
         Document.Tokens = MBLSP::UpdateSemanticTokens(Document.Tokens,Changes);
         Document.Lines = MBLSP::LineIndex(NewContent);
         p_RunOpenHandlers(Document,URI,NewContent);
@@ -236,17 +237,24 @@ namespace MBLisp
     {
         auto HandlersCopy = m_OnOpenHandlers;
         //run handlers
+        bool ExceptionCaught = false;
+        int InitialStackCount = m_ExecutionState->StackSize();
         try
         {
             for(auto const& Handler : HandlersCopy)
             {
-                m_Evaluator->Eval(*m_ExecutionState,Handler,{m_This,URI,Content});
+                m_Evaluator->Eval(*m_ExecutionState,Handler,{m_This,p_CanonURI(URI),Content});
             }
         }
         catch(...)
         {
-               
+            ExceptionCaught = true;
+            m_Evaluator->Unwind(*m_ExecutionState,InitialStackCount);
+            //here the stack should be unwound...
+            //TODO add Unwind function to Evaluation state,
+            //that takes care of unwinding this stuff
         }
+        assert(InitialStackCount == m_ExecutionState->StackSize());
         MBLSP::PublishDiagnostics_Notification Notification;
         Notification.params.diagnostics = std::move(Document.Diagnostics);
         Notification.params.uri = URI;

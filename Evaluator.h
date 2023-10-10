@@ -112,6 +112,10 @@ namespace MBLisp
         {
             return *StackFrames.back().StackScope;
         }
+        int StackSize()
+        {
+            return StackFrames.size();   
+        }
         Ref<Scope> GetScopeRef()
         {
             return StackFrames.back().StackScope;
@@ -342,6 +346,7 @@ namespace MBLisp
 
         Value p_Expand(ExecutionState&  CurrentState,Scope& Namespace,Value ValueToExpand);
         Value p_Expand(ExecutionState&  CurrentState,Scope& Namespace,List const& ListToExpand);
+        Value p_GetExecutableTerm(ExecutionState&  CurrentState,Scope& Namespace,Value ValueToExpand);
 
         //reading
         String p_ReadString(MBUtility::StreamReader& Content);
@@ -610,5 +615,6 @@ namespace MBLisp
         void Eval(std::filesystem::path const& SourceFile);
         void Repl();
         Value Eval(ExecutionState& CurrentState,Value Callable,FuncArgVector Arguments);
+        void Unwind(ExecutionState& CurrentState,int TargetIndex);
     };
 }

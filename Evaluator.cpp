@@ -944,6 +944,20 @@ namespace MBLisp
         p_Invoke(Callable,Arguments,CurrentState);
         return p_Eval(CurrentState,CurrentState.StackFrames.size()-1);
     }
+    void Evaluator::Unwind(ExecutionState& CurrentState,int TargetIndex)
+    {
+        CurrentState.UnwindingStack = true;
+        CurrentState.FrameTarget = TargetIndex-1;
+        try
+        {
+            p_Eval(CurrentState,TargetIndex);
+        }
+        catch(ContinueUnwind const&)
+        {
+            CurrentState.FrameTarget = -1;
+            CurrentState.UnwindingStack = false;
+        }
+    }
     void Evaluator::p_EmitSignal(ExecutionState& CurrentState,Value SignalValue,bool ForceUnwind)
     {
         //the signal form returns a value in the current frame, which
@@ -1192,8 +1206,7 @@ namespace MBLisp
                 {
                     if(!(CurrentState.TraphandlerIndex == CurrentState.StackFrames.size() +1  ))
                     {
-                        m_DebugState.UpdateTraps(CurrentFrame.ExecutionPosition);
-                        if(CurrentFrame.ExecutionPosition.IsTrapped(CurrentFrame.ExecutionPosition.GetIP()))
+                        if(m_DebugState.IsTrapped(CurrentFrame.ExecutionPosition))
                         {
                             Value Handler = m_DebugState.GetTrapHandler();
                             FuncArgVector Args;
@@ -1540,7 +1553,7 @@ namespace MBLisp
                 }
                 Value ValueToEvaluate = CurrentFrame.ArgumentStack.back();
                 CurrentFrame.ArgumentStack.pop_back();
-                ValueToEvaluate = p_Expand(CurrentState,*ScopeToUse,std::move(ValueToEvaluate));
+                ValueToEvaluate = p_GetExecutableTerm(CurrentState,*ScopeToUse,std::move(ValueToEvaluate));
                 Ref<OpCodeList> NewOpcodes = MakeRef<OpCodeList>(ValueToEvaluate);
                 StackFrame NewFrame = StackFrame(OpCodeExtractor(NewOpcodes));
                 NewFrame.StackScope = ScopeToUse;
@@ -1617,6 +1630,7 @@ namespace MBLisp
                     if(ReturnValue.IsType<List>())
                     {
                         ReturnValue.GetType<List>().SetLocation(ListToExpand.GetLocation());   
+                        ReturnValue.GetType<List>().SetDepth(ListToExpand.GetDepth());   
                     }
                     return ReturnValue;
                 }
@@ -1625,6 +1639,7 @@ namespace MBLisp
         //head wasn't macro, try to expand children
         List NewList;
         NewList.SetLocation(ListToExpand.GetLocation());
+        NewList.SetDepth(ListToExpand.GetDepth());
         NewList.push_back(ListToExpand[0]);
         for(int i = 1; i < ListToExpand.size();i++)
         {
@@ -1638,6 +1653,26 @@ namespace MBLisp
             }
         }
         return NewList;
+    }
+    //infinite for recursive lists...
+    inline void h_AssignDepths(Value& CurrentValue,int CurrentDepth)
+    {
+        if(CurrentValue.IsType<List>())
+        {
+            for(auto& Elem : CurrentValue.GetType<List>())
+            {
+                if(Elem.IsType<List>())
+                {
+                    Elem.GetType<List>().SetDepth(CurrentDepth+1);
+                    h_AssignDepths(Elem,CurrentDepth+1);
+                }   
+            }
+        }
+    }
+    Value Evaluator::p_GetExecutableTerm(ExecutionState&  CurrentState,Scope& Namespace,Value ValueToExpand)
+    {
+        h_AssignDepths(ValueToExpand,0);
+        return p_Expand(CurrentState,Namespace,std::move(ValueToExpand));
     }
 
     void Evaluator::p_SkipWhiteSpace(MBUtility::StreamReader& Content)
@@ -2348,7 +2383,7 @@ namespace MBLisp
         while(!Reader.EOFReached())
         {
             IPIndex InstructionToExecute = OpCodes->Size();
-            Value NewTerm = p_Expand(CurrentState,CurrentState.GetCurrentScope() ,p_ReadTerm(CurrentState,URI,Table,Reader,ReaderValue));
+            Value NewTerm = p_GetExecutableTerm(CurrentState,CurrentState.GetCurrentScope() ,p_ReadTerm(CurrentState,URI,Table,Reader,ReaderValue));
             p_SkipWhiteSpace(Reader);
             if(NewTerm.IsType<List>())
             {
@@ -2413,7 +2448,7 @@ namespace MBLisp
             try
             {
                 IPIndex InstructionToExecute = OpCodes->Size();
-                Value NewTerm = p_Expand(CurrentState,CurrentState.GetCurrentScope() ,p_ReadTerm(CurrentState,URI,Table,Stdin,StdinValue));
+                Value NewTerm = p_GetExecutableTerm(CurrentState,CurrentState.GetCurrentScope() ,p_ReadTerm(CurrentState,URI,Table,Stdin,StdinValue));
                 OpCodes->Append(NewTerm);
                 Print(*this,p_Eval(CurrentState,OpCodes,InstructionToExecute));
                 std::cout<<std::endl;
