@@ -47,7 +47,7 @@ namespace MBLisp
         assert(OutCodes.size() > CurrentPosition);
         if(!ListToConvert.GetLocation().IsEmpty())
         {
-            m_OpcodeDebugInfo[CurrentPosition] = LocationInfo(ListToConvert.GetLocation());
+            m_OpcodeLocationInfo[CurrentPosition] = LocationInfo(ListToConvert.GetLocation(),ListToConvert.GetDepth());
         }
     }
     void OpCodeList::p_CreateOpCodes(List const& ListToConvert, std::vector<OpCode>& ListToAppend,EncodingState& CurrentState)
@@ -440,7 +440,7 @@ namespace MBLisp
         assert(ListToAppend.size() > CurrentPosition);
         if(!ListToConvert.GetLocation().IsEmpty())
         {
-            m_OpcodeDebugInfo[CurrentPosition] = LocationInfo(ListToConvert.GetLocation());
+            m_OpcodeLocationInfo[CurrentPosition] = LocationInfo(ListToConvert.GetLocation(),ListToConvert.GetDepth());
         }
     }
     void OpCodeList::p_WriteProgn(List const& ListToConvert,std::vector<OpCode>& ListToAppend,EncodingState& CurrentState,int Offset)
@@ -457,7 +457,7 @@ namespace MBLisp
         assert(ListToAppend.size() > CurrentPosition);
         if(!ListToConvert.GetLocation().IsEmpty())
         {
-            m_OpcodeDebugInfo[CurrentPosition] = LocationInfo(ListToConvert.GetLocation());
+            m_OpcodeLocationInfo[CurrentPosition] = LocationInfo(ListToConvert.GetLocation(),ListToConvert.GetDepth());
         }
     }
     OpCodeList::OpCodeList(Value const& ValueToEncode)
@@ -468,7 +468,7 @@ namespace MBLisp
         {
             throw std::runtime_error("go's to tags without corresponding label detected");
         }
-        m_Trapped = std::vector<bool>(m_OpCodes.size(),false);
+        p_FillDebugInfo();
     }
     OpCodeList::OpCodeList(List const& ListToConvert)
     {
@@ -478,7 +478,7 @@ namespace MBLisp
         {
             throw std::runtime_error("go's to tags without corresponding label detected");
         }
-        m_Trapped = std::vector<bool>(m_OpCodes.size(),false);
+        p_FillDebugInfo();
     }
     void OpCodeList::Append(List const& ListToConvert)
     {
@@ -491,11 +491,10 @@ namespace MBLisp
         {
             throw std::runtime_error("go's to tags without corresponding label detected");
         }
-        m_Trapped.insert(m_Trapped.end(),m_OpCodes.size()-PrevSize,false);
+        p_FillDebugInfo();
     }
     void OpCodeList::Append(Value const& ListToConvert)
     {
-        IPIndex PrevSize = m_OpCodes.size();
         EncodingState CurrentState;
         p_CreateOpCodes(ListToConvert,m_OpCodes,CurrentState);
         //TODO fix with let/cc
@@ -504,7 +503,7 @@ namespace MBLisp
         {
             throw std::runtime_error("go's to tags without corresponding label detected");
         }
-        m_Trapped.insert(m_Trapped.end(),m_OpCodes.size()-PrevSize,false);
+        p_FillDebugInfo();
     }
     OpCodeList::OpCodeList(List const& ListToConvert,int Offset,bool  InLambda)
     {
@@ -522,7 +521,7 @@ namespace MBLisp
         {
             throw std::runtime_error("go's to tags without corresponding label detected");
         }
-        m_Trapped = std::vector<bool>(m_OpCodes.size(),false);
+        p_FillDebugInfo();
     }
     OpCodeList::OpCodeList(SymbolID ArgID,SymbolID IndexFunc,std::vector<SlotDefinition> const& Initializers)
     {
@@ -542,9 +541,23 @@ namespace MBLisp
             m_OpCodes.push_back(OpCode_Pop());
         }
         m_OpCodes.push_back(OpCode_PushVar(ArgID));
-        m_Trapped = std::vector<bool>(m_OpCodes.size(),false);
+        p_FillDebugInfo();
     }
-
+    void OpCodeList::p_FillDebugInfo()
+    {
+        int Offset = m_DebugInfo.size();
+        m_DebugInfo.insert(m_DebugInfo.end(),m_OpCodes.size()-m_DebugInfo.size(),DebugInfo());
+        int CurrentDepth = -1; 
+        for(size_t i = Offset; i < m_DebugInfo.size();i++)
+        {
+            if(auto It = m_OpcodeLocationInfo.find(i); It != m_OpcodeLocationInfo.end())
+            {
+                CurrentDepth = It->second.Depth;   
+            }
+            m_DebugInfo[i].Depth = CurrentDepth;   
+        }
+        assert(m_DebugInfo.size() == m_OpCodes.size());
+    }
     OpCodeExtractor::OpCodeExtractor(Ref<OpCodeList> OpCodes)
     {
         m_AssociatedList = OpCodes;
@@ -578,19 +591,19 @@ namespace MBLisp
     }
     void OpCodeExtractor::SetTrap(Location TrapLocation)
     {
-        for(auto& DebugInfo : m_AssociatedList->m_OpcodeDebugInfo)
+        for(auto& DebugInfo : m_AssociatedList->m_OpcodeLocationInfo)
         {
             if(DebugInfo.second.Loc == TrapLocation)
             {
-                m_AssociatedList->m_Trapped[DebugInfo.first] = true;
+                m_AssociatedList->m_DebugInfo[DebugInfo.first].Trapped = true;
             }
         }
     }
     void OpCodeExtractor::ClearTraps()
     {
-        for(auto& DebugInfo : m_AssociatedList->m_OpcodeDebugInfo)
+        for(auto& DebugInfo : m_AssociatedList->m_OpcodeLocationInfo)
         {
-            m_AssociatedList->m_Trapped[DebugInfo.first] = false;
+            m_AssociatedList->m_DebugInfo[DebugInfo.first].Trapped = false;
         }
     }
     void OpCodeExtractor::SetDebugID(int ID)
@@ -603,10 +616,18 @@ namespace MBLisp
     }
     bool OpCodeExtractor::IsTrapped(IPIndex Position)
     {
-        if(Position >= m_AssociatedList->m_Trapped.size())
+        if(Position >= m_AssociatedList->m_DebugInfo.size())
         {
             throw std::runtime_error("Trying to query trapped out of bounds");   
         }
-        return m_AssociatedList->m_Trapped[Position];
+        return m_AssociatedList->m_DebugInfo[Position].Trapped;
+    }
+    int OpCodeExtractor::GetDepth(IPIndex Position)
+    {
+        if(Position >= m_AssociatedList->m_DebugInfo.size())
+        {
+            throw std::runtime_error("Trying to query trapped out of bounds");   
+        }
+        return m_AssociatedList->m_DebugInfo[Position].Depth;
     }
 }

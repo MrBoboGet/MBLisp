@@ -215,18 +215,25 @@ namespace MBLisp
         struct LocationInfo
         {
             Location Loc;
+            int Depth = -1;
             LocationInfo()
             {
                    
             }
-            LocationInfo(Location NewLoc)
+            LocationInfo(Location NewLoc,int Depth)
             {
                 Loc = NewLoc;
+                this->Depth = Depth;
             }
         };
-        std::unordered_map<IPIndex,LocationInfo> m_OpcodeDebugInfo;
+        std::unordered_map<IPIndex,LocationInfo> m_OpcodeLocationInfo;
 
-        std::vector<bool> m_Trapped;
+        struct DebugInfo
+        {
+            bool Trapped = false;
+            int Depth = -1;
+        };
+        std::vector<DebugInfo> m_DebugInfo;
 
         int m_DebugID = 0;
         struct EncodingState
@@ -243,6 +250,8 @@ namespace MBLisp
         void p_CreateOpCodes(List const& ListToConvert,std::vector<OpCode>& ListToAppend,EncodingState& CurrentState);
 
         void p_WriteProgn(List const& ListToConvert,std::vector<OpCode>& ListToAppend,EncodingState& CurrentState,int Offset);
+
+        void p_FillDebugInfo();
         public:
         OpCodeList();
         OpCodeList(Value const& ValueToEncode);
@@ -279,6 +288,7 @@ namespace MBLisp
         void SetDebugID(int ID);
         int GetDebugID();
         bool IsTrapped(IPIndex Position);
+        int GetDepth(IPIndex Position);
     };
 }
 

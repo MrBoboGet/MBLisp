@@ -1682,6 +1682,7 @@ namespace MBLisp
     {
         if(CurrentValue.IsType<List>())
         {
+            CurrentValue.GetType<List>().SetDepth(CurrentDepth);
             for(auto& Elem : CurrentValue.GetType<List>())
             {
                 if(Elem.IsType<List>())
