@@ -25,7 +25,8 @@
                 "/MBLisp_CLIMain.cpp",
                 "/Threading.cpp",
                 "/DebugInternals.cpp",
-                "/Modules/LSP/LSPModule.cpp"
+                "/Modules/LSP/LSPModule.cpp",
+                "/Modules/Text/TextModule.cpp"
             ],
             "TargetType": "Executable"
         },

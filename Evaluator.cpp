@@ -15,14 +15,15 @@
 
 #include <atomic>
 
-#include "Modules/LSP/LSPModule.h"
 
 #include <MBUtility/FileStreams.h>
 
 #include <iostream>
-
-
 #include "Threading.h"
+
+
+#include "Modules/LSP/LSPModule.h"
+#include "Modules/Text/TextModule.h"
 namespace MBLisp
 {
     //CallContext
@@ -1339,14 +1340,13 @@ namespace MBLisp
                 //    throw std::runtime_error("can only invoke objects of type function");
                 //}
                 OpCode_CallFunc&  CallFuncCode = CurrentCode.GetType<OpCode_CallFunc>();
-                Value FunctionToCall = std::move(CurrentFrame.ArgumentStack.back());
-                CurrentFrame.ArgumentStack.pop_back();
+                Value FunctionToCall = std::move(CurrentFrame.ArgumentStack[CurrentFrame.ArgumentStack.size()-(CallFuncCode.ArgumentCount+1)]);
                 FuncArgVector Arguments;
                 for(int i = 0; i < CallFuncCode.ArgumentCount;i++)
                 {
                     Arguments.push_back(std::move(CurrentFrame.ArgumentStack[CurrentFrame.ArgumentStack.size()-CallFuncCode.ArgumentCount+i]));
                 }
-                CurrentFrame.ArgumentStack.resize(CurrentFrame.ArgumentStack.size()-CallFuncCode.ArgumentCount);
+                CurrentFrame.ArgumentStack.resize(CurrentFrame.ArgumentStack.size()-(CallFuncCode.ArgumentCount+1));
                 //for(int i = 0; i < CallFuncCode.ArgumentCount;i++)
                 //{
                 //    CurrentFrame.ArgumentStack.pop_back();
@@ -2294,6 +2294,7 @@ namespace MBLisp
     {
         m_BuiltinModules["lsp-internal"] = std::make_unique<LSPModule>();
         m_BuiltinModules["debug"] = std::make_unique<DebugModule>();
+        m_BuiltinModules["text"] = std::make_unique<TextModule>();
     }
     Value Evaluator::Load BUILTIN_ARGLIST
     {

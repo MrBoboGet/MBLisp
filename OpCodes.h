@@ -267,7 +267,7 @@ namespace MBLisp
     };
     class OpCodeExtractor
     {
-        Ref<OpCodeList> m_AssociatedList = nullptr;
+        Ref<OpCodeList> m_AssociatedList = MakeRef<OpCodeList>();
         IPIndex m_IP = 0;
     public:
         OpCodeExtractor()

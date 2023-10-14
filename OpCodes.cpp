@@ -33,12 +33,12 @@ namespace MBLisp
     void OpCodeList::p_CreateFuncCall(List const& ListToConvert,std::vector<OpCode>& OutCodes,EncodingState& CurrentState,bool Setting)
     {
         IPIndex CurrentPosition = OutCodes.size();
+        p_CreateOpCodes(ListToConvert.front(),OutCodes,CurrentState);
         for(int i = 1; i < ListToConvert.size();i++)
         {
             p_CreateOpCodes(ListToConvert[i],OutCodes,CurrentState);
             CurrentState.ArgumentStackCount += 1;
         }
-        p_CreateOpCodes(ListToConvert.front(),OutCodes,CurrentState);
         CurrentState.ArgumentStackCount -= ListToConvert.size()-1;
         OpCode_CallFunc FunCall(ListToConvert.size()-1,Setting);
         m_OpCodes.push_back(FunCall);
@@ -532,9 +532,9 @@ namespace MBLisp
 
             m_OpCodes.push_back(OpCode_PreSet());
 
+            m_OpCodes.push_back(OpCode_PushVar(IndexFunc));
             m_OpCodes.push_back(OpCode_PushVar(ArgID));
             m_OpCodes.push_back(OpCode_PushLiteral(Value(Symbol(Slot.Symbol))));
-            m_OpCodes.push_back(OpCode_PushVar(IndexFunc));
             m_OpCodes.push_back(OpCode_CallFunc(2,true));
 
 
