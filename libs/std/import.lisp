@@ -63,7 +63,7 @@
   )
   (if is-internal
     (if (< (len binding) 1)
-        (return `(set-parent (environment) (get-internal-module ,internal-string)))
+        (return `(add-parent (environment) (get-internal-module ,internal-string)))
      else 
         (return `(set ,(. binding 0) (get-internal-module ,internal-string)))
     )

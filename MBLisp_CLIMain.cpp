@@ -21,9 +21,10 @@ int main(int argc,const char** argv)
     {
         std::cout<<e.what()<<": "<<Evaluator.GetSymbolString(e.GetSymbol())<<std::endl;
     }
-    catch (MBLisp::UncaughtSignal const& e)
+    catch (MBLisp::UncaughtSignal& e)
     {
-        std::cout << e.what();
+        std::cout<<"Uncaught signal:";
+        Evaluator.Eval(e.AssociatedScope, e.AssociatedScope->FindVariable(Evaluator.GetSymbolID("print")), {e.ThrownValue});
     }
     catch(std::exception const& e)
     {

@@ -26,6 +26,17 @@
 #include "Modules/Text/TextModule.h"
 namespace MBLisp
 {
+
+    //ExecutionState
+    
+    void ExecutionState::PopFrame()
+    {
+        auto& StackScope = StackFrames.back().StackScope;
+        StackFrames.pop_back();
+    }
+    //
+
+    
     //CallContext
     Evaluator& CallContext::GetEvaluator()
     {
@@ -47,7 +58,7 @@ namespace MBLisp
     void CallContext::PauseThread()
     {
         m_ThreadPaused = true;
-        m_AssociatedEvaluator->m_ThreadingState.Pause(m_CurrentState->ThreadID);
+        m_AssociatedEvaluator->m_ThreadingState.Pause(m_CurrentState->AssociatedThread);
     }
     bool CallContext::IsMultiThreaded()
     {
@@ -772,7 +783,9 @@ namespace MBLisp
     }
     Value Evaluator::Environment BUILTIN_ARGLIST
     {
-        return Context.GetState().GetScopeRef();
+        Value ReturnValue = Context.GetState().GetScopeRef();
+        Context.GetState().StackFrames.back().ScopeRetrieved = true;
+        return ReturnValue;
     }
     Value Evaluator::NewEnvironment BUILTIN_ARGLIST
     {
@@ -945,6 +958,16 @@ namespace MBLisp
         p_Invoke(Callable,Arguments,CurrentState);
         return p_Eval(CurrentState,CurrentState.StackFrames.size()-1);
     }
+    Value Evaluator::Eval(Ref<Scope> AssociatedScope,Value Callable,FuncArgVector Arguments)
+    {
+        ExecutionState NewState;   
+        NewState.StackFrames.push_back(StackFrame());
+        NewState.StackFrames.back().StackScope = std::move(AssociatedScope);
+        NewState.CurrentCallContext.m_AssociatedEvaluator = this;
+        NewState.CurrentCallContext.m_CurrentState = &NewState;
+        p_Invoke(Callable,Arguments,NewState);
+        return p_Eval(NewState,NewState.StackFrames.size()-1);
+    }
     void Evaluator::Unwind(ExecutionState& CurrentState,int TargetIndex)
     {
         CurrentState.UnwindingStack = true;
@@ -963,11 +986,11 @@ namespace MBLisp
     {
         //the signal form returns a value in the current frame, which
         int CurrentFrameIndex = CurrentState.StackFrames.size()-1;
-        auto& CurrentFrame = CurrentState.StackFrames.back();
         bool SignalFound = false;
-        auto& StackFrames = CurrentState.StackFrames;
         for(int i = CurrentFrameIndex; i >= 0; i--)
         {
+            auto& CurrentFrame = CurrentState.StackFrames.back();
+            auto& StackFrames = CurrentState.StackFrames;
             if(CurrentFrame.SignalFrameIndex != -1 && i == CurrentFrameIndex)
             {
                 continue;   
@@ -1002,11 +1025,13 @@ namespace MBLisp
         }
         if(!SignalFound)
         {
+            auto& CurrentFrame = CurrentState.StackFrames.back();
             CurrentFrame.ArgumentStack.push_back(false);
             if(ForceUnwind)
             {
                 UncaughtSignal Exception;
                 Exception.ThrownValue = SignalValue;
+                Exception.AssociatedScope = CurrentFrame.StackScope;
                 throw Exception;
             }
         }
@@ -1042,7 +1067,7 @@ namespace MBLisp
                 CurrentCallStack.back().ArgumentStack.push_back(std::move(Result));
                 if(CurrentState.CurrentCallContext.m_ThreadPaused)
                 {
-                    m_ThreadingState.Resume(CurrentState.ThreadID);
+                    m_ThreadingState.Resume(CurrentState.AssociatedThread);
                 }
             }
             catch(ContinueUnwind const& e)
@@ -1079,6 +1104,7 @@ namespace MBLisp
             }
             StackFrame NewStackFrame(OpCodeExtractor(AssociatedLambda.Definition->Instructions));
             NewStackFrame.StackScope = MakeRef<Scope>();
+            NewStackFrame.StackScope->GetStackInfo().IsStackScope = true;
             NewStackFrame.StackScope->SetParentScope(AssociatedLambda.AssociatedScope);
             for(int i = 0; i < AssociatedLambda.Definition->Arguments.size();i++)
             {
@@ -1152,6 +1178,7 @@ namespace MBLisp
             }
         }
     }
+    
     Value Evaluator::p_Eval(ExecutionState& CurrentState,int ReturnIndex)
     {
         Value ReturnValue;
@@ -1163,7 +1190,7 @@ namespace MBLisp
             assert(StackFrames.size() >=  ReturnIndex);
             if(m_ThreadingState.MultipleThreadsActive())
             {
-                m_ThreadingState.WaitForTurn(CurrentState.ThreadID);
+                m_ThreadingState.WaitForTurn(CurrentState.AssociatedThread);
             }
             if(CurrentState.UnwindingStack)
             {
@@ -1177,7 +1204,7 @@ namespace MBLisp
                 {
                     if (CurrentState.StackFrames.back().ActiveUnwindProtectorsBegin.size() == 0)
                     {
-                        CurrentState.StackFrames.pop_back();
+                        CurrentState.PopFrame();
                         if(StackFrames.size() == ReturnIndex)
                         {
                             throw ContinueUnwind();
@@ -1210,7 +1237,7 @@ namespace MBLisp
                 assert(CurrentFrame.ActiveUnwindProtectorsBegin.size() == 0);
                 assert(CurrentFrame.SignalHandlerBunchSize.size() == 0);
                 ReturnValue = std::move(CurrentFrame.ArgumentStack.back());
-                StackFrames.pop_back();
+                CurrentState.PopFrame();
                 if(StackFrames.size() != ReturnIndex)
                 {
                     StackFrames.back().ArgumentStack.push_back(ReturnValue);   
@@ -1291,6 +1318,7 @@ namespace MBLisp
                 if(LiteralToPush.IsType<Lambda>())
                 {
                     LiteralToPush.GetType<Lambda>().AssociatedScope = CurrentFrame.StackScope;
+                    CurrentFrame.ScopeRetrieved = true;
                 }
                 else if(LiteralToPush.IsType<String>())
                 {
@@ -2229,8 +2257,8 @@ namespace MBLisp
             Args.push_back(Arguments[i]);
         }
         Context.GetEvaluator().p_Invoke(Arguments[0],Args,NewExecState);
-        NewExecState.ThreadID = Context.GetEvaluator().m_ThreadingState.GetNextID();
-        NewThread.ID = NewExecState.ThreadID;
+        NewExecState.AssociatedThread = Context.GetEvaluator().m_ThreadingState.GetNextID();
+        NewThread.ID = NewExecState.AssociatedThread;
         Context.GetEvaluator().m_ThreadingState.AddThread([&,ExecState=std::move(NewExecState)]() mutable
                 {
                     Context.GetEvaluator().p_Eval(ExecState,1);
@@ -2257,9 +2285,13 @@ namespace MBLisp
             throw std::runtime_error("get-internal-module requires exactly 1 argument of type string");
         }
         String& AssociatedString = Arguments[0].GetType<String>();
-        if( auto It = Context.GetEvaluator().m_BuiltinModules.find(AssociatedString); It != Context.GetEvaluator().m_BuiltinModules.end())
+        if(auto It = Context.GetEvaluator().m_BuiltinModules.find(AssociatedString); It != Context.GetEvaluator().m_BuiltinModules.end())
         {
-            ReturnValue = Value(It->second->GetModuleScope(Context.GetEvaluator()));
+            if(auto ScopeIt = Context.GetEvaluator().m_LoadedModules.find(AssociatedString); ScopeIt == Context.GetEvaluator().m_LoadedModules.end())
+            {
+                Context.GetEvaluator().m_LoadedModules[AssociatedString] = It->second->GetModuleScope(Context.GetEvaluator());
+            }
+            ReturnValue = Value(Context.GetEvaluator().m_LoadedModules[AssociatedString]);
         }
         else
         {
@@ -2425,14 +2457,15 @@ namespace MBLisp
     }
     void Evaluator::LoadStd()
     {
-        if(std::filesystem::exists(MBSystem::GetUserHomeDirectory()/".mblisp/libs/std/index.lisp"))
+        std::filesystem::path StdFile = MBSystem::GetUserHomeDirectory()/".mblisp/libs/std/index.lisp";
+        if(std::filesystem::exists(StdFile))
         {
             try
             {
                 ExecutionState CurrentState;
                 CurrentState.StackFrames.push_back(StackFrame());
                 CurrentState.StackFrames.back().StackScope = m_GlobalScope;
-                p_LoadFile(CurrentState,MBSystem::GetUserHomeDirectory()/".mblisp/libs/std/index.lisp");
+                p_LoadFile(CurrentState,StdFile);
             }
             catch(std::exception const& e)
             {
@@ -2441,7 +2474,7 @@ namespace MBLisp
         }
         else
         {
-            throw std::runtime_error("Failed loading standard library: file not present on default location ~/.mblisp/std/index.lisp");   
+            throw std::runtime_error("Failed loading standard library: file not present on default location "+MBUnicode::PathToUTF8(StdFile));
         }
     }
     void Evaluator::Eval(std::filesystem::path const& SourcePath)

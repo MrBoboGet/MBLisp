@@ -11,6 +11,7 @@
 #include <assert.h>
 
 #include <MBUtility/MBVector.h>
+#include <MBUtility/Iterator.h>
 
 #include <mutex>
 
@@ -146,6 +147,15 @@ public:
     };
 
     template<typename T>
+    void RefDestructor(T& ContentToDelete)
+    {
+           
+    }
+    class Scope;
+    template<>
+    inline void RefDestructor<Scope>(Scope& ScopeToDelete);
+    
+    template<typename T>
     class RefContent_Specialised : public RefContent
     {
     public:
@@ -158,7 +168,7 @@ public:
         }
         virtual ~RefContent_Specialised()
         {
-               
+            RefDestructor(Content);
         }
     };
     template<typename T>
@@ -240,8 +250,7 @@ public:
         }
         RefBase& operator=(RefBase ObjectToCopy)
         {
-            m_AllocatedContent = ObjectToCopy.m_AllocatedContent;
-            ObjectToCopy.m_AllocatedContent = nullptr;
+            std::swap(m_AllocatedContent,ObjectToCopy.m_AllocatedContent);
             return *this;
         }
         ~RefBase()
@@ -280,6 +289,10 @@ public:
         {
             return m_AllocatedContent != nullptr;
         }
+        int RefCount() const
+        {
+            return m_AllocatedContent->RefCount();   
+        }
         T* operator->()
         {
             return &m_AllocatedContent->GetContent<T>();
@@ -295,6 +308,14 @@ public:
         T const& operator*() const
         {
             return m_AllocatedContent->GetContent<T>();
+        }
+        bool operator==(Ref const& Rhs)  const
+        {
+            return static_cast<RefBase const&>(*this) == static_cast<RefBase const&>(Rhs);
+        }
+        bool operator!=(Ref const& Rhs)  const
+        {
+            return static_cast<RefBase const&>(*this) != static_cast<RefBase const&>(Rhs);
         }
         T* get()
         {
@@ -344,7 +365,6 @@ public:
     };
 
     class OpCodeList;
-    class Scope;
     class ClassDefinition;
     class ClassInstance;
     class GenericFunction;
@@ -465,81 +485,6 @@ public:
 
     class DynamicVariable;
 
-    class ExternalValue
-    {
-        ClassID m_ClassID = 0;
-        void* m_ExternalData = nullptr;
-        std::function<void(void*)> m_Deleter;
-        ExternalValue()
-        {
-               
-        }
-    public:
-        ExternalValue(ExternalValue const&) = delete;
-        ExternalValue& operator=(ExternalValue const&) = delete;
-        ExternalValue(ExternalValue&& OtherValue) noexcept
-        {
-            m_ClassID = OtherValue.m_ClassID;   
-            m_ExternalData = OtherValue.m_ExternalData;
-            OtherValue.m_ExternalData = nullptr;
-            OtherValue.m_ClassID = 0;
-        }
-    
-        template<typename T>
-        explicit ExternalValue(T ValueToStore)
-        {
-            m_ExternalData = new T(std::move(ValueToStore));
-            m_Deleter = [](void* DataToDelete){delete static_cast<T*>(DataToDelete);};
-            m_ClassID = GetClassID<T>();
-        }
-        template<typename Class,typename... ArgTypes>
-        static ExternalValue Emplace(ArgTypes&&... Args)
-        {
-            ExternalValue ReturnValue;
-            ReturnValue.m_ExternalData = new Class(std::forward<ArgTypes>(Args)...);
-            ReturnValue.m_Deleter = [](void* DataToDelete){delete static_cast<Class*>(DataToDelete);};
-            ReturnValue.m_ClassID = GetClassID<Class>();
-            return ReturnValue;
-        }
-        ~ExternalValue()
-        {
-            if(m_ExternalData != nullptr)
-            {
-                m_Deleter(m_ExternalData);   
-            }
-        }
-
-        ClassID GetTypeID()
-        {
-            return m_ClassID;   
-        }
-        template<typename T>
-        bool IsType() const
-        {
-            return m_ClassID == GetClassID<T>();
-        }
-        template<typename T>
-        T& GetType()
-        {
-            if(!IsType<T>())
-            {
-                throw std::runtime_error("Invalid type access for ExternalValue: "+std::string(typeid(T).name()));
-            }
-            return *static_cast<T*>(m_ExternalData);
-        }
-        template<typename T>
-        T const& GetType() const
-        {
-            if(!IsType<T>())
-            {
-                throw std::runtime_error("Invalid type access for ExternalValue: "+std::string(typeid(T).name()));
-            }
-            return *static_cast<T const*>(m_ExternalData);
-        }
-    };
-  
-
-    
     class Null 
     { 
     private:
@@ -1162,6 +1107,12 @@ public:
         }
     };
 
+
+
+    struct ScopeStackframeInfo
+    {
+        bool IsStackScope = false;
+    };
     class Scope
     {
         struct ParentScope
@@ -1171,6 +1122,8 @@ public:
         };
         MBUtility::MBVector<ParentScope,4> m_ParentScope;
         std::unordered_map<SymbolID,Value> m_Variables;
+
+        ScopeStackframeInfo  m_StackFrameInfo;
     public:
         void SetParentScope(Ref<Scope> ParentScope);
         void AddParentScope(Ref<Scope> ParentScope);
@@ -1180,5 +1133,27 @@ public:
         void OverrideVariable(SymbolID Variable,Value NewValue);
         Value* TryGet(SymbolID Variable);
         void Clear();
+        size_t VarCount() const
+        {
+            return m_Variables.size();   
+        }
+        ScopeStackframeInfo& GetStackInfo()
+        {
+            return m_StackFrameInfo;   
+        }
+
+        auto begin()
+        {
+            return m_Variables.begin();
+        }
+        auto end()
+        {
+            return m_Variables.end();
+        }
+        //kinda hacky, might consider doing proper garbage collecting...
     };
+    template<>
+    inline void RefDestructor<Scope>(Scope& ScopeToDelete)
+    {
+    }
 };

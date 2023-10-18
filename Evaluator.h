@@ -55,6 +55,14 @@ namespace MBLisp
         std::vector<IPIndex> ActiveUnwindProtectorsBegin;
 
 
+        //GC Stuff
+        
+        //This is set to true whenever a 
+        //lambda or (environmnent) is called. Poping a scope with its adress
+        // taken requries special care in order to ensure that we don't leak commonly occuring cycles.
+        bool ScopeRetrieved = false;
+
+
         StackFrame(OpCodeExtractor Extractor) : ExecutionPosition(std::move(Extractor))
         {
         }
@@ -90,7 +98,7 @@ namespace MBLisp
         friend class CallContext;
         private:
         //-1 means last, other value entails being in a signal
-        ThreadID ThreadID = 0;
+        ThreadID AssociatedThread = 0;
         int FrameTarget = -1;
         bool UnwindingStack = false;
         bool UnwindForced = false;
@@ -102,12 +110,16 @@ namespace MBLisp
         //and allowing for seamles setting/getting. Does however 
         //depend on the single threadeadness use of ExecutionState
         CallContext CurrentCallContext;
-       
+      
+        void PopFrame();
+        
         std::vector<StackFrame> StackFrames;
         std::unordered_map<DynamicVarID,std::vector<Value>> DynamicBindings;
         std::vector<std::vector<DynamicVarID>> BindingStack;
 
     public:
+
+
         Scope& GetCurrentScope()
         {
             return *StackFrames.back().StackScope;
@@ -135,6 +147,7 @@ namespace MBLisp
     {
     public:
         Value ThrownValue;
+        Ref<Scope> AssociatedScope;
         const char* what() const noexcept 
         {
             return "Uncaught signal";   
@@ -314,6 +327,8 @@ namespace MBLisp
 
 
         std::unordered_map<std::string,std::unique_ptr<Module>> m_BuiltinModules;
+        std::unordered_map<std::string,Ref<Scope>> m_LoadedModules;
+
         std::unordered_map<std::string,SymbolID> m_InternedSymbols;
         std::unordered_map<SymbolID,std::string> m_SymbolToString;
         std::unordered_map<ClassID,Value> m_BuiltinTypeDefinitions;
@@ -617,6 +632,7 @@ namespace MBLisp
         void Eval(std::filesystem::path const& SourceFile);
         void Repl();
         Value Eval(ExecutionState& CurrentState,Value Callable,FuncArgVector Arguments);
+        Value Eval(Ref<Scope> AssociatedScope,Value Callable,FuncArgVector Arguments);
         void Unwind(ExecutionState& CurrentState,int TargetIndex);
     };
 }
