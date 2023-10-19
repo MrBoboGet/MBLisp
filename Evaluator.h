@@ -316,14 +316,15 @@ namespace MBLisp
 
         //Threading
         ThreadingState m_ThreadingState;
-        //Debugging
-        DebugState m_DebugState;
 
         static Value Thread BUILTIN_ARGLIST;
         static Value This_Thread BUILTIN_ARGLIST;
         static Value Sleep BUILTIN_ARGLIST;
+        static Value ActiveThreads BUILTIN_ARGLIST;
 
 
+        //Debugging
+        DebugState m_DebugState;
 
 
         std::unordered_map<std::string,std::unique_ptr<Module>> m_BuiltinModules;
@@ -367,11 +368,10 @@ namespace MBLisp
 
         //reading
         String p_ReadString(MBUtility::StreamReader& Content);
-        Value p_ReadSymbol(ExecutionState&  CurrentState, SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content);
+        Value p_ReadSymbol(ExecutionState&  CurrentState, SymbolID URI,Ref<ReadTable>& Table,MBUtility::StreamReader& Content);
         Int p_ReadInteger(MBUtility::StreamReader& Content);
-        List p_ReadList(ExecutionState&  CurrentState,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
-        Value p_ReadTerm(ExecutionState&  CurrentState,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
-        List p_Read(ExecutionState&  CurrentState,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue);
+        List p_ReadList(ExecutionState&  CurrentState,SymbolID URI,Ref<ReadTable>& Table,MBUtility::StreamReader& Content,Value& StreamValue);
+        Value p_ReadTerm(ExecutionState&  CurrentState,SymbolID URI,Ref<ReadTable>& Table,MBUtility::StreamReader& Content,Value& StreamValue);
         
         SymbolID p_GetSymbolID(std::string const& SymbolString);
         

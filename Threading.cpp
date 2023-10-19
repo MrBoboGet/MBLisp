@@ -273,6 +273,15 @@ namespace MBLisp
         std::lock_guard<std::mutex> InternalsLock(m_ThreadInfoMutex);
         return m_CurrentThread;
     }
+    std::vector<ThreadID> ThreadingState::ActiveThreads()
+    {
+        std::vector<ThreadID> ReturnValue;
+        for(auto const& Thread : m_ActiveThreads)
+        {
+            ReturnValue.push_back(Thread.first);   
+        }
+        return ReturnValue;
+    }
     void ThreadingState::Sleep(ThreadID ID,float Duration)
     {
         std::lock_guard<std::mutex> InternalLock(m_ThreadInfoMutex);

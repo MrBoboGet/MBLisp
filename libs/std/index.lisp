@@ -317,19 +317,25 @@
 )
 
 
+(defmacro let (bindings &rest body)
+    (set triplets (list))
+    (doit pair bindings
+        (append triplets `( (environment) (quote ,(index pair 0)) ,(index pair 1)))
+    )
+    `(bind-dynamic ( ,@ triplets )  (progn ,@body))
+)
 
 
 
-(set in-top-curry true)
-(set curry-args (list))
-(set arg-dict (dict))
+(defvar in-top-curry true)
+(defvar arg-dict (dict))
+
 (defun curry-reader (stream)
   (if in-top-curry
-      (set in-top-curry false)
-      (set curry-term (read-term stream))
-      (set in-top-curry true)
-      (set ret-value `( ,\lambda (,@(map (lambda (x) (index arg-dict x)) (sort (keys arg-dict)) )) ,curry-term))
-      (set arg-dict (dict))
+      (let ((in-top-curry false) (arg-dict (dict)))
+          (set curry-term (read-term stream))
+          (set ret-value `( ,\lambda (,@(map (lambda (x) (index arg-dict x)) (sort (keys arg-dict)) )) ,curry-term))
+      )
       ret-value
    else
       (set current-sym "_")

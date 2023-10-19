@@ -58,7 +58,6 @@
 (defun type-eq (lhs rhs)
     (eq (type lhs) rhs)
 )
-
 (defun default-extractor (envir ast)
     (set return-value (list))
     (if (eq (type ast) symbol_t)
@@ -334,9 +333,6 @@
                         (handle-form new-envir new-term semantic-tokens jump-symbols diagnostics)
                  )
           )
-          (doit new-term delayed-forms
-                 (handle-form new-envir new-term semantic-tokens jump-symbols diagnostics)
-          )
     )    
     catch (symbol-location loc)
     (
@@ -351,6 +347,9 @@
     (
       false
     )
+  )
+  (doit new-term delayed-forms
+         (handle-form new-envir new-term semantic-tokens jump-symbols diagnostics)
   )
   (clear new-envir)
   (lsp:set-document-tokens handler uri semantic-tokens)

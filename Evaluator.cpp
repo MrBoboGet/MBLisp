@@ -430,7 +430,8 @@ namespace MBLisp
             throw std::runtime_error("Invalid argument for read-term, argument has to be stream");   
         }
         MBUtility::StreamReader& Reader = Arguments[0].GetType<MBUtility::StreamReader>();
-        ReadTable& Table = Context.GetState().GetCurrentScope().FindVariable(Context.GetEvaluator().GetSymbolID("*READTABLE*")).GetType<ReadTable>();
+        //copy
+        Ref<ReadTable> Table = Context.GetState().GetCurrentScope().FindVariable(Context.GetEvaluator().GetSymbolID("*READTABLE*")).GetRef<ReadTable>();
         SymbolID URI = p_PathURI(Context.GetEvaluator(),Context.GetState().GetCurrentScope().FindVariable(Context.GetEvaluator().p_GetSymbolID("load-filepath")).GetType<String>());
         //TODO think through this functionality again, how needed is it for ":" expander, and could it be implemented in a more clean way
         //Ref<Scope> NewScope = Context.GetState().StackFrames.front().StackScope;
@@ -784,6 +785,7 @@ namespace MBLisp
     Value Evaluator::Environment BUILTIN_ARGLIST
     {
         Value ReturnValue = Context.GetState().GetScopeRef();
+        assert(ReturnValue.IsType<Scope>());
         Context.GetState().StackFrames.back().ScopeRetrieved = true;
         return ReturnValue;
     }
@@ -970,6 +972,10 @@ namespace MBLisp
     }
     void Evaluator::Unwind(ExecutionState& CurrentState,int TargetIndex)
     {
+        if(TargetIndex == CurrentState.StackFrames.size())
+        {
+            return;   
+        }
         CurrentState.UnwindingStack = true;
         CurrentState.FrameTarget = TargetIndex-1;
         try
@@ -1538,20 +1544,20 @@ namespace MBLisp
                 std::vector<Value> NewValues;
                 for(int i = 0; i < PushBindings.BindCount;i++)
                 {
-                    if(!Arguments[i].IsType<Scope>())
+                    if(!Arguments[i*3].IsType<Scope>())
                     {
                         //throw std::runtime_error("first part of binding triplet has to be a scope");
                         p_EmitSignal(CurrentState,"first part of binding triplet has to be a scope",true);
                         continue;
                     }   
-                    Scope& ScopeToModify = Arguments[i].GetType<Scope>();
-                    if(!Arguments[i+1].IsType<Symbol>())
+                    Scope& ScopeToModify = Arguments[i*3].GetType<Scope>();
+                    if(!Arguments[i*3+1].IsType<Symbol>())
                     {
                         //throw std::runtime_error("second part of binding triplet has to be a symbol");
                         p_EmitSignal(CurrentState,"second part of binding triplet has to be a symbol",true);
                         continue;
                     }   
-                    SymbolID IDToModify = Arguments[i+1].GetType<Symbol>().ID;
+                    SymbolID IDToModify = Arguments[i*3+1].GetType<Symbol>().ID;
                     Value* VariableToInspect = ScopeToModify.TryGet(IDToModify);
                     if(VariableToInspect == nullptr)
                     {
@@ -1566,7 +1572,7 @@ namespace MBLisp
                         continue;
                     }
                     ModifiedBindings.push_back(VariableToInspect->GetType<DynamicVariable>().ID);
-                    NewValues.push_back(std::move(Arguments[i+2]));
+                    NewValues.push_back(std::move(Arguments[i*3+2]));
                 }
                 for(int i = 0; i < ModifiedBindings.size();i++)
                 {
@@ -1604,11 +1610,30 @@ namespace MBLisp
                 }
                 Value ValueToEvaluate = CurrentFrame.ArgumentStack.back();
                 CurrentFrame.ArgumentStack.pop_back();
-                ValueToEvaluate = p_GetExecutableTerm(CurrentState,*ScopeToUse,std::move(ValueToEvaluate));
-                Ref<OpCodeList> NewOpcodes = MakeRef<OpCodeList>(ValueToEvaluate);
-                StackFrame NewFrame = StackFrame(OpCodeExtractor(NewOpcodes));
-                NewFrame.StackScope = ScopeToUse;
-                CurrentState.StackFrames.push_back(std::move(NewFrame));
+                try
+                {
+                    ValueToEvaluate = p_GetExecutableTerm(CurrentState,*ScopeToUse,std::move(ValueToEvaluate));
+                }
+                catch (ContinueUnwind const& Unwind)
+                {
+                    //continue loop, and unwind. UncaughtException should be propagated
+                    continue;
+                }
+                Ref<OpCodeList> NewOpcodes;
+                try
+                {
+                    NewOpcodes = MakeRef<OpCodeList>(ValueToEvaluate); 
+                }
+                catch (std::exception const& e)
+                {
+                    p_EmitSignal(CurrentState,"Error evaluating form: "+std::string(e.what()),true);
+                }
+                if(NewOpcodes != nullptr)
+                {
+                    StackFrame NewFrame = StackFrame(OpCodeExtractor(NewOpcodes));
+                    NewFrame.StackScope = ScopeToUse;
+                    CurrentState.StackFrames.push_back(std::move(NewFrame));
+                }
             }
             else
             {
@@ -1787,7 +1812,7 @@ namespace MBLisp
         }
         return ReturnValue;
     }
-    Value Evaluator::p_ReadSymbol(ExecutionState&  CurrentState,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content)
+    Value Evaluator::p_ReadSymbol(ExecutionState&  CurrentState,SymbolID URI,Ref<ReadTable>& Table,MBUtility::StreamReader& Content)
     {
         Value ReturnValue;
         size_t Position = Content.Position();
@@ -1823,7 +1848,7 @@ namespace MBLisp
             NewSymbol.SymbolLocation.Position = Position;
             NewSymbol.SymbolLocation.URI = URI;
             ReturnValue = NewSymbol;
-            for(auto const& ExpandPairs : Table.ExpandMappings)
+            for(auto const& ExpandPairs : Table->ExpandMappings)
             {
                 if(SymbolString.find(ExpandPairs.first) != std::string::npos)
                 {
@@ -1844,7 +1869,7 @@ namespace MBLisp
         ReturnValue = std::stoi(NumberString);
         return ReturnValue;
     }
-    List Evaluator::p_ReadList(ExecutionState&  CurrentState,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue)
+    List Evaluator::p_ReadList(ExecutionState&  CurrentState,SymbolID URI,Ref<ReadTable>& Table,MBUtility::StreamReader& Content,Value& StreamValue)
     {
         List ReturnValue;
         Location CurrentLocation;
@@ -1869,7 +1894,7 @@ namespace MBLisp
         }
         return ReturnValue;
     }
-    Value Evaluator::p_ReadTerm(ExecutionState&  CurrentState,SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue)
+    Value Evaluator::p_ReadTerm(ExecutionState&  CurrentState,SymbolID URI,Ref<ReadTable>& Table,MBUtility::StreamReader& Content,Value& StreamValue)
     {
         Value ReturnValue;
         p_SkipWhiteSpace(Content);
@@ -1891,24 +1916,32 @@ namespace MBLisp
         {
             ReturnValue = p_ReadInteger(Content);
         }
-        else if(auto ReaderIt = Table.Mappings.find(NextChar); ReaderIt != Table.Mappings.end())
+        else if(auto ReaderIt = Table->Mappings.find(NextChar); ReaderIt != Table->Mappings.end())
         {
             Content.ReadByte();
-            ReturnValue = Eval(CurrentState,ReaderIt->second,{StreamValue});
+            Ref<ReadTable> PrevTable;
+            //TODO kinda hacky, should most likely rework *READTABLE* to be a true dynamic variable
+            if(ReaderIt->second.IsType<Lambda>())
+            {
+                PrevTable = ReaderIt->second.GetType<Lambda>().AssociatedScope->FindVariable( p_GetSymbolID("*READTABLE*")).GetRef<ReadTable>();
+                ReaderIt->second.GetType<Lambda>().AssociatedScope->SetVariable(p_GetSymbolID("*READTABLE*"), Table);
+            }
+            try
+            {
+                ReturnValue = Eval(CurrentState,ReaderIt->second,{StreamValue});
+            }
+            catch(...)
+            {
+                if(ReaderIt->second.IsType<Lambda>())
+                {
+                    ReaderIt->second.GetType<Lambda>().AssociatedScope->SetVariable(p_GetSymbolID("*READTABLE*"), Value(PrevTable));
+                }
+                throw;
+            }
         }
         else
         {
             ReturnValue = p_ReadSymbol(CurrentState,URI,Table,Content);
-        }
-        return ReturnValue;
-    }
-    List Evaluator::p_Read(ExecutionState&  CurrentState, SymbolID URI,ReadTable const& Table,MBUtility::StreamReader& Content,Value& StreamValue)
-    {
-        List ReturnValue;
-        while(!Content.EOFReached())
-        {
-            ReturnValue.push_back(p_ReadTerm(CurrentState,URI,Table,Content,StreamValue));
-            p_SkipWhiteSpace(Content);
         }
         return ReturnValue;
     }
@@ -2131,6 +2164,7 @@ namespace MBLisp
         AddMemberMethod<Lock,&Lock::Release>("release");
         AddMemberMethod<Lock,&Lock::Wait>("wait");
         AddMethod<ThreadHandle,Int>("sleep",Sleep);
+        m_GlobalScope->SetVariable(p_GetSymbolID("active-threads"),ActiveThreads);
         //Symbols
         AddMethod<String>("symbol",Symbol_String);
         AddMethod<Symbol,Int>("symbol",Symbol_SymbolInt);
@@ -2275,6 +2309,15 @@ namespace MBLisp
     {
         Context.GetEvaluator().m_ThreadingState.Sleep(Arguments[0].GetType<ThreadHandle>().ID,Arguments[1].GetType<Int>());
         return Value();
+    }
+    Value Evaluator::ActiveThreads BUILTIN_ARGLIST
+    {
+        List ReturnValue;
+        for(auto const& ID : Context.GetEvaluator().m_ThreadingState.ActiveThreads())
+        {
+            ReturnValue.push_back(Int(ID));
+        }
+        return ReturnValue;
     }
 
     Value Evaluator::GetInternalModule BUILTIN_ARGLIST
@@ -2436,11 +2479,11 @@ namespace MBLisp
         Value ReaderValue = Value::MakeExternal(MBUtility::StreamReader(std::make_unique<MBUtility::IndeterminateStringStream>(Content)));
         MBUtility::StreamReader& Reader = ReaderValue.GetType<MBUtility::StreamReader>();
         assert(ReaderValue.IsType<MBUtility::StreamReader>());
-        ReadTable& Table = CurrentState.GetCurrentScope().FindVariable(p_GetSymbolID("*READTABLE*")).GetType<ReadTable>();
+        Ref<ReadTable> TableRef  = CurrentState.GetCurrentScope().FindVariable(p_GetSymbolID("*READTABLE*")).GetRef<ReadTable>();
         while(!Reader.EOFReached())
         {
             IPIndex InstructionToExecute = OpCodes->Size();
-            Value NewTerm = p_GetExecutableTerm(CurrentState,CurrentState.GetCurrentScope() ,p_ReadTerm(CurrentState,URI,Table,Reader,ReaderValue));
+            Value NewTerm = p_GetExecutableTerm(CurrentState,CurrentState.GetCurrentScope() ,p_ReadTerm(CurrentState,URI,TableRef,Reader,ReaderValue));
             p_SkipWhiteSpace(Reader);
             if(NewTerm.IsType<List>())
             {
@@ -2493,7 +2536,6 @@ namespace MBLisp
         auto& Stdin  = StdinValue.GetType<MBUtility::StreamReader>();
         auto ReplScope = CreateDefaultScope();
         Value TableValue = ReplScope->FindVariable(p_GetSymbolID("*READTABLE*"));
-        ReadTable const& Table = TableValue.GetType<ReadTable>();
         m_GlobalScope->SetVariable(p_GetSymbolID("is-repl"),true);
         ReplScope->SetVariable( p_GetSymbolID("load-filepath"),MBUnicode::PathToUTF8(std::filesystem::current_path()));
         SymbolID URI = p_PathURI(*this,std::filesystem::current_path());
@@ -2501,12 +2543,14 @@ namespace MBLisp
         ExecutionState CurrentState;
         CurrentState.StackFrames.push_back(StackFrame());
         CurrentState.StackFrames.back().StackScope = ReplScope;
+        Ref<ReadTable> TableRef  = CurrentState.GetCurrentScope().FindVariable(p_GetSymbolID("*READTABLE*")).GetRef<ReadTable>();
         while(true)
         {
+            size_t InitialStackSize = CurrentState.StackSize();
             try
             {
                 IPIndex InstructionToExecute = OpCodes->Size();
-                Value NewTerm = p_GetExecutableTerm(CurrentState,CurrentState.GetCurrentScope() ,p_ReadTerm(CurrentState,URI,Table,Stdin,StdinValue));
+                Value NewTerm = p_GetExecutableTerm(CurrentState,CurrentState.GetCurrentScope() ,p_ReadTerm(CurrentState,URI,TableRef,Stdin,StdinValue));
                 OpCodes->Append(NewTerm);
                 Print(*this,p_Eval(CurrentState,OpCodes,InstructionToExecute));
                 std::cout<<std::endl;
@@ -2516,16 +2560,19 @@ namespace MBLisp
                 std::cout<<"Uncaught signal: ";
                 Print(*this,e.ThrownValue);
                 std::cout<<std::endl;
+                Unwind(CurrentState,InitialStackSize);
             }
             catch(InvalidCharacter const& e)
             {
                 std::cout<<e.what();
                 std::cout<<std::endl;
                 Stdin.ReadByte();
+                Unwind(CurrentState,InitialStackSize);
             }
             catch(std::exception const& e)
             {
                 std::cout<<"Uncaught signal: "<<e.what()<<std::endl;
+                Unwind(CurrentState,InitialStackSize);
             }
         }
     }

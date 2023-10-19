@@ -87,7 +87,8 @@ namespace MBLisp
         ThreadID GetNextID();
         ThreadID CurrentID();
 
-
+        std::vector<ThreadID> ActiveThreads();
+        
         void Pause(ThreadID ID);
         void Resume(ThreadID ID);
         void Sleep(ThreadID ID,float Duration);
