@@ -1716,8 +1716,8 @@ namespace MBLisp
         List NewList;
         NewList.SetLocation(ListToExpand.GetLocation());
         NewList.SetDepth(ListToExpand.GetDepth());
-        NewList.push_back(ListToExpand[0]);
-        for(int i = 1; i < ListToExpand.size();i++)
+        //NewList.push_back(ListToExpand[0]);
+        for(int i = 0; i < ListToExpand.size();i++)
         {
             if(ListToExpand[i].IsType<List>())
             {
