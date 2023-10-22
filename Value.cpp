@@ -85,6 +85,15 @@ namespace MBLisp
     {
         m_Variables[Variable] = std::move(NewValue);
     }
+    std::vector<SymbolID> Scope::Vars() const
+    {
+        std::vector<SymbolID> ReturnValue;
+        for(auto const& Element : m_Variables)
+        {
+            ReturnValue.push_back(Element.first);   
+        }
+        return ReturnValue;
+    }
     //END Scope
     ClassID ClassIdentificator::m_CurrentID = 1<<ExternalClassBit;
 

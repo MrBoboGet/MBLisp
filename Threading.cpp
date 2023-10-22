@@ -127,7 +127,7 @@ namespace MBLisp
     {
         return m_ThreadCount.load() > 0; 
     }
-    void ThreadingState::WaitForTurn(ThreadID ID)
+    void ThreadingState::WaitForTurn(ThreadID ID,ExecutionState* State)
     {
         std::shared_ptr<ThreadSchedulingInfo> ThreadInfo;
         m_ThreadInfoMutex.lock();
@@ -159,6 +159,7 @@ namespace MBLisp
 #endif
             assert(ThreadInfo->SleepDuration <= 0);
             m_ThreadInfoMutex.unlock();
+            ThreadInfo->ExecutionState = State;
             while(!ThreadInfo->WakedUp)
             {
                 ThreadInfo->WaitConditional.wait(Lock);
@@ -281,6 +282,17 @@ namespace MBLisp
             ReturnValue.push_back(Thread.first);   
         }
         return ReturnValue;
+    }
+    ExecutionState* ThreadingState::GetState(ThreadID ID)
+    {
+        std::lock_guard<std::mutex> InternalLock(m_ThreadInfoMutex);
+        auto ThreadIt = m_ActiveThreads.find(ID);
+        if(ThreadIt == m_ActiveThreads.end())
+        {
+            throw std::runtime_error("Invalid thread ID when calling GetState");
+        }
+        assert(ThreadIt->second->ExecutionState  != nullptr);
+        return ThreadIt->second->ExecutionState;
     }
     void ThreadingState::Sleep(ThreadID ID,float Duration)
     {

@@ -1,11 +1,8 @@
 (import lsp-internal lsp)
 (import lsp.types)
 (set handler (lsp:create-lsp-server))
-(defun insert-elements (out-list in-list)
-  (doit e in-list
-    (append out-list e)
-  )
-)
+
+
 (defun if-token-extractor (envir ast)
    (set return-value (list)) 
    (doit e ast
@@ -305,6 +302,7 @@
 (defun open-handler (handler uri content)
   (set new-envir (new-environment))
   (set (index new-envir 'load-filepath) uri)
+  (set load-filepath uri)
   (set file-stream (in-stream content))
   (set input-stream-symbol (gensym))
   (set (index new-envir input-stream-symbol) file-stream)

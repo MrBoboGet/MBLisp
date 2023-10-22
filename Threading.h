@@ -45,6 +45,8 @@ namespace MBLisp
             return Value();
         }
     };
+
+    struct ExecutionState;
     class ThreadingState
     {
         struct ThreadSchedulingInfo
@@ -56,6 +58,7 @@ namespace MBLisp
             bool WakedUp = false;
             std::mutex WaitMutex;
             std::condition_variable WaitConditional;
+            ExecutionState* ExecutionState = nullptr;
         };
         static constexpr float m_SwapTime = 0.005f;
 
@@ -80,7 +83,7 @@ namespace MBLisp
         ThreadingState& operator=(ThreadingState const&) = delete;
 
         bool MultipleThreadsActive();
-        void WaitForTurn(ThreadID ID);
+        void WaitForTurn(ThreadID ID,ExecutionState* State);
 
         void Remove(ThreadID ID);
         ThreadID AddThread(std::function<void()> Func);
@@ -88,6 +91,7 @@ namespace MBLisp
         ThreadID CurrentID();
 
         std::vector<ThreadID> ActiveThreads();
+        ExecutionState* GetState(ThreadID ID);
         
         void Pause(ThreadID ID);
         void Resume(ThreadID ID);

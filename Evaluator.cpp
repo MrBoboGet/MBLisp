@@ -138,6 +138,14 @@ namespace MBLisp
         //Value ReturnValue = List(std::move(Arguments));
         return  ReturnValue;
     }
+    bool Evaluator::InsertElements(List& Lhs,List& Rhs)
+    {
+        for(auto& Val : Rhs)
+        {
+            Lhs.push_back(Val);   
+        }
+        return true;
+    }
     Value Evaluator::CreateDict BUILTIN_ARGLIST
     {
         return Dict();
@@ -189,6 +197,14 @@ namespace MBLisp
             ReturnValue = Arguments[0].GetType<Int>() + Arguments[1].GetType<Int>();
         }
         return  ReturnValue;
+    }
+    Int Evaluator::Plus_Int (Int Lhs,Int Rhs)
+    {
+        return Lhs+Rhs;
+    }
+    String Evaluator::Plus_String (String& Lhs,String& Rhs)
+    {
+        return Lhs+Rhs;
     }
     void Evaluator::Print(Evaluator& AssociatedEvaluator,Value const& ValueToPrint)
     {
@@ -850,6 +866,21 @@ namespace MBLisp
         Arguments[0].GetType<Scope>().Clear();
         return true;
     }
+    List Evaluator::Vars (Scope& Environemnt)
+    {
+        List ReturnValue;
+        for(auto ID : Environemnt.Vars())
+        {
+            ReturnValue.push_back(Symbol(ID));
+        }
+        return ReturnValue;
+    }
+    List Evaluator::AllVars (Scope& Environemnt)
+    {
+        List ReturnValue;
+
+        return ReturnValue;
+    }
     Value Evaluator::AddReaderCharacter BUILTIN_ARGLIST
     {
         if(Arguments.size() != 3)
@@ -942,6 +973,15 @@ namespace MBLisp
             SymbolIt->second = Context.GetSetValue();
         }
         return SymbolIt->second;
+    }
+    List Evaluator::Slots_ClassInstance(ClassInstance& InstanceToInspect)
+    {
+        List ReturnValue;
+        for(auto const& Slot : InstanceToInspect.Slots)
+        {
+            ReturnValue.push_back(Symbol(Slot.first));   
+        }
+        return ReturnValue;
     }
     ///Value Evaluator::p_Eval(std::shared_ptr<Scope> AssociatedScope,FunctionDefinition& FunctionToExecute,std::vector<Value> Arguments)
     ///{
@@ -1196,7 +1236,7 @@ namespace MBLisp
             assert(StackFrames.size() >=  ReturnIndex);
             if(m_ThreadingState.MultipleThreadsActive())
             {
-                m_ThreadingState.WaitForTurn(CurrentState.AssociatedThread);
+                m_ThreadingState.WaitForTurn(CurrentState.AssociatedThread,&CurrentState);
             }
             if(CurrentState.UnwindingStack)
             {
@@ -2031,7 +2071,6 @@ namespace MBLisp
         }
         for(auto const& Pair : std::vector<std::pair<std::string,BuiltinFuncType>>{
                     {"print",Print},
-                    {"+",Plus},
                     {"list",CreateList},
                     {"class",Class},
                     {"addmethod",AddMethod},
@@ -2089,6 +2128,7 @@ namespace MBLisp
         p_RegisterBuiltinClass<Macro>("macro_t");
         p_RegisterBuiltinClass<GenericFunction>("generic_t");
         p_RegisterBuiltinClass<ClassDefinition>("type_t");
+        p_RegisterBuiltinClass<ClassInstance>("object_t");
         p_RegisterBuiltinClass<Any>("any_t");
         p_RegisterBuiltinClass<ThreadHandle>("thread_t");
         
@@ -2158,6 +2198,12 @@ namespace MBLisp
         AddMethod<Int,Int>("<",Less_Int);
         AddMethod<String,String>("<",Less_String);
         AddMethod<Symbol,Symbol>("<",Less_Symbol);
+
+        AddGeneric<&Plus_Int>("plus");
+        AddGeneric<&Plus_String>("plus");
+        AddGeneric<&InsertElements>("insert-elements");
+        
+
         //Threading
         AddMemberMethod<Lock,&Lock::Get>("get");
         AddMemberMethod<Lock,&Lock::Notify>("notify");
@@ -2310,6 +2356,11 @@ namespace MBLisp
         Context.GetEvaluator().m_ThreadingState.Sleep(Arguments[0].GetType<ThreadHandle>().ID,Arguments[1].GetType<Int>());
         return Value();
     }
+    Value Evaluator::Pause BUILTIN_ARGLIST
+    {
+        Context.GetEvaluator().m_ThreadingState.Pause(Arguments[0].GetType<ThreadHandle>().ID);
+        return Value();
+    }
     Value Evaluator::ActiveThreads BUILTIN_ARGLIST
     {
         List ReturnValue;
@@ -2318,6 +2369,30 @@ namespace MBLisp
             ReturnValue.push_back(Int(ID));
         }
         return ReturnValue;
+    }
+    Value Evaluator::GetStackFrames BUILTIN_ARGLIST
+    {
+        List ReturnValue;
+        ExecutionState* StateToInspect = nullptr;
+        if(Context.GetEvaluator().m_ThreadingState.CurrentID() == Arguments[0].GetType<ThreadHandle>().ID)
+        {
+            StateToInspect = &Context.GetState();
+        }
+        else
+        {
+            StateToInspect = Context.GetEvaluator().m_ThreadingState.GetState(Arguments[0].GetType<ThreadHandle>().ID);
+        }
+        for(auto const& StackFrame : StateToInspect->StackFrames)
+        {
+            LispStackFrame NewFrame;
+            NewFrame.StackScope = StackFrame.StackScope;
+            ReturnValue.push_back(Value::EmplaceExternal<LispStackFrame>(std::move(NewFrame)));
+        }
+        return ReturnValue;
+    }
+    Ref<Scope> Evaluator::GetScope(LispStackFrame& StackeFrame)
+    {
+        return StackeFrame.StackScope;
     }
 
     Value Evaluator::GetInternalModule BUILTIN_ARGLIST
@@ -2509,6 +2584,11 @@ namespace MBLisp
                 CurrentState.StackFrames.push_back(StackFrame());
                 CurrentState.StackFrames.back().StackScope = m_GlobalScope;
                 p_LoadFile(CurrentState,StdFile);
+            }
+            catch (MBLisp::UncaughtSignal& e)
+            {
+                std::cout<<"Uncaught signal:";
+                Eval(e.AssociatedScope, e.AssociatedScope->FindVariable(GetSymbolID("print")), {e.ThrownValue});
             }
             catch(std::exception const& e)
             {

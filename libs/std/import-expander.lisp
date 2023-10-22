@@ -1,7 +1,7 @@
 (import lsp.types types)
 (defun expand-sym-string (symbol-to-expand)
    (set current-pos (position symbol-to-expand))
-   (set symbol-parts (map _(symbol (symbol _) (++ current-pos (+ (len _) 1))) (split (str symbol-to-expand) ":")))
+   (set symbol-parts (map _(symbol (symbol _) (++ current-pos (plus (len _) 1))) (split (str symbol-to-expand) ":")))
    (if (eq (len symbol-parts) 1)
      (return symbol-to-expand)
    )

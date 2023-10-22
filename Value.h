@@ -1128,10 +1128,14 @@ public:
         void SetParentScope(Ref<Scope> ParentScope);
         void AddParentScope(Ref<Scope> ParentScope);
         void SetShadowingParent(Ref<Scope> ParentScope);
-        Value FindVariable(SymbolID Variable);
+
+        //setters
         void SetVariable(SymbolID Variable,Value NewValue);
         void OverrideVariable(SymbolID Variable,Value NewValue);
+        //getters
+        Value FindVariable(SymbolID Variable);
         Value* TryGet(SymbolID Variable);
+
         void Clear();
         size_t VarCount() const
         {
@@ -1141,7 +1145,7 @@ public:
         {
             return m_StackFrameInfo;   
         }
-
+        std::vector<SymbolID> Vars() const;
         auto begin()
         {
             return m_Variables.begin();

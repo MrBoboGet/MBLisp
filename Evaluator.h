@@ -180,7 +180,10 @@ namespace MBLisp
         static Value Less BUILTIN_ARGLIST;
         static Value Sort BUILTIN_ARGLIST;
         static Value Plus  BUILTIN_ARGLIST;
+        static Int Plus_Int (Int Lhs,Int Rhs);
+        static String Plus_String (String& Lhs,String& Rhs);
         static Value CreateList BUILTIN_ARGLIST;
+        static bool InsertElements(List& Lhs,List& Rhs);
         static Value CreateDict BUILTIN_ARGLIST;
 
 
@@ -203,6 +206,9 @@ namespace MBLisp
         static Value Flatten_1 BUILTIN_ARGLIST;
         //class instance
         static Value Index_ClassInstance BUILTIN_ARGLIST;
+        static List Slots_ClassInstance(ClassInstance& InstanceToInspect);
+
+
         static Value Expand BUILTIN_ARGLIST;
 
         //Streams
@@ -266,6 +272,8 @@ namespace MBLisp
         static Value SetParent_Environment BUILTIN_ARGLIST;
         static Value AddParent_Environment BUILTIN_ARGLIST;
         static Value Clear_Environment BUILTIN_ARGLIST;
+        static List Vars (Scope& Environemnt);
+        static List AllVars (Scope& Environemnt);
        
         //Readtable
         static Value AddReaderCharacter BUILTIN_ARGLIST;
@@ -317,10 +325,18 @@ namespace MBLisp
         //Threading
         ThreadingState m_ThreadingState;
 
+        struct LispStackFrame
+        {
+            Ref<Scope> StackScope;
+            Symbol Position;
+        };
         static Value Thread BUILTIN_ARGLIST;
         static Value This_Thread BUILTIN_ARGLIST;
         static Value Sleep BUILTIN_ARGLIST;
+        static Value Pause BUILTIN_ARGLIST;
         static Value ActiveThreads BUILTIN_ARGLIST;
+        static Value GetStackFrames BUILTIN_ARGLIST;
+        static Ref<Scope> GetScope(LispStackFrame& StackeFrame);
 
 
         //Debugging
@@ -384,13 +400,14 @@ namespace MBLisp
         template<typename T>
         void p_AddType(std::vector<ClassID>& Types)
         {
-            if constexpr(std::is_same_v<T,Any>)
+            typedef typename std::remove_cv<typename std::remove_reference<T>::type>::type Type;
+            if constexpr(std::is_same_v<Type,Any>)
             {
                 Types.push_back(0);
             }
             else
             {
-                Types.push_back(Value::GetTypeTypeID<T>());
+                Types.push_back(Value::GetTypeTypeID<Type>());
             }
         }
         template<typename T,typename... Extra>
