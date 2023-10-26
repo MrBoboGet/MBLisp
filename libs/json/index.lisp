@@ -75,7 +75,7 @@
     (error (+ "object must begin with a " begin))
   )
   (read-byte stream)
-  (read-comma-delimited-body (end read-element-func stream))
+  (read-comma-delimited-body end read-element-func stream)
   (if (eof stream)
     (error "eof while reading json object")
   )
@@ -100,9 +100,9 @@
 )
 
 (defun read-json-list (stream)
-  (set return-value (list))
-  (read-comma-delimited-object "[" "]" (lambda (stream) (append return-value (read-json stream))) stream)
-  return-value
+  (set b (list))
+  (read-comma-delimited-object "[" "]" _(append b (read-json _)) stream)
+  b
 )
 
 

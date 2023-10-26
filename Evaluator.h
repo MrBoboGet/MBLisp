@@ -302,6 +302,8 @@ namespace MBLisp
         static Value OutStream_String BUILTIN_ARGLIST;
         static Value InStream_String BUILTIN_ARGLIST;
         static Value Open_URI BUILTIN_ARGLIST;
+        static bool Flush(MBUtility::MBOctetOutputStream& OutStream);
+        static bool Close(MBUtility::MBFileOutputStream& OutStream);
 
 
         //special stuff

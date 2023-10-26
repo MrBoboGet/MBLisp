@@ -2,6 +2,7 @@
 #include "Evaluator.h"
 #include <MBUtility/StreamReader.h>
 #include "MBLSP/LSP_Structs.h"
+#include "MBUtility/MBInterfaces.h"
 #include "assert.h"
 #include <MBParsing/MBParsing.h>
 
@@ -473,6 +474,7 @@ namespace MBLisp
             Context.PauseThread();
         }
         Value ReturnValue;
+
         std::string NumberString = Arguments[0].GetType<MBUtility::StreamReader>().ReadWhile([]
                 (char NextChar)
                 {
@@ -488,18 +490,14 @@ namespace MBLisp
             Lock = Arguments[0].GetLock();   
             Context.PauseThread();
         }
-        int BytesToRead = Arguments[1].GetType<Int>();
+        Int BytesToRead = Arguments[1].GetType<Int>();
         if(BytesToRead < 0)
         {
             throw std::runtime_error("Can only read a positive amount of bytes");   
         }
-        int ReadBytes = 0;
-        std::string ReturnValue = Arguments[0].GetType<MBUtility::StreamReader>().ReadWhile([&](char NextByte)
-                {
-                    bool ReturnValue = ReadBytes < BytesToRead;
-                    ReadBytes += 1;
-                    return ReturnValue;
-                });
+        String ReturnValue(BytesToRead,0);
+        size_t ReadBytes = Arguments[0].GetType<MBUtility::StreamReader>().Read(ReturnValue.data(),BytesToRead);
+        ReturnValue.resize(BytesToRead);
         return ReturnValue;
     }
     Value Evaluator::Stream_ReadLine BUILTIN_ARGLIST
@@ -640,10 +638,10 @@ namespace MBLisp
     Value Evaluator::Append_List BUILTIN_ARGLIST
     {
         assert(!Arguments[0].IsType<List>() || Arguments[0].GetRef<List>() != nullptr);
-        Ref<List> AssociatdList = Arguments[0].GetRef<List>();
+        List& AssociatdList = Arguments[0].GetType<List>();
         for(int i = 1; i < Arguments.size();i++)
         {
-            AssociatdList->push_back(Arguments[i]);
+            AssociatdList.push_back(Arguments[i]);
             assert(!Arguments[i].IsType<List>() || Arguments[i].GetRef<List>() != nullptr);
         }
         return AssociatdList;
@@ -1213,7 +1211,8 @@ namespace MBLisp
         }
         else
         {
-            throw std::runtime_error("Cannot invoke object");   
+            //throw std::runtime_error("Cannot invoke object");   
+            p_EmitSignal(CurrentState,"Cannot invoke object",true);
         }
         //after function invoked, trap it
         if(m_DebugState.DebuggingActive() && m_DebugState.TrappingNewFunctions() && !IsTrapHandler && !p_InTrapHandler(CurrentState))
@@ -1363,7 +1362,9 @@ namespace MBLisp
                 Value LiteralToPush = PushCode.Literal;
                 if(LiteralToPush.IsType<Lambda>())
                 {
-                    LiteralToPush.GetType<Lambda>().AssociatedScope = CurrentFrame.StackScope;
+                    Ref<Lambda> NewLambda = MakeRef<Lambda>(LiteralToPush.GetType<Lambda>());
+                    NewLambda->AssociatedScope = CurrentFrame.StackScope;
+                    LiteralToPush = Value(NewLambda);
                     CurrentFrame.ScopeRetrieved = true;
                 }
                 else if(LiteralToPush.IsType<String>())
@@ -1815,6 +1816,47 @@ namespace MBLisp
         }
         return EscapeCount;
     }
+    String h_UnescapeString(String const& StringToEscape)
+    {
+        String ReturnValue;
+        size_t ParseOffset = 0;
+        while(ParseOffset < StringToEscape.size())
+        {
+            size_t NextSlash = StringToEscape.find('\\',ParseOffset);
+            if(NextSlash == StringToEscape.npos)
+            {
+                break;   
+            }
+            //assert(NextSlash != StringToEscape.size()-1);
+            if(NextSlash == StringToEscape.size() -1)
+            {
+                break;   
+            }
+            ReturnValue.insert(ReturnValue.end(),StringToEscape.begin()+ParseOffset,StringToEscape.begin()+NextSlash);
+            if(StringToEscape[NextSlash+1] == 'n')
+            {
+                ReturnValue += '\n';   
+            }
+            else if(StringToEscape[NextSlash+1] == 'r')
+            {
+                ReturnValue += '\r';   
+            }
+            else if(StringToEscape[NextSlash+1] == 't')
+            {
+                ReturnValue += '\t';   
+            }
+            else
+            {
+                ReturnValue += StringToEscape[NextSlash+1];   
+            }
+            ParseOffset = NextSlash+2;
+        }
+        if(ParseOffset < StringToEscape.size())
+        {
+            ReturnValue.insert(ReturnValue.end(),StringToEscape.begin()+ParseOffset,StringToEscape.end());   
+        }
+        return  ReturnValue;
+    }
     String Evaluator::p_ReadString(MBUtility::StreamReader& Content)
     {
         String ReturnValue;
@@ -1850,7 +1892,7 @@ namespace MBLisp
                 break;
             }
         }
-        return ReturnValue;
+        return h_UnescapeString(ReturnValue);
     }
     Value Evaluator::p_ReadSymbol(ExecutionState&  CurrentState,SymbolID URI,Ref<ReadTable>& Table,MBUtility::StreamReader& Content)
     {
@@ -2146,6 +2188,7 @@ namespace MBLisp
         AddMethod<Scope,Scope>("set-parent",SetParent_Environment);
         AddMethod<Scope,Scope>("add-parent",AddParent_Environment);
         AddMethod<Scope,Symbol>("shadow",Shadow_Environment);
+        AddGeneric<Vars>("vars");
         //comparisons
         AddMethod<String,String>("eq",Eq_String);
         AddMethod<Symbol,Symbol>("eq",Eq_Symbol);
@@ -2166,7 +2209,9 @@ namespace MBLisp
         AddMethod<MBUtility::StreamReader>("read-number",Stream_ReadNumber);
         AddMethod<MBUtility::StreamReader>("read-line",Stream_ReadLine);
         AddMethod<MBUtility::StreamReader,String>("read-until",Stream_ReadUntil);
-        AddMethod<std::unique_ptr<MBUtility::MBOctetOutputStream>,String>("write",Write_OutStream);
+        AddMethod<MBUtility::MBOctetOutputStream,String>("write",Write_OutStream);
+        AddGeneric<Flush>("flush");
+
         AddMethod<String>("out-stream",OutStream_String);
         AddMethod<String>("in-stream",InStream_String);
         AddMethod<String>("open",Open_URI);
@@ -2245,8 +2290,7 @@ namespace MBLisp
 
 
         m_GlobalScope->SetVariable(p_GetSymbolID("*standard-input*"),Value::MakeExternal(MBUtility::StreamReader(std::make_unique<MBLSP::TerminalInput>())));
-        m_GlobalScope->SetVariable(p_GetSymbolID("*standard-output*"),Value::MakeExternal(
-                    std::unique_ptr<MBUtility::MBOctetOutputStream>( new MBUtility::TerminalOutput())));
+        m_GlobalScope->SetVariable(p_GetSymbolID("*standard-output*"),Value::EmplacePolymorphic<MBUtility::TerminalOutput,MBUtility::MBOctetOutputStream>());
         m_GlobalScope->SetVariable(p_GetSymbolID("is-repl"),false);
 
 
@@ -2266,10 +2310,20 @@ namespace MBLisp
     Value Evaluator::Write_OutStream BUILTIN_ARGLIST
     {
         Value ReturnValue;
-        std::unique_ptr<MBUtility::MBOctetOutputStream>& OutStream = Arguments[0].GetType<std::unique_ptr<MBUtility::MBOctetOutputStream>>();
+        MBUtility::MBOctetOutputStream& OutStream = Arguments[0].GetType<MBUtility::MBOctetOutputStream>();
         String& StringToWrite = Arguments[1].GetType<String>();
-        OutStream->Write(StringToWrite.data(),StringToWrite.size());
+        OutStream.Write(StringToWrite.data(),StringToWrite.size());
         return ReturnValue;
+    }
+    bool Evaluator::Flush(MBUtility::MBOctetOutputStream& OutStream)
+    {
+        OutStream.Flush();
+        return false;
+    }
+    bool Evaluator::Close(MBUtility::MBFileOutputStream& OutStream)
+    {
+        //TODO implement
+        return false;
     }
     struct i_ValueStringStream : public MBUtility::MBOctetOutputStream
     {
@@ -2286,7 +2340,7 @@ namespace MBLisp
     };
     Value Evaluator::OutStream_String BUILTIN_ARGLIST
     {
-        return Value::MakeExternal(std::unique_ptr<MBUtility::MBOctetOutputStream>(new i_ValueStringStream(Arguments[0])));
+        return Value::EmplacePolymorphic<i_ValueStringStream,MBUtility::MBOctetOutputStream>(Arguments[0]);
     }
 
     Value Evaluator::InStream_String BUILTIN_ARGLIST
@@ -2310,7 +2364,8 @@ namespace MBLisp
             }
             else if(AccessString.find('w') != AccessString.npos)
             {
-                return Value::MakeExternal(std::unique_ptr<MBUtility::MBOctetOutputStream>(new MBUtility::MBFileOutputStream(URIToOpen)));
+                return Value::EmplacePolymorphic<MBUtility::MBFileOutputStream,MBUtility::MBOctetOutputStream,MBUtility::MBSearchableOutputStream>(
+                        URIToOpen);
             }
             else
             {

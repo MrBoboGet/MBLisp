@@ -2,6 +2,7 @@
 #include <cstdint>
 #include <stdexcept>
 #include <type_traits>
+#include <typeinfo>
 #include <vector>
 #include <string>
 #include <variant>
@@ -15,6 +16,7 @@
 
 #include <mutex>
 
+#include <algorithm>
 namespace MBLisp
 {
     typedef int_least64_t Int;
@@ -338,6 +340,7 @@ public:
         //}
     };
 
+
     
     enum class ValueType
     {
@@ -481,6 +484,71 @@ public:
         static ClassID ID = ++ClassIdentificator::m_CurrentID;
         return ID;
     }
+
+    template<typename... Types>
+    class TypeList { };
+    class PolymorphicContainer
+    {
+        friend class GenericFunction;
+        void* m_Data = nullptr;
+        std::vector<std::pair<ClassID,void*>> m_Types;
+
+        std::function<void(void*)> m_Deleter;
+
+        template<typename T,typename P>
+        void p_AddTypes(T* DataPointer)
+        {
+            m_Types.push_back(std::pair<ClassID,void*>(GetClassID<P>(),static_cast<P*>(DataPointer)));
+        }
+        template<typename T,typename P1,typename P2,typename... P3>
+        void p_AddTypes(T* DataPointer)
+        {
+            p_AddTypes<T,P1>(DataPointer);
+            p_AddTypes<T,P2>(DataPointer);
+            if constexpr( sizeof...(P3) > 0)
+            {
+                p_AddTypes<T,P3...>(DataPointer);
+            }
+        }
+    public:
+
+        PolymorphicContainer() = delete;
+        PolymorphicContainer& operator=(PolymorphicContainer const&) = delete;
+        PolymorphicContainer(PolymorphicContainer&&) = delete;
+        PolymorphicContainer(PolymorphicContainer const&) = delete;
+        ~PolymorphicContainer()
+        {
+            m_Deleter(m_Data);   
+        }
+
+        template<typename T,typename...  PolyTypes,typename... ArgTypes>
+        //Kinda hacky...
+        PolymorphicContainer(TypeList<T> Type,TypeList<PolyTypes...> Poly,ArgTypes&&... Args)
+        {
+            T* NewData = new T(std::forward<ArgTypes>(Args)...);
+            p_AddTypes<T,PolyTypes...>(NewData);
+            std::sort(m_Types.begin(),m_Types.end(), [](std::pair<ClassID,void*> const& lhs,std::pair<ClassID,void*> const& rhs)
+                    {
+                        return lhs.first < rhs.first;
+                    } );
+            m_Deleter = [](void* ptr){delete reinterpret_cast<T*>(ptr);};
+        }
+        template<typename T>
+        T const& GetType() const
+        {
+            ClassID ID = GetClassID<T>();
+            auto It = std::lower_bound(m_Types.begin(),m_Types.end(),ID,[](std::pair<ClassID,void*> const& lhs,ClassID rhs)
+                    {
+                        return lhs.first < rhs;
+                    });
+            if(It != m_Types.end() && It->first == ID)
+            {
+                return *reinterpret_cast<T const*>(It->second);
+            }
+            throw std::runtime_error("Error acessing type in PolymorphicContainer: object of type " + std::string(typeid(T).name()) + " not stored");
+        }
+    };
+
 
 
     class DynamicVariable;
@@ -804,7 +872,7 @@ public:
         template<typename T>
         T const& p_GetType() const
         {
-            if(m_Data.GetTypeID() != GetTypeTypeID<T>())
+            if(m_Data.GetTypeID() != GetTypeTypeID<T>() && !IsType<PolymorphicContainer>())
             {
                throw std::runtime_error("Invalid type dereference: type of \""+ std::string(typeid(T).name())+ "\" not stored");
             }
@@ -814,7 +882,19 @@ public:
             }
             else
             {
-                return m_Data.GetType<RefBase>().GetType<T>();
+                RefBase const& StoredRef = m_Data.GetType<RefBase>();
+                if constexpr(!std::is_same_v<T,PolymorphicContainer>)
+                {
+                    if(StoredRef.GetTypeID() == GetClassID<PolymorphicContainer>())
+                    {
+                        return StoredRef.GetType<PolymorphicContainer>().GetType<T>();
+                    }
+                }
+                if constexpr(!std::is_abstract<T>::value)
+                {
+                    return StoredRef.GetType<T>();
+                }
+                throw std::runtime_error("Invalid type dereference: type of \""+ std::string(typeid(T).name())+ "\" not stored");
             }
         }
 
@@ -976,6 +1056,13 @@ public:
         {
             Value ReturnValue;
             ReturnValue.m_Data = ValueVariant(MakeRef<T>(std::forward<ArgTypes>(Args)...));
+            return ReturnValue;
+        }
+        template<typename T,typename... PolyTypes,typename... ArgTypes>
+        static Value EmplacePolymorphic(ArgTypes&&... Args)
+        {
+            Value ReturnValue;
+            ReturnValue.m_Data = ValueVariant(MakeRef<PolymorphicContainer>(TypeList<T>(),TypeList<PolyTypes...>(),std::forward<ArgTypes>(Args)...));
             return ReturnValue;
         }
         template<typename T>

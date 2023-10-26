@@ -270,12 +270,12 @@ namespace MBLisp
         Handler.m_This  = Arguments[0];
 
         MBUtility::StreamReader& Input = Context.GetState().GetCurrentScope().FindVariable(Context.GetEvaluator().GetSymbolID("*standard-input*")).GetType<MBUtility::StreamReader>();
-        std::unique_ptr<MBUtility::MBOctetOutputStream>& Output = Context.GetState().GetCurrentScope().FindVariable(Context.GetEvaluator().GetSymbolID("*standard-output*")).
-            GetType<std::unique_ptr<MBUtility::MBOctetOutputStream>>();
+        MBUtility::MBOctetOutputStream& Output = Context.GetState().GetCurrentScope().FindVariable(Context.GetEvaluator().GetSymbolID("*standard-output*")).
+            GetType<MBUtility::MBOctetOutputStream>();
 
         MBLSP::LSP_ServerHandler Server  = MBLSP::LSP_ServerHandler(
                 std::make_unique<MBUtility::NonOwningIndeterminateInputStream>(&Input),
-                std::make_unique<MBUtility::NonOwningOutputStream>(Output.get()),
+                std::make_unique<MBUtility::NonOwningOutputStream>(&Output),
                 std::make_unique<LSPServerAdapter>(&Handler)
                 );
         Server.Run();

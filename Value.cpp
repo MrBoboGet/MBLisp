@@ -141,6 +141,15 @@ namespace MBLisp
                 return false;
             }
         }
+        else if(Arg.IsType<PolymorphicContainer>())
+        {
+            auto const& Types = Arg.GetType<PolymorphicContainer>().m_Types;
+            if(auto It = std::lower_bound(Types.begin(),Types.end(),Override, [](auto lhs,ClassID rhs){return lhs.first < rhs;});
+                    !(It != Types.end() && It->first == Override))
+            {
+                return false;
+            }
+        }
         else
         {
             return Override == Arg.GetTypeID();
