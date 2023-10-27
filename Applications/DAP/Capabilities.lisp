@@ -5,6 +5,7 @@
 
 (set capabilites 
 {
-  supportsEvaluateForHovers: true
+  supportsEvaluateForHovers: true,
+  supportsConfigurationDoneRequest: true
 }
 )

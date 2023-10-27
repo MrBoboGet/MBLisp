@@ -353,7 +353,7 @@ public:
 
     struct Symbol
     {
-        SymbolID ID;
+        SymbolID ID = -1;
         Location SymbolLocation;
 
         Symbol() = default;

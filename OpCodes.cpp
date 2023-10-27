@@ -548,13 +548,16 @@ namespace MBLisp
         int Offset = m_DebugInfo.size();
         m_DebugInfo.insert(m_DebugInfo.end(),m_OpCodes.size()-m_DebugInfo.size(),DebugInfo());
         int CurrentDepth = -1; 
+        Location CurrentLocation;
         for(size_t i = Offset; i < m_DebugInfo.size();i++)
         {
             if(auto It = m_OpcodeLocationInfo.find(i); It != m_OpcodeLocationInfo.end())
             {
                 CurrentDepth = It->second.Depth;   
+                CurrentLocation = It->second.Loc;
             }
             m_DebugInfo[i].Depth = CurrentDepth;   
+            m_DebugInfo[i].Loc = CurrentLocation;
         }
         assert(m_DebugInfo.size() == m_OpCodes.size());
     }
@@ -570,7 +573,7 @@ namespace MBLisp
     {
         m_IP = NewIP;
     }
-    IPIndex OpCodeExtractor::GetIP()
+    IPIndex OpCodeExtractor::GetIP() const
     {
         return m_IP;
     }
@@ -622,12 +625,24 @@ namespace MBLisp
         }
         return m_AssociatedList->m_DebugInfo[Position].Trapped;
     }
-    int OpCodeExtractor::GetDepth(IPIndex Position)
+    int OpCodeExtractor::GetDepth(IPIndex Position) const
     {
         if(Position >= m_AssociatedList->m_DebugInfo.size())
         {
             throw std::runtime_error("Trying to query trapped out of bounds");   
         }
         return m_AssociatedList->m_DebugInfo[Position].Depth;
+    }
+    Location OpCodeExtractor::GetLocation(IPIndex Position)  const
+    {
+        if(Position >= m_AssociatedList->m_DebugInfo.size())
+        {
+            throw std::runtime_error("Trying to query trapped out of bounds");   
+        }
+        return m_AssociatedList->m_DebugInfo[Position].Loc;
+    }
+    Symbol OpCodeExtractor::GetName() const
+    {
+        return m_AssociatedList->m_Name;
     }
 }

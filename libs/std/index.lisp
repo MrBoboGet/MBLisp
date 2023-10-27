@@ -79,7 +79,7 @@
     )
     (incr i 1)
   )
-  `(addmethod ,methodname (list ,@type-overrides) (lambda (,@argument-symbols) ,@body))
+  `(addmethod ,methodname (list ,@type-overrides) (set-name (lambda (,@argument-symbols) ,@body) (quote ,methodname)))
 )
 (defmacro defclass (classname parents &rest slots)
     (set filtered-slots (list)) 

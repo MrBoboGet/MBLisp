@@ -127,16 +127,45 @@ namespace MBLisp
     {
         return m_ThreadCount.load() > 0; 
     }
+    //TODO  refactor, mega hacky
     void ThreadingState::WaitForTurn(ThreadID ID,ExecutionState* State)
     {
         std::shared_ptr<ThreadSchedulingInfo> ThreadInfo;
         m_ThreadInfoMutex.lock();
+        for(auto& RemovedThread : m_RemovedThreads)
+        {
+            if(RemovedThread.first == ID)
+            {
+                //Current thread was removed, skip everyting
+                throw std::runtime_error("Thread removed");   
+            }
+            m_ThreadCount.fetch_sub(1);
+            if(RemovedThread.second->Paused)
+            {
+                RemovedThread.second->WaitConditional.notify_one();
+            }
+            if(RemovedThread.second->SystemThread != nullptr)
+            {
+                RemovedThread.second->SystemThread->join();
+            }
+        }
+        if(m_RemovedThreads.size() > 0)
+        {
+            m_ThreadCount.fetch_sub(m_RemovedThreads.size());
+            m_RemovedThreads.clear();
+        }
         bool Unlocked = false;
         auto ThreadIt = m_ActiveThreads.find(ID);
         if(ThreadIt == m_ActiveThreads.end())
         {
             m_ThreadInfoMutex.unlock();
             throw std::runtime_error("Invalid thread ID when calling WaitForTurn");   
+        }
+        if(m_ActiveThreads.size() == 1)
+        {
+            m_CurrentThread = ID;
+            m_ThreadInfoMutex.unlock();
+            return;
         }
         ThreadInfo = ThreadIt->second;
         p_ScheduleNext();
@@ -226,11 +255,7 @@ namespace MBLisp
             }
             InfoToRemove = std::move(ThreadIt->second);
             m_ActiveThreads.erase(ThreadIt);
-        }
-        m_ThreadCount.fetch_sub(1);
-        if(InfoToRemove->Paused)
-        {
-            InfoToRemove->WaitConditional.notify_one();
+            m_RemovedThreads[ID] = std::move(InfoToRemove);
         }
     }
     ThreadID ThreadingState::AddThread(std::function<void()> Func)
@@ -303,7 +328,14 @@ namespace MBLisp
             throw std::runtime_error("Invalid thread ID when calling sleep");
         }
         std::lock_guard<std::mutex> ThreadLock(ThreadIt->second->WaitMutex);
-        ThreadIt->second->SleepDuration = Duration;
+        if(m_ActiveThreads.size() == 1 && ID == m_CurrentThread)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(int(Duration)));
+        }
+        else
+        {
+            ThreadIt->second->SleepDuration = Duration;
+        }
     }
     void ThreadingState::Join(ThreadID ID)
     {

@@ -211,6 +211,7 @@ namespace MBLisp
     class OpCodeList
     {
         friend class OpCodeExtractor;
+        Symbol m_Name;
         std::vector<OpCode> m_OpCodes;
         struct LocationInfo
         {
@@ -232,6 +233,7 @@ namespace MBLisp
         {
             bool Trapped = false;
             int Depth = -1;
+            Location Loc;
         };
         std::vector<DebugInfo> m_DebugInfo;
 
@@ -260,6 +262,10 @@ namespace MBLisp
         OpCodeList(SymbolID ArgID,SymbolID IndexFunc,std::vector<SlotDefinition> const& Initializers);
         void Append(List const& ListToConvert);
         void Append(Value const& ListToConvert);
+        void SetName(Symbol NewName)
+        {
+            m_Name = NewName;   
+        }
         IPIndex Size()
         {
             return m_OpCodes.size();   
@@ -277,7 +283,7 @@ namespace MBLisp
         OpCodeExtractor(Ref<OpCodeList> OpCodes);
         OpCode& GetCurrentCode();
         void SetIP(IPIndex NewIP);
-        IPIndex GetIP();
+        IPIndex GetIP() const;
         void Pop();
         bool Finished() const;
         void SetEnd();
@@ -288,7 +294,9 @@ namespace MBLisp
         void SetDebugID(int ID);
         int GetDebugID();
         bool IsTrapped(IPIndex Position);
-        int GetDepth(IPIndex Position);
+        int GetDepth(IPIndex Position) const;
+        Location GetLocation(IPIndex Position) const;
+        Symbol GetName() const;
     };
 }
 

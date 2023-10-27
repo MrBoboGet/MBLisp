@@ -165,11 +165,29 @@ namespace MBLisp
 
 
 
+    
+
 
     //TODO kinda hacky, should be temporary, but much more convenient when
     //iterating and prototyping
     class Evaluator
     {
+
+        struct StackTrace
+        {
+            struct Frame 
+            {
+                Symbol Name;
+                Location FrameLocation;
+            };
+            std::vector<Frame> Frames;
+            String Message;
+
+            StackTrace(ExecutionState& CurrentState,String const& Message);
+        };
+        String GetString(StackTrace const& Trace);
+
+
         SymbolID m_CurrentSymbolID = 1;
         SymbolID m_PrimitiveSymbolMax = 0;
         
@@ -244,6 +262,7 @@ namespace MBLisp
         static Value Str_Bool BUILTIN_ARGLIST;
         static Value Str_Null BUILTIN_ARGLIST;
         static Value Str_Float BUILTIN_ARGLIST;
+        static Value Str_StackTrace BUILTIN_ARGLIST;
         static Value Symbol_String BUILTIN_ARGLIST;
         static Value Symbol_SymbolInt BUILTIN_ARGLIST;
         static Value GenSym BUILTIN_ARGLIST;
@@ -319,6 +338,7 @@ namespace MBLisp
         static Value Name_Lambda BUILTIN_ARGLIST;
         static Value Name_Generic BUILTIN_ARGLIST;
         static Value Name_ClassDefinition BUILTIN_ARGLIST;
+        static Value Applicable BUILTIN_ARGLIST;
 
 
 
@@ -336,6 +356,8 @@ namespace MBLisp
         static Value This_Thread BUILTIN_ARGLIST;
         static Value Sleep BUILTIN_ARGLIST;
         static Value Pause BUILTIN_ARGLIST;
+        static Value Remove BUILTIN_ARGLIST;
+        static Value Resume BUILTIN_ARGLIST;
         static Value ActiveThreads BUILTIN_ARGLIST;
         static Value GetStackFrames BUILTIN_ARGLIST;
         static Ref<Scope> GetScope(LispStackFrame& StackeFrame);

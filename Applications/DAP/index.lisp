@@ -85,11 +85,12 @@
 (set trap-state (TrapState))
 
 (defun parse-path (path-string)
-    path-string
+    (. path-string "path")
 )
 (defun load-source (path)
     (set return-value (SourceInfo))
     (set (slot return-value file-index) (line-index (open path)))
+    return-value
 )
 (eval-lsp (add-readers *READTABLE*))
 
@@ -114,7 +115,7 @@
 )
 
 (defun trap-handler ()
-    (send-event "stopped" {reason: "breakpoint"})
+    (send-event "stopped" {reason: "breakpoint",threadId:0,allThreadsStopped: true})
     (stopped)
     (pause (. process-state 'id))
 )
@@ -122,9 +123,9 @@
 
 (defun parse-breakpoint (arg)
     (set return-value (SourceBreakpoint))
-    (set (slot return-value line) (+ (. "line" arg) line-offset))
+    (set (slot return-value line) (+ (. arg "line") line-offset))
     (if (in "column" arg)
-        (set (slot return-value column) (+ (. "column" arg) col-offset))
+        (set (slot return-value column) (+ (. arg "column") col-offset))
     )
     (if (in "condition" arg) (set (slot return-value condition) (. arg "condition")))
     (if (in "hitCondition"  arg) (set (slot return-value hitCondition) (. arg "hitCondition")))
@@ -156,14 +157,14 @@
      (doit b (slot (. loaded-sources source-path) breakpoints)
          (remove-trap b)
      )
-     (set (slot (index loaded-sources source-path) breakpoints) (list))
+     (set (slot (. loaded-sources source-path) breakpoints) (list))
    else 
-    (set (index loaded-sources source-path) (load-source source-path))
+    (set (. loaded-sources source-path) (load-source source-path))
   )
   (set source-info (. loaded-sources source-path))
   (set return-breakpoints (list))
   (doit b breakpoints
-    (set lisp-position (symbol 'asd (get-byte-position (slot source-info file-index) b) (path-id source-path)))
+    (set lisp-position (symbol 'asd (get-byte-position (slot source-info file-index) (. b 'line) (.  b 'column) ) (path-id source-path)))
     (set-trap lisp-position)
     (append (slot source-info breakpoints) lisp-position)
     (set return-breakpoint (Breakpoint))
@@ -171,6 +172,12 @@
     (append return-breakpoints return-breakpoint)
   )
   {breakpoints: return-breakpoints}
+)
+(defun handle-setExceptionBreakpoints (arg)
+  {breakpoints: []}
+)
+(defun handle-disconnect (arg)
+  {}
 )
 
 (defun handle-threads (arg)
@@ -261,9 +268,9 @@
 (defun handle-scopes (arg)
  {scopes: (convert-scope (. (. stopped-state 'variables 'value) (. arg "framedId")))}
 )
+(set launch-path "")
 (defun handle-launch (arg)
- (set new-envir (new-environment))
- (set (. process-state 'id) (thread _(eval (load (. arg "path")) new-envir)))
+ (set launch-path (. arg "path"))
  {}
 )
 (defun handle-continue (arg)
@@ -272,8 +279,12 @@
 )
 
 (defun handle-configurationDone (arg)
- (set return-value (make-dict))
- return-value
+    (set new-envir (new-environment))
+    (set (. process-state 'id) (thread _(eval (load launch-path) new-envir)))
+    (write debug-file "launching UwU")
+    (write debug-file  "\n")
+    (flush debug-file)
+    {}
 )
 
 (set client-capabilities (make-dict))
@@ -297,6 +308,8 @@
                         ("next" handle-next)
                         ("initialize" handle-initialize)
                         ("setBreakpoints" handle-setBreakpoints)
+                        ("setExceptionBreakpoints" handle-setExceptionBreakpoints)
+                        ("disconnect" handle-disconnect)
                         ("threads" handle-threads)
                         ("stackTrace" handle-stackTrace)
                         ("variables" handle-variables )
@@ -338,19 +351,32 @@
     )
     catch (any_t e)
     (
+      (set message "internal error")
+      (if (applicable str e)
+        (catch-all (set message (str e)))
+      )
       (set (. return-value "success") false)
-      (set (. return-value "body") {error: (get-error "internal error")})
+      (set (. return-value "body") {error: (get-error message)})
     )
     )
   )
   return-value
 )
 (defun  send-event (name body)
-   (js:send-rpc {seq: (get-seq), type: "event",event: name,body: body})
+   (set message-to-send {seq: (get-seq), type: "event",event: name,body: body})
+   (write debug-file  (js:to-json-string message-to-send))
+   (write debug-file  "\n")
+   (flush debug-file)
+   (js:send-rpc *standard-output* message-to-send)
 )
 
 (set debug-file (open "DAPOutput.txt" "w"))
 
+
+
+(defun stop-debugee ()
+    (remove (. process-state 'id))
+)
 (defun main ()
     (set-trap-handler trap-handler)
     (while true
@@ -371,6 +397,9 @@
             (write debug-file (js:to-json-string message-to-send))
             (write debug-file  "\n")
             (flush debug-file)
+           else if (eq (. next-message "command") "disconnect")
+            (stop-debugee)
+            (break)
           )
         )
     )

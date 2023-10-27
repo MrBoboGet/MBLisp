@@ -8,6 +8,7 @@ namespace MBLisp
     {
         static MBLSP::LineIndex CreateLineIndex(String const& Data);
         static MBLSP::LineIndex CreateLineIndex(MBUtility::StreamReader& Data);
+        static String JSONEscape(String&);
         static Int GetPosition(MBLSP::LineIndex const& Index, Int Line,Int Col);
 
     public:

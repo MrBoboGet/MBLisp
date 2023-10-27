@@ -25,10 +25,49 @@ namespace MBLisp
         }
         return MBLSP::LineIndex(TotalData);
     }
+    String TextModule::JSONEscape(String& StringToEscape)
+    {
+        String ReturnValue;
+        for(char Character : StringToEscape)
+        {
+            if(Character == '\\')
+            {
+                ReturnValue += "\\\\";   
+            }
+            else if(Character <= 31)
+            {
+                if(Character == '\n')
+                {
+                    ReturnValue += "\\n";
+                }
+                else if(Character == '\t')
+                {
+                    ReturnValue += "\\t";
+                }
+                else if(Character == '\r')
+                {
+                    ReturnValue += "\\r";
+                }
+            }
+            else if(Character == '"')
+            {
+                ReturnValue += "\\\"";   
+            }
+            else
+            {
+                ReturnValue += Character;
+            }
+        }
+        return ReturnValue;
+    }
     Int TextModule::GetPosition(MBLSP::LineIndex const& Index, Int Line,Int Col)
     {
         Int ReturnValue;
         MBLSP::Position Position;
+        if(Col == -1)
+        {
+            Col = 0;   
+        }
         Position.character = Col;
         Position.line = Line;
         ReturnValue = Index.PositionToByteOffset(Position);
@@ -40,6 +79,7 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<static_cast<MBLSP::LineIndex(*)(String const&)>(CreateLineIndex)>(ReturnValue,"line-index");
         AssociatedEvaluator.AddGeneric<static_cast<MBLSP::LineIndex(*)(MBUtility::StreamReader&)>(CreateLineIndex)>(ReturnValue,"line-index");
         AssociatedEvaluator.AddGeneric<GetPosition>(ReturnValue,"get-byte-position");
+        AssociatedEvaluator.AddGeneric<JSONEscape>(ReturnValue,"json-escape");
 
         return ReturnValue;
     }

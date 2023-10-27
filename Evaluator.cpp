@@ -28,6 +28,21 @@
 namespace MBLisp
 {
 
+    //Stacktrace
+    Evaluator::StackTrace::StackTrace(ExecutionState& CurrentState,String  const& Message)
+    {
+        for(int i = 1; i < CurrentState.StackFrames.size();i++)
+        {
+            auto const& CurrentFrame = CurrentState.StackFrames[i];
+            Frame NewFrame;
+            NewFrame.FrameLocation = CurrentFrame.ExecutionPosition.GetLocation(CurrentFrame.ExecutionPosition.GetIP()-1);
+            NewFrame.Name = CurrentFrame.ExecutionPosition.GetName();
+            Frames.push_back(NewFrame);
+        }
+        this->Message = Message;
+    }
+    //Stacktrace
+   
     //ExecutionState
     
     void ExecutionState::PopFrame()
@@ -207,6 +222,40 @@ namespace MBLisp
     {
         return Lhs+Rhs;
     }
+
+
+    String Evaluator::GetString(StackTrace const& Trace)
+    {
+        String ReturnValue = "\nError at:\n";
+        std::unordered_map<String,MBLSP::LineIndex> Indexes;
+        for(auto const& Frame : Trace.Frames)
+        {
+            ReturnValue += "    ";
+            if(! (Frame.Name.ID == -1))
+            {
+                ReturnValue += GetSymbolString(Frame.Name.ID);
+            }
+            else
+            {
+                ReturnValue += "lambda";   
+            }
+            if(Frame.FrameLocation.URI != -1)
+            {
+                //reading the  whole file...
+                String URI = GetSymbolString(Frame.FrameLocation.URI);
+                if(Indexes.find(URI) == Indexes.end())
+                {
+                    Indexes[URI] = MBLSP::LineIndex(MBUtility::ReadWholeFile(URI));   
+                }
+                MBLSP::Position Position = Indexes[URI].ByteOffsetToPosition(Frame.FrameLocation.Position);
+                ReturnValue  += " line: "+std::to_string(Position.line +1);
+                ReturnValue  += " col: "+std::to_string(Position.character +1);
+            }
+            ReturnValue  += "\n";
+        }
+        ReturnValue += Trace.Message;
+        return ReturnValue;
+    }
     void Evaluator::Print(Evaluator& AssociatedEvaluator,Value const& ValueToPrint)
     {
         if(ValueToPrint.IsType<String>())
@@ -246,6 +295,10 @@ namespace MBLisp
                 }
             }
             std::cout<< ")";
+        }
+        else if(ValueToPrint.IsType<StackTrace>())
+        {
+            std::cout<<AssociatedEvaluator.GetString(ValueToPrint.GetType<StackTrace>());
         }
         else if(ValueToPrint.IsType<Dict>())
         {
@@ -777,6 +830,10 @@ namespace MBLisp
     {
         return std::to_string(Arguments[0].GetType<Float>());
     }
+    Value Evaluator::Str_StackTrace BUILTIN_ARGLIST
+    {
+        return Context.GetEvaluator().GetString(Arguments[0].GetType<StackTrace>());
+    }
     Value Evaluator::Symbol_String BUILTIN_ARGLIST
     {
         return Symbol(Context.GetEvaluator().GetSymbolID(Arguments[0].GetType<String>()));
@@ -1120,7 +1177,7 @@ namespace MBLisp
             }
             catch(std::exception const& e)
             {
-                p_EmitSignal(CurrentState,e.what(),true);
+                p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState, String(e.what())),true);
             }
             //for(auto& Arg : Arguments)
             //{
@@ -1134,7 +1191,7 @@ namespace MBLisp
             if(Arguments.size() < AssociatedLambda.Definition->Arguments.size())
             {
                 //throw std::runtime_error("To few arguments for function call with function \""+AssociatedLambda.Name+"\"");
-                p_EmitSignal(CurrentState,"To few arguments for function call with function \""+GetSymbolString(AssociatedLambda.Name.ID)+"\"",true);
+                p_EmitSignal(CurrentState, Value::EmplaceExternal<StackTrace>( CurrentState,"To few arguments for function call with function \""+GetSymbolString(AssociatedLambda.Name.ID)+"\""),true);
                 return;
             }
             if(AssociatedLambda.Definition->RestParameter == 0)
@@ -1142,7 +1199,7 @@ namespace MBLisp
                 if(Arguments.size() > AssociatedLambda.Definition->Arguments.size())
                 {
                     //throw std::runtime_error("To many arguments for function call \""+AssociatedLambda.Name+"\"");
-                    p_EmitSignal(CurrentState,"To many arguments for function call \""+GetSymbolString(AssociatedLambda.Name.ID)+"\"",true);
+                    p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,"To many arguments for function call \""+GetSymbolString(AssociatedLambda.Name.ID)+"\""),true);
                     return;
                 }
             }
@@ -1202,7 +1259,7 @@ namespace MBLisp
             if(Callable == nullptr)
             {
                 //throw std::runtime_error("No method associated with the argument list for generic \""+GenericToInvoke.Name+"\"");   
-                p_EmitSignal(CurrentState,"No method associated with the argument list for generic \""+GetSymbolString(GenericToInvoke.Name.ID)+"\"",true);
+                p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,"No method associated with the argument list for generic \""+GetSymbolString(GenericToInvoke.Name.ID)+"\""),true);
                 return;
             }
             p_Invoke(*Callable,Arguments,CurrentState,Setting,IsTrapHandler);
@@ -1212,7 +1269,7 @@ namespace MBLisp
         else
         {
             //throw std::runtime_error("Cannot invoke object");   
-            p_EmitSignal(CurrentState,"Cannot invoke object",true);
+            p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,"Cannot invoke object"),true);
         }
         //after function invoked, trap it
         if(m_DebugState.DebuggingActive() && m_DebugState.TrappingNewFunctions() && !IsTrapHandler && !p_InTrapHandler(CurrentState))
@@ -1333,7 +1390,7 @@ namespace MBLisp
                 Value* VarPointer = CurrentFrame.StackScope->TryGet(PushCode.ID);
                 if(VarPointer == nullptr)
                 {
-                    p_EmitSignal(CurrentState,"Error finding variable with name \""+GetSymbolString(PushCode.ID)+"\"",true);
+                    p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,"Error finding variable with name \""+GetSymbolString(PushCode.ID)+"\""),true);
                     continue;
                 }
                 //assert(!VarPointer->IsType<List>() || VarPointer->GetRef<List>() != nullptr);
@@ -1523,7 +1580,7 @@ namespace MBLisp
                     if(!TypeValue.IsType<ClassDefinition>())
                     {
                         //throw std::runtime_error("signal handler value specifier evaluated to non class type");
-                        p_EmitSignal(CurrentState,"signal handler value specifier evaluated to non class type",true);
+                        p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,"signal handler value specifier evaluated to non class type"),true);
                         continue;
                     }
                     SignalHandler NewSignalHandler;
@@ -1588,14 +1645,14 @@ namespace MBLisp
                     if(!Arguments[i*3].IsType<Scope>())
                     {
                         //throw std::runtime_error("first part of binding triplet has to be a scope");
-                        p_EmitSignal(CurrentState,"first part of binding triplet has to be a scope",true);
+                        p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,"first part of binding triplet has to be a scope"),true);
                         continue;
                     }   
                     Scope& ScopeToModify = Arguments[i*3].GetType<Scope>();
                     if(!Arguments[i*3+1].IsType<Symbol>())
                     {
                         //throw std::runtime_error("second part of binding triplet has to be a symbol");
-                        p_EmitSignal(CurrentState,"second part of binding triplet has to be a symbol",true);
+                        p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,"second part of binding triplet has to be a symbol"),true);
                         continue;
                     }   
                     SymbolID IDToModify = Arguments[i*3+1].GetType<Symbol>().ID;
@@ -1603,13 +1660,13 @@ namespace MBLisp
                     if(VariableToInspect == nullptr)
                     {
                         //throw std::runtime_error("couldn't find dynamic variable  in scope");
-                        p_EmitSignal(CurrentState,"couldn't find dynamic variable  in scope",true);
+                        p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,"couldn't find dynamic variable in scope"),true);
                         continue;
                     }
                     if(!VariableToInspect->IsType<DynamicVariable>())
                     {
                         //throw std::runtime_error("variable was not a dynamic variable");
-                        p_EmitSignal(CurrentState,"variable was not a dynamic variable",true);
+                        p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,"variable was not a dynamic variable"),true);
                         continue;
                     }
                     ModifiedBindings.push_back(VariableToInspect->GetType<DynamicVariable>().ID);
@@ -1644,7 +1701,7 @@ namespace MBLisp
                     if(!ScopeValue.IsType<Scope>())
                     {
                         //throw std::runtime_error("argument to eval not of type environment");
-                        p_EmitSignal(CurrentState,"argument to eval not of type environment",true);
+                        p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,"argument to eval not of type environment"),true);
                         continue;
                     }
                     ScopeToUse = ScopeValue.GetRef<Scope>();
@@ -1667,7 +1724,7 @@ namespace MBLisp
                 }
                 catch (std::exception const& e)
                 {
-                    p_EmitSignal(CurrentState,"Error evaluating form: "+std::string(e.what()),true);
+                    p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,"Error evaluating form: "+std::string(e.what())),true);
                 }
                 if(NewOpcodes != nullptr)
                 {
@@ -2180,7 +2237,8 @@ namespace MBLisp
         AddMethod<List>("len",Len_List);
         AddMethod<List>("sort",Sort);
         //class
-        AddMethod<ClassInstance>("index",Index_ClassInstance);
+        AddMethod<ClassInstance,Symbol>("index",Index_ClassInstance);
+        AddGeneric<Slots_ClassInstance>("slots");
 
         //scope
         AddMethod<Scope,Symbol>("index",Index_Environment);
@@ -2233,6 +2291,7 @@ namespace MBLisp
         AddMethod<Null>("str",Str_Null);
         AddMethod<Float>("str",Str_Float);
         AddMethod<Int>("str",Str_Int);
+        AddMethod<StackTrace>("str",Str_StackTrace);
         AddMethod<String>("int",Int_Str);
         AddMethod<String,Int>("substr",Substr);
         AddMethod<String,Int,Int>("substr",Substr);
@@ -2255,6 +2314,12 @@ namespace MBLisp
         AddMemberMethod<Lock,&Lock::Release>("release");
         AddMemberMethod<Lock,&Lock::Wait>("wait");
         AddMethod<ThreadHandle,Int>("sleep",Sleep);
+        AddMethod<ThreadHandle>("pause",Pause);
+        AddMethod<ThreadHandle>("remove",Remove);
+        AddMethod<ThreadHandle>("resume",Resume);
+        AddMethod<ThreadHandle>("get-stack-frames",GetStackFrames);
+        AddGeneric<GetScope>("get-frame-envir");
+
         m_GlobalScope->SetVariable(p_GetSymbolID("active-threads"),ActiveThreads);
         //Symbols
         AddMethod<String>("symbol",Symbol_String);
@@ -2270,6 +2335,7 @@ namespace MBLisp
         AddMethod<Lambda>("name",Name_Lambda);
         AddMethod<GenericFunction>("name",Name_Generic);
         AddMethod<ClassDefinition>("name",Name_ClassDefinition);
+        AddMethod<GenericFunction>("applicable",Applicable);
 
         AddMethod<Symbol>("is-special",IsSpecial_Symbol);
         AddMethod<Symbol>("position",Position_Symbol);
@@ -2391,6 +2457,12 @@ namespace MBLisp
         {
             Args.push_back(Arguments[i]);
         }
+        //janky...
+        //
+        NewExecState.StackFrames.push_back(StackFrame());
+        NewExecState.StackFrames.back().StackScope = Context.GetState().GetScopeRef();
+        NewExecState.CurrentCallContext.m_CurrentState = &NewExecState;
+        NewExecState.CurrentCallContext.m_AssociatedEvaluator = &Context.GetEvaluator();
         Context.GetEvaluator().p_Invoke(Arguments[0],Args,NewExecState);
         NewExecState.AssociatedThread = Context.GetEvaluator().m_ThreadingState.GetNextID();
         NewThread.ID = NewExecState.AssociatedThread;
@@ -2415,6 +2487,18 @@ namespace MBLisp
     {
         Context.GetEvaluator().m_ThreadingState.Pause(Arguments[0].GetType<ThreadHandle>().ID);
         return Value();
+    }
+    Value Evaluator::Remove BUILTIN_ARGLIST
+    {
+        Value ReturnValue = false;
+        Context.GetEvaluator().m_ThreadingState.Remove(Arguments[0].GetType<ThreadHandle>().ID);
+        return ReturnValue;
+    }
+    Value Evaluator::Resume BUILTIN_ARGLIST
+    {
+        Value ReturnValue = false;
+        Context.GetEvaluator().m_ThreadingState.Resume(Arguments[0].GetType<ThreadHandle>().ID);
+        return ReturnValue;
     }
     Value Evaluator::ActiveThreads BUILTIN_ARGLIST
     {
@@ -2742,7 +2826,8 @@ namespace MBLisp
     {
         Value ReturnValue;
         Arguments[0].GetType<Lambda>().Name = Arguments[1].GetType<Symbol>();
-        return ReturnValue;
+        Arguments[0].GetType<Lambda>().Definition->Instructions->SetName(Arguments[1].GetType<Symbol>());
+        return Arguments[0];
     }
     Value Evaluator::SetName_Generic BUILTIN_ARGLIST
     {
@@ -2770,5 +2855,29 @@ namespace MBLisp
     Value Evaluator::Name_ClassDefinition BUILTIN_ARGLIST
     {
         return Arguments[0].GetType<ClassDefinition>().Name;
+    }
+    Value Evaluator::Applicable BUILTIN_ARGLIST
+    {
+        Value ReturnValue = false;
+        if(Arguments.size() == 0 || !Arguments[0].IsType<GenericFunction>())
+        {
+            throw std::runtime_error("first argument for applicable needs to a generic function");
+        }
+        GenericFunction& FuncToCheck = Arguments[0].GetType<GenericFunction>();
+        Value* Method = nullptr;
+        if(Arguments.size() > 1)
+        {
+            Method = FuncToCheck.GetMethod(&Arguments[1],(&Arguments.back())+1);
+        }
+        else
+        {
+            //zero size argument list
+            Method = FuncToCheck.GetMethod(&Arguments[1],&Arguments[1]);
+        }
+        if(Method != nullptr)
+        {
+            ReturnValue = true;   
+        }
+        return ReturnValue;
     }
 }
