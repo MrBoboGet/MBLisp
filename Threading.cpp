@@ -1,16 +1,16 @@
 #include "Threading.h"
-
+#include <iostream>
 
 namespace MBLisp
 {
        
-    void ThreadingState::p_ScheduleNext()
+    void ThreadingState::p_ScheduleNext(ThreadSchedulingInfo& CurrentThreadInfo)
     {
         clock_t LastClock = m_LastClock.load();
         clock_t CurrentClock = clock();
         double Diff = (CurrentClock-LastClock)/double(CLOCKS_PER_SEC);
         m_ElapsedTime.store(m_ElapsedTime.load() + Diff);
-        if(m_ElapsedTime.load() > m_SwapTime)
+        if(m_ElapsedTime.load() > m_SwapTime ||   CurrentThreadInfo.Paused  == true || CurrentThreadInfo.SleepDuration  >= 0)
         {
             ThreadID NextID = -1;
             float MinSleepTime = 1000;
@@ -36,7 +36,7 @@ namespace MBLisp
             if(NextID == -1 && m_ActiveThreads[m_CurrentThread]->SleepDuration > 0)
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(int(MinSleepTime*1000)));
-                p_ScheduleNext();
+                p_ScheduleNext(CurrentThreadInfo);
                 return;
             }
             if(NextID != -1)
@@ -45,9 +45,11 @@ namespace MBLisp
                 assert(ThreadIt != m_ActiveThreads.end());
                 std::shared_ptr<ThreadSchedulingInfo>& ThreadToWake = ThreadIt->second;
                 std::lock_guard<std::mutex> WakeMutex(ThreadToWake->WaitMutex);
-                ThreadToWake->WakedUp = true;
-                ThreadToWake->WaitConditional.notify_one();
+                assert(NextID != m_CurrentThread);
                 m_CurrentThread = NextID;
+                ThreadToWake->WakedUp = true;
+
+                ThreadToWake->WaitConditional.notify_one();
             }
             //new thread to schedule
         }
@@ -161,14 +163,17 @@ namespace MBLisp
             m_ThreadInfoMutex.unlock();
             throw std::runtime_error("Invalid thread ID when calling WaitForTurn");   
         }
+        ThreadInfo = ThreadIt->second;
         if(m_ActiveThreads.size() == 1)
         {
             m_CurrentThread = ID;
+            ThreadInfo->WakedUp = false;
+            assert(ThreadInfo->SleepDuration <= 0.001);
+            assert(m_CurrentThread == ID);
             m_ThreadInfoMutex.unlock();
             return;
         }
-        ThreadInfo = ThreadIt->second;
-        p_ScheduleNext();
+        p_ScheduleNext(*ThreadIt->second);
         if(m_CurrentThread != ID)
         {
             std::unique_lock<std::mutex> Lock(ThreadInfo->WaitMutex);
@@ -186,7 +191,10 @@ namespace MBLisp
             }
             assert(!AllArePaused);
 #endif
-            assert(ThreadInfo->SleepDuration <= 0);
+            //Kinda obscure edge case,  but when adding a new thread that thread might not  have begun exeucting to the
+            //point where  it enters this function, and schedukling that thread would mean that this value was set to true 
+            //here
+            ThreadInfo->WakedUp = false;
             m_ThreadInfoMutex.unlock();
             ThreadInfo->ExecutionState = State;
             while(!ThreadInfo->WakedUp)
@@ -194,9 +202,14 @@ namespace MBLisp
                 ThreadInfo->WaitConditional.wait(Lock);
             }
             ThreadInfo->WakedUp = false;
+            assert(ThreadInfo->SleepDuration <= 0.001);
+            assert(m_CurrentThread == ID || (std::cout<<m_CurrentThread<<" "<<ID && false));
         }
         if(!Unlocked)
         {
+            ThreadInfo->WakedUp = false;
+            assert(ThreadInfo->SleepDuration <= 0.001);
+            assert(m_CurrentThread == ID || (std::cout<<m_CurrentThread<<" "<<ID && false));
             m_ThreadInfoMutex.unlock();   
         }
         if(m_Exiting.load())
@@ -256,6 +269,7 @@ namespace MBLisp
             InfoToRemove = std::move(ThreadIt->second);
             m_ActiveThreads.erase(ThreadIt);
             m_RemovedThreads[ID] = std::move(InfoToRemove);
+            p_StartNext();
         }
     }
     ThreadID ThreadingState::AddThread(std::function<void()> Func)
@@ -330,7 +344,7 @@ namespace MBLisp
         std::lock_guard<std::mutex> ThreadLock(ThreadIt->second->WaitMutex);
         if(m_ActiveThreads.size() == 1 && ID == m_CurrentThread)
         {
-            std::this_thread::sleep_for(std::chrono::milliseconds(int(Duration)));
+            std::this_thread::sleep_for(std::chrono::milliseconds(int(Duration*1000)));
         }
         else
         {

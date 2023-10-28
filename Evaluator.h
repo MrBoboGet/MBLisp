@@ -350,7 +350,8 @@ namespace MBLisp
         struct LispStackFrame
         {
             Ref<Scope> StackScope;
-            Symbol Position;
+            Symbol Name;
+            Location Position;
         };
         static Value Thread BUILTIN_ARGLIST;
         static Value This_Thread BUILTIN_ARGLIST;
@@ -360,6 +361,7 @@ namespace MBLisp
         static Value Resume BUILTIN_ARGLIST;
         static Value ActiveThreads BUILTIN_ARGLIST;
         static Value GetStackFrames BUILTIN_ARGLIST;
+        static ThreadHandle Thread_Handle(Int ID);
         static Ref<Scope> GetScope(LispStackFrame& StackeFrame);
 
 

@@ -73,7 +73,7 @@ namespace MBLisp
         ThreadID m_CurrentID = 1;
         std::unordered_map<ThreadID,std::shared_ptr<ThreadSchedulingInfo>> m_ActiveThreads;
         std::unordered_map<ThreadID,std::shared_ptr<ThreadSchedulingInfo>> m_RemovedThreads;
-        void p_ScheduleNext();
+        void p_ScheduleNext(ThreadSchedulingInfo& CurrentThreadInfo);
         void p_StartNext();
     public:
         ThreadingState();

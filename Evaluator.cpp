@@ -2319,6 +2319,7 @@ namespace MBLisp
         AddMethod<ThreadHandle>("resume",Resume);
         AddMethod<ThreadHandle>("get-stack-frames",GetStackFrames);
         AddGeneric<GetScope>("get-frame-envir");
+        AddGeneric<Thread_Handle>("thread-handle");
 
         m_GlobalScope->SetVariable(p_GetSymbolID("active-threads"),ActiveThreads);
         //Symbols
@@ -2480,7 +2481,7 @@ namespace MBLisp
     }
     Value Evaluator::Sleep BUILTIN_ARGLIST
     {
-        Context.GetEvaluator().m_ThreadingState.Sleep(Arguments[0].GetType<ThreadHandle>().ID,Arguments[1].GetType<Int>());
+        Context.GetEvaluator().m_ThreadingState.Sleep(Arguments[0].GetType<ThreadHandle>().ID,float(Arguments[1].GetType<Int>())/1000 );
         return Value();
     }
     Value Evaluator::Pause BUILTIN_ARGLIST
@@ -2525,6 +2526,8 @@ namespace MBLisp
         {
             LispStackFrame NewFrame;
             NewFrame.StackScope = StackFrame.StackScope;
+            NewFrame.Name = StackFrame.ExecutionPosition.GetName();
+            NewFrame.Position = StackFrame.ExecutionPosition.GetLocation(StackFrame.ExecutionPosition.GetIP());
             ReturnValue.push_back(Value::EmplaceExternal<LispStackFrame>(std::move(NewFrame)));
         }
         return ReturnValue;
@@ -2532,6 +2535,12 @@ namespace MBLisp
     Ref<Scope> Evaluator::GetScope(LispStackFrame& StackeFrame)
     {
         return StackeFrame.StackScope;
+    }
+    ThreadHandle Evaluator::Thread_Handle(Int ID)
+    {
+        ThreadHandle ReturnValue;
+        ReturnValue.ID = ID;
+        return ReturnValue;
     }
 
     Value Evaluator::GetInternalModule BUILTIN_ARGLIST
