@@ -259,6 +259,7 @@ namespace MBLisp
         static Value In_Environment BUILTIN_ARGLIST;
         static Value Str_Symbol BUILTIN_ARGLIST;
         static Value Str_Int BUILTIN_ARGLIST;
+        static String Str_String(String& Input);
         static Value Str_Bool BUILTIN_ARGLIST;
         static Value Str_Null BUILTIN_ARGLIST;
         static Value Str_Float BUILTIN_ARGLIST;
@@ -461,22 +462,32 @@ namespace MBLisp
         }
         struct i_Empty{};
         template <int CurrentIndex,int TargetIndex,typename... Types>
-        struct i_TypeIndex 
+        struct i_TypeExtractor 
         { 
         };
         template <int CurrentIndex,int TargetIndex,typename T>
-        struct i_TypeIndex<CurrentIndex,TargetIndex,T>
+        struct i_TypeExtractor<CurrentIndex,TargetIndex,T>
+        { 
+            typedef T type;
+        };
+        template <int CurrentIndex,int TargetIndex,typename T>
+        struct i_TypeExtractor<CurrentIndex,TargetIndex,Ref<T>>
         { 
             typedef T type;
         };
         template <int CurrentIndex,int TargetIndex,typename T,typename... Rest>
-        struct i_TypeIndex<CurrentIndex,TargetIndex,T,Rest...> : 
+        struct i_TypeExtractor<CurrentIndex,TargetIndex,T,Rest...> : 
         std::conditional_t<CurrentIndex == TargetIndex,
-            i_TypeIndex<0,0,T>, 
-            i_TypeIndex<CurrentIndex+1,TargetIndex,Rest...>>
+            i_TypeExtractor<0,0,T>, 
+            i_TypeExtractor<CurrentIndex+1,TargetIndex,Rest...>>
         {
 
         };
+
+        template<typename T,template <typename> class R>
+        struct i_IsTemplateInstantiation : std::false_type { };
+        template<typename T,template <typename> class R>
+        struct i_IsTemplateInstantiation<R<T>,R> : std::true_type { };
 
 
         template <
@@ -500,7 +511,7 @@ namespace MBLisp
                 return p_InvokeMemberMethod(InvokingObject,MemberMethod,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
                     LispArgs[sizeof...(SuppliedArgTypes)+1].GetType<
                     typename std::remove_cv<
-                        typename std::remove_reference<typename i_TypeIndex<0,sizeof...(SuppliedArgTypes),TotalArgTypes...>::type>::type>::type>());
+                        typename std::remove_reference<typename i_TypeExtractor<0,sizeof...(SuppliedArgTypes),TotalArgTypes...>::type>::type>::type>());
             }
         }
 
@@ -508,7 +519,7 @@ namespace MBLisp
         static Value p_MemberMethodConverter BUILTIN_ARGLIST
         {
             ObjectType InvokingObject = Arguments[0].GetType<ObjectType>();
-            if constexpr(Value::IsBuiltin<ReturnType>())
+            if constexpr(Value::IsBuiltin<ReturnType>() || i_IsTemplateInstantiation<ReturnType,Ref>::value)
             {
                 return p_InvokeMemberMethod(InvokingObject,Func,Arguments);   
             }
@@ -534,14 +545,14 @@ namespace MBLisp
                 return p_InvokeFunction(Function,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
                     LispArgs[sizeof...(SuppliedArgTypes)].GetType<
                     typename std::remove_cv<
-                        typename std::remove_reference<typename i_TypeIndex<0,sizeof...(SuppliedArgTypes),TotalArgTypes...>::type>::type>::type>());
+                        typename std::remove_reference<typename i_TypeExtractor<0,sizeof...(SuppliedArgTypes),TotalArgTypes...>::type>::type>::type>());
             }
         }
 
         template<typename ReturnType,auto Func>
         static Value p_FunctionConverter BUILTIN_ARGLIST
         {
-            if constexpr(Value::IsBuiltin<ReturnType>())
+            if constexpr(Value::IsBuiltin<ReturnType>() || i_IsTemplateInstantiation<ReturnType,Ref>::value)
             {
                 return p_InvokeFunction(Func,Arguments);   
             }

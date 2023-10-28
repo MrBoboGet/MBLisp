@@ -31,9 +31,13 @@ namespace MBLisp
     //Stacktrace
     Evaluator::StackTrace::StackTrace(ExecutionState& CurrentState,String  const& Message)
     {
-        for(int i = 1; i < CurrentState.StackFrames.size();i++)
+        for(int i = 0; i < CurrentState.StackFrames.size();i++)
         {
             auto const& CurrentFrame = CurrentState.StackFrames[i];
+            if(CurrentFrame.ExecutionPosition.OpCodeCount() == 0)
+            {
+                continue;   
+            }
             Frame NewFrame;
             NewFrame.FrameLocation = CurrentFrame.ExecutionPosition.GetLocation(CurrentFrame.ExecutionPosition.GetIP()-1);
             NewFrame.Name = CurrentFrame.ExecutionPosition.GetName();
@@ -786,6 +790,10 @@ namespace MBLisp
     Value Evaluator::Str_Int BUILTIN_ARGLIST
     {
         return std::to_string(Arguments[0].GetType<Int>());
+    }
+    String Evaluator::Str_String(String& Input)
+    {
+        return Input;
     }
     Value Evaluator::Int_Str BUILTIN_ARGLIST
     {
@@ -2230,6 +2238,7 @@ namespace MBLisp
         p_RegisterBuiltinClass<ClassInstance>("object_t");
         p_RegisterBuiltinClass<Any>("any_t");
         p_RegisterBuiltinClass<ThreadHandle>("thread_t");
+        p_RegisterBuiltinClass<Scope>("envir_t");
         
         //list
         AddMethod<List>("append",Append_List);
@@ -2291,6 +2300,7 @@ namespace MBLisp
         AddMethod<Null>("str",Str_Null);
         AddMethod<Float>("str",Str_Float);
         AddMethod<Int>("str",Str_Int);
+        AddGeneric<Str_String>("str");
         AddMethod<StackTrace>("str",Str_StackTrace);
         AddMethod<String>("int",Int_Str);
         AddMethod<String,Int>("substr",Substr);
@@ -2525,9 +2535,13 @@ namespace MBLisp
         {
             StateToInspect = Context.GetEvaluator().m_ThreadingState.GetState(Arguments[0].GetType<ThreadHandle>().ID);
         }
-        for(int i = 1;  i < StateToInspect->StackFrames.size();i++)
+        for(int i = 0;  i < StateToInspect->StackFrames.size();i++)
         {
             auto const& StackFrame = StateToInspect->StackFrames[i];
+            if(StackFrame.ExecutionPosition.OpCodeCount() == 0)
+            {
+                continue;   
+            }
             LispStackFrame NewFrame;
             NewFrame.StackScope = StackFrame.StackScope;
             NewFrame.Name = StackFrame.ExecutionPosition.GetName();

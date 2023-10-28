@@ -215,7 +215,7 @@
 (defun handle-stackTrace (arg)
  (set return-value (dict))
  (set stack-frames (get-stack-frames (thread-handle (. arg "threadId"))))
- (set (. return-value "stackFrames") (map _(create-stackframe _) stack-frames))
+ (set (. return-value "stackFrames") (map create-stackframe  stack-frames))
  (set (. (slot stopped-state stack-frames) (. arg "threadId")) (. return-value "stackFrames"))
  return-value
 )
@@ -225,7 +225,11 @@
 (defmethod get-var ((var any_t) )
     (set return-value (Variable))
     (set var-id (++ (. stopped-state 'var-id) 1))
-    (set (. return-value 'value) (str var))
+    (if (applicable str var)
+        (set (. return-value 'value) (str var))
+     else
+        (set  (. return-value  'value) "{}")
+    )
     (set stored-var (StoredVar))
     (set (. stored-var 'value) var)
     (set (. stored-var 'variable) return-value)
@@ -238,7 +242,7 @@
     (set return-value (list))
     (set child-ids (list))
     (doit i (range 0  (len var))
-        (set current-id  (stopped-state 'var-id))
+        (set current-id  (. stopped-state 'var-id))
         (set sub-var (get-var (. var i)))
         (set (. sub-var 'name) (str i))
         (append return-value sub-var)
@@ -250,7 +254,24 @@
     (set return-value (list))
     (set child-ids (list))
     (doit key (keys var)
-        (set current-id  (stopped-state 'var-id))
+        (set current-id  (. stopped-state 'var-id))
+        (set sub-var (get-var (. var key)))
+        (if (applicable str key)
+            (set (. sub-var 'name) (str key))
+         else 
+            (set (. sub-var 'name) "{}")
+        )
+        (append return-value sub-var)
+        (append child-ids current-id)
+    )
+    (set (. stopped-state 'sub-var-ids id) child-ids) 
+    return-value
+)
+(defmethod get-vars ((var envir_t) id)
+    (set return-value (list))
+    (set child-ids (list))
+    (doit key (vars var)
+        (set current-id  (. stopped-state 'var-id))
         (set sub-var (get-var (. var key)))
         (set (. sub-var 'name) (str key))
         (append return-value sub-var)
@@ -259,6 +280,7 @@
     (set (. stopped-state 'sub-var-ids id) child-ids) 
     return-value
 )
+
 (defmethod get-vars ((var any_t) id)
     (set return-value (list (get-var var)))
 )
@@ -266,21 +288,26 @@
 (defun handle-variables (arg)
  (set var-ref (. arg "variablesReference"))
  (set indexed-var (. stopped-state 'variables var-ref))
- (if (. indexed-var 'evaluated) (return (. stopped-state 
-        {variables: (map _(. stopped-state 'variables _ 'variable)  (. stopped-state 'variables 'sub-var-ids var-ref) ) })))
+ (if (. indexed-var 'evaluated) 
+        (return 
+        {variables: (map _(cond (not (eq (type _) null_t))   (. stopped-state 'variables _ 'variable)  [])
+            (. stopped-state 'sub-var-ids var-ref) ) })
+ )
  (set (. indexed-var 'evaluated) true)
- (set new-vars (get-vars (slot indexed-var value)))
+ (set new-vars (get-vars (slot indexed-var value)  var-ref))
  {variables: new-vars}
 )
 
 
-(defun convert-scope (lisp-scope)
+(defun convert-scope (lisp-scope frame-id)
     (set return-value (Scope))
     (set (slot return-value name) "slugma")
+    (set (slot return-value variablesReference) frame-id)
     return-value
 )
 (defun handle-scopes (arg)
- {scopes: (convert-scope (. (. stopped-state 'variables 'value) (. arg "framedId")))}
+ (set frame-id (. arg "frameId"))
+ {scopes: [(convert-scope (. stopped-state 'variables frame-id 'value) frame-id)]}
 )
 (set launch-path "")
 (defun handle-launch (arg)
