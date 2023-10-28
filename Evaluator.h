@@ -330,6 +330,8 @@ namespace MBLisp
         static Value InternalModules BUILTIN_ARGLIST;
         static Value IsSpecial_Symbol BUILTIN_ARGLIST;
         static Value Position_Symbol BUILTIN_ARGLIST;
+        static Value URI_Symbol BUILTIN_ARGLIST;
+
         static Value SetName_Macro BUILTIN_ARGLIST;
         static Value SetName_Lambda BUILTIN_ARGLIST;
         static Value SetName_Generic BUILTIN_ARGLIST;
@@ -363,6 +365,8 @@ namespace MBLisp
         static Value GetStackFrames BUILTIN_ARGLIST;
         static ThreadHandle Thread_Handle(Int ID);
         static Ref<Scope> GetScope(LispStackFrame& StackeFrame);
+        static Symbol GetName_Stackframe(LispStackFrame& StackeFrame);
+        static Symbol GetLocation_StackFrame(LispStackFrame& StackeFrame);
 
 
         //Debugging

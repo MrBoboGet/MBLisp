@@ -10,6 +10,8 @@ namespace MBLisp
         static MBLSP::LineIndex CreateLineIndex(MBUtility::StreamReader& Data);
         static String JSONEscape(String&);
         static Int GetPosition(MBLSP::LineIndex const& Index, Int Line,Int Col);
+        static Int GetLine(MBLSP::LineIndex const& Index, Symbol ByteOffset);
+        static Int GetCol(MBLSP::LineIndex const& Index, Symbol ByteOffset);
 
     public:
         virtual Ref<Scope> GetModuleScope(Evaluator& AssociatedEvaluator);

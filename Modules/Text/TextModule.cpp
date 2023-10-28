@@ -73,12 +73,24 @@ namespace MBLisp
         ReturnValue = Index.PositionToByteOffset(Position);
         return ReturnValue;
     }
+    Int TextModule::GetLine(MBLSP::LineIndex const& Index, Symbol ByteOffset)
+    {
+        MBLSP::Position BytePosition = Index.ByteOffsetToPosition(ByteOffset.SymbolLocation.Position);
+        return BytePosition.line;
+    }
+    Int TextModule::GetCol(MBLSP::LineIndex const& Index, Symbol ByteOffset)
+    {
+        MBLSP::Position BytePosition = Index.ByteOffsetToPosition(ByteOffset.SymbolLocation.Position);
+        return BytePosition.character;
+    }
     Ref<Scope> TextModule::GetModuleScope(Evaluator& AssociatedEvaluator) 
     {
         Ref<Scope> ReturnValue = MakeRef<Scope>();
         AssociatedEvaluator.AddGeneric<static_cast<MBLSP::LineIndex(*)(String const&)>(CreateLineIndex)>(ReturnValue,"line-index");
         AssociatedEvaluator.AddGeneric<static_cast<MBLSP::LineIndex(*)(MBUtility::StreamReader&)>(CreateLineIndex)>(ReturnValue,"line-index");
         AssociatedEvaluator.AddGeneric<GetPosition>(ReturnValue,"get-byte-position");
+        AssociatedEvaluator.AddGeneric<GetLine>(ReturnValue,"get-line");
+        AssociatedEvaluator.AddGeneric<GetCol>(ReturnValue,"get-col");
         AssociatedEvaluator.AddGeneric<JSONEscape>(ReturnValue,"json-escape");
 
         return ReturnValue;

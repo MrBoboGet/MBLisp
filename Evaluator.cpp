@@ -2319,6 +2319,8 @@ namespace MBLisp
         AddMethod<ThreadHandle>("resume",Resume);
         AddMethod<ThreadHandle>("get-stack-frames",GetStackFrames);
         AddGeneric<GetScope>("get-frame-envir");
+        AddGeneric<GetName_Stackframe>("get-frame-name");
+        AddGeneric<GetLocation_StackFrame>("get-frame-location");
         AddGeneric<Thread_Handle>("thread-handle");
 
         m_GlobalScope->SetVariable(p_GetSymbolID("active-threads"),ActiveThreads);
@@ -2340,6 +2342,7 @@ namespace MBLisp
 
         AddMethod<Symbol>("is-special",IsSpecial_Symbol);
         AddMethod<Symbol>("position",Position_Symbol);
+        AddMethod<Symbol>("uri",URI_Symbol);
         AddMethod<MBUtility::StreamReader>("position",Stream_Position);
        
         //Filesystem stuff
@@ -2522,12 +2525,20 @@ namespace MBLisp
         {
             StateToInspect = Context.GetEvaluator().m_ThreadingState.GetState(Arguments[0].GetType<ThreadHandle>().ID);
         }
-        for(auto const& StackFrame : StateToInspect->StackFrames)
+        for(int i = 1;  i < StateToInspect->StackFrames.size();i++)
         {
+            auto const& StackFrame = StateToInspect->StackFrames[i];
             LispStackFrame NewFrame;
             NewFrame.StackScope = StackFrame.StackScope;
             NewFrame.Name = StackFrame.ExecutionPosition.GetName();
-            NewFrame.Position = StackFrame.ExecutionPosition.GetLocation(StackFrame.ExecutionPosition.GetIP());
+            if(StackFrame.ExecutionPosition.Finished())
+            {
+                NewFrame.Position = StackFrame.ExecutionPosition.GetLocation(StackFrame.ExecutionPosition.OpCodeCount()-1);
+            }
+            else
+            {
+                NewFrame.Position = StackFrame.ExecutionPosition.GetLocation(StackFrame.ExecutionPosition.GetIP());
+            }
             ReturnValue.push_back(Value::EmplaceExternal<LispStackFrame>(std::move(NewFrame)));
         }
         return ReturnValue;
@@ -2540,6 +2551,16 @@ namespace MBLisp
     {
         ThreadHandle ReturnValue;
         ReturnValue.ID = ID;
+        return ReturnValue;
+    }
+    Symbol Evaluator::GetName_Stackframe(LispStackFrame& StackeFrame)
+    {
+        return  StackeFrame.Name;
+    }
+    Symbol Evaluator::GetLocation_StackFrame(LispStackFrame& StackeFrame)
+    {
+        Symbol ReturnValue;
+        ReturnValue.SymbolLocation = StackeFrame.Position;
         return ReturnValue;
     }
 
@@ -2582,6 +2603,10 @@ namespace MBLisp
     Value Evaluator::Position_Symbol BUILTIN_ARGLIST
     {
         return Arguments[0].GetType<Symbol>().SymbolLocation.Position;
+    }
+    Value Evaluator::URI_Symbol BUILTIN_ARGLIST
+    {
+        return  Context.GetEvaluator().GetSymbolString(Arguments[0].GetType<Symbol>().SymbolLocation.URI);
     }
     Evaluator::Evaluator()
     {

@@ -284,6 +284,7 @@ namespace MBLisp
         OpCode& GetCurrentCode();
         void SetIP(IPIndex NewIP);
         IPIndex GetIP() const;
+        IPIndex OpCodeCount() const;
         void Pop();
         bool Finished() const;
         void SetEnd();

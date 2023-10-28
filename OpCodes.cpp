@@ -577,6 +577,14 @@ namespace MBLisp
     {
         return m_IP;
     }
+    IPIndex OpCodeExtractor::OpCodeCount() const
+    {
+        if(m_AssociatedList == nullptr)
+        {
+            throw std::runtime_error("Trying to access OpCodeCount with empty OpCodeList");
+        }   
+        return m_AssociatedList->m_OpCodes.size();
+    }
     void OpCodeExtractor::Pop()
     {
         m_IP += 1;

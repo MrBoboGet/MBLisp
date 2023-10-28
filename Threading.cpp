@@ -174,22 +174,22 @@ namespace MBLisp
             return;
         }
         p_ScheduleNext(*ThreadIt->second);
-        if(m_CurrentThread != ID)
+        if(m_CurrentThread != ID  || ThreadIt->second->Paused)
         {
             std::unique_lock<std::mutex> Lock(ThreadInfo->WaitMutex);
             Unlocked = true;
 
 #if !defined(NDEBUG)
-            bool AllArePaused = true;
-            for(auto const& Info : m_ActiveThreads)
-            {
-                if(Info.first != ID && Info.second->Paused == false)
-                {
-                    AllArePaused = false;
-                    break;
-                }
-            }
-            assert(!AllArePaused);
+            //bool AllArePaused = true;
+            //for(auto const& Info : m_ActiveThreads)
+            //{
+            //    if(Info.first != ID && Info.second->Paused == false)
+            //    {
+            //        AllArePaused = false;
+            //        break;
+            //    }
+            //}
+            //assert(!AllArePaused);
 #endif
             //Kinda obscure edge case,  but when adding a new thread that thread might not  have begun exeucting to the
             //point where  it enters this function, and schedukling that thread would mean that this value was set to true 
