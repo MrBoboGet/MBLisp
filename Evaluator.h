@@ -260,6 +260,8 @@ namespace MBLisp
         static Value Str_Symbol BUILTIN_ARGLIST;
         static Value Str_Int BUILTIN_ARGLIST;
         static String Str_String(String& Input);
+        static String Str_ThreadHandle(ThreadHandle Input);
+        static Int Int_ThreadHandle(ThreadHandle Input);
         static Value Str_Bool BUILTIN_ARGLIST;
         static Value Str_Null BUILTIN_ARGLIST;
         static Value Str_Float BUILTIN_ARGLIST;

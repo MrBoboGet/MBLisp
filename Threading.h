@@ -51,12 +51,12 @@ namespace MBLisp
     {
         struct ThreadSchedulingInfo
         {
-            bool Paused = false;
+            bool HardPaused = false;
+            bool TemporaryPaused = false;
             float SleepDuration = 0;
             //not existing means that the scheduler represents the main thread
             std::unique_ptr<std::thread> SystemThread;
             bool WakedUp = false;
-            std::mutex WaitMutex;
             std::condition_variable WaitConditional;
             ExecutionState* ExecutionState = nullptr;
         };
@@ -73,7 +73,7 @@ namespace MBLisp
         ThreadID m_CurrentID = 1;
         std::unordered_map<ThreadID,std::shared_ptr<ThreadSchedulingInfo>> m_ActiveThreads;
         std::unordered_map<ThreadID,std::shared_ptr<ThreadSchedulingInfo>> m_RemovedThreads;
-        void p_ScheduleNext(ThreadSchedulingInfo& CurrentThreadInfo);
+        void p_ScheduleNext(ThreadSchedulingInfo& CurrentThreadInfo,ThreadID ID);
         void p_StartNext();
     public:
         ThreadingState();
@@ -92,8 +92,8 @@ namespace MBLisp
 
         std::vector<ThreadID> ActiveThreads();
         ExecutionState* GetState(ThreadID ID);
-        
         void Pause(ThreadID ID);
+        void TempSuspend(ThreadID ID,bool TempSuspended);
         void Resume(ThreadID ID);
         void Sleep(ThreadID ID,float Duration);
         void Join(ThreadID ID);

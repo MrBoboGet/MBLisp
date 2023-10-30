@@ -78,7 +78,7 @@ namespace MBLisp
     void CallContext::PauseThread()
     {
         m_ThreadPaused = true;
-        m_AssociatedEvaluator->m_ThreadingState.Pause(m_CurrentState->AssociatedThread);
+        m_AssociatedEvaluator->m_ThreadingState.TempSuspend(m_CurrentState->AssociatedThread,true);
     }
     bool CallContext::IsMultiThreaded()
     {
@@ -795,6 +795,14 @@ namespace MBLisp
     {
         return Input;
     }
+    String Evaluator::Str_ThreadHandle(ThreadHandle Input)
+    {
+        return std::to_string(Input.ID);
+    }
+    Int Evaluator::Int_ThreadHandle(ThreadHandle Input)
+    {
+        return Input.ID;
+    }
     Value Evaluator::Int_Str BUILTIN_ARGLIST
     {
         return  std::stoi(Arguments[0].GetType<String>());
@@ -1176,7 +1184,7 @@ namespace MBLisp
                 CurrentCallStack.back().ArgumentStack.push_back(std::move(Result));
                 if(CurrentState.CurrentCallContext.m_ThreadPaused)
                 {
-                    m_ThreadingState.Resume(CurrentState.AssociatedThread);
+                    m_ThreadingState.TempSuspend(CurrentState.AssociatedThread,false);
                 }
             }
             catch(ContinueUnwind const& e)
@@ -2301,6 +2309,8 @@ namespace MBLisp
         AddMethod<Float>("str",Str_Float);
         AddMethod<Int>("str",Str_Int);
         AddGeneric<Str_String>("str");
+        AddGeneric<Str_ThreadHandle>("str");
+        AddGeneric<Int_ThreadHandle>("int");
         AddMethod<StackTrace>("str",Str_StackTrace);
         AddMethod<String>("int",Int_Str);
         AddMethod<String,Int>("substr",Substr);

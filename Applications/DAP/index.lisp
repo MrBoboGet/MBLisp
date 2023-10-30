@@ -119,6 +119,12 @@
     (set stopped-state (Stopped-State))
     true
 )
+(defun finished ()
+    (send-event "thread" {reason: "stopped", threadId: (. process-state 'id)  })
+    (send-event "exited" {exitCode: 0})
+    (stopped)
+    true
+)
 
 (defun trap-handler ()
     (send-event "stopped" {reason: "breakpoint",threadId:0,allThreadsStopped: true})
@@ -238,6 +244,7 @@
     (if (|| (eq var-type list_t) (eq var-type dict_t) (eq var-type object_t)) (set (. return-value 'variablesReference) var-id))
     return-value
 )
+
 (defmethod get-vars ((var list_t) id)
     (set return-value (list))
     (set child-ids (list))
@@ -316,12 +323,12 @@
 )
 (defun handle-continue (arg)
     (resume-execution)
-    {}
+    {threadId: (int(. process-state 'id)),allThreadsContinued: true}
 )
 
 (defun handle-configurationDone (arg)
     (set new-envir (new-environment))
-    (set (. process-state 'id) (thread _(eval (load launch-path) new-envir)))
+    (set (. process-state 'id) (thread _(progn (eval (load launch-path) new-envir) (finished))))
     (write debug-file "launching UwU")
     (write debug-file  "\n")
     (flush debug-file)
