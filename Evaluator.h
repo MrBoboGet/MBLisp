@@ -96,6 +96,7 @@ namespace MBLisp
     {
         friend class Evaluator;
         friend class CallContext;
+        friend class DebugState;
         private:
         //-1 means last, other value entails being in a signal
         ThreadID AssociatedThread = 0;
@@ -119,6 +120,10 @@ namespace MBLisp
 
     public:
 
+        bool InTrapHandler()
+        {
+            return TraphandlerIndex != -1 && TraphandlerIndex <= StackFrames.size();
+        }
 
         Scope& GetCurrentScope()
         {
@@ -222,6 +227,8 @@ namespace MBLisp
         static Value Append_List BUILTIN_ARGLIST;
         static Value Len_List BUILTIN_ARGLIST;
         static Value Flatten_1 BUILTIN_ARGLIST;
+        static Value Pop_List(List& ListToModify);
+        static bool Reverse_List(List& ListToModify);
         //class instance
         static Value Index_ClassInstance BUILTIN_ARGLIST;
         static List Slots_ClassInstance(ClassInstance& InstanceToInspect);
@@ -253,6 +260,7 @@ namespace MBLisp
         static Value Eq_Null BUILTIN_ARGLIST;
         static Value Eq_Type BUILTIN_ARGLIST;
         static Value Eq_Any BUILTIN_ARGLIST;
+        static bool Eq_ThreadHandle(ThreadHandle  lhs,ThreadHandle rhs);
         static Value Minus_Int BUILTIN_ARGLIST;
 
         static Value In_String BUILTIN_ARGLIST;
@@ -398,7 +406,6 @@ namespace MBLisp
 
         void p_Invoke(Value& ObjectToCall,FuncArgVector& Arguments,ExecutionState& CurrentState,bool Setting = false,bool IsTrapHandler = false);
         void p_InvokeTrapHandler(ExecutionState& State);
-        bool p_InTrapHandler(ExecutionState& State);
         void p_EmitSignal(ExecutionState& State,Value SignalToEmit,bool ForceUnwind);
         //The fundamental dispatch loop
         //Return index is the stack frame index where the value of the previous call should be returned instead of continuing evaluating 
@@ -521,7 +528,7 @@ namespace MBLisp
         static Value p_MemberMethodConverter BUILTIN_ARGLIST
         {
             ObjectType InvokingObject = Arguments[0].GetType<ObjectType>();
-            if constexpr(Value::IsBuiltin<ReturnType>() || i_IsTemplateInstantiation<ReturnType,Ref>::value)
+            if constexpr(std::is_same_v<ReturnType,Value> || Value::IsBuiltin<ReturnType>() || i_IsTemplateInstantiation<ReturnType,Ref>::value)
             {
                 return p_InvokeMemberMethod(InvokingObject,Func,Arguments);   
             }
@@ -554,7 +561,7 @@ namespace MBLisp
         template<typename ReturnType,auto Func>
         static Value p_FunctionConverter BUILTIN_ARGLIST
         {
-            if constexpr(Value::IsBuiltin<ReturnType>() || i_IsTemplateInstantiation<ReturnType,Ref>::value)
+            if constexpr(std::is_same_v<ReturnType,Value> || Value::IsBuiltin<ReturnType>() || i_IsTemplateInstantiation<ReturnType,Ref>::value)
             {
                 return p_InvokeFunction(Func,Arguments);   
             }

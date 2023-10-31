@@ -726,6 +726,21 @@ namespace MBLisp
         }
         return ReturnValue;
     }
+    Value Evaluator::Pop_List(List& ListToModify)
+    {
+        if(ListToModify.size() == 0)
+        {
+            throw std::runtime_error("Cannot pop from empty list");
+        }
+        Value ReturnValue = ListToModify.back();
+        ListToModify.pop_back();
+        return ReturnValue;
+    }
+    bool Evaluator::Reverse_List(List& ListToModify)
+    {
+        std::reverse(ListToModify.begin(),ListToModify.end());
+        return false;
+    }
     Value Evaluator::Eq_String BUILTIN_ARGLIST
     {
         return Arguments[0].GetType<String>() == Arguments[1].GetType<String>();
@@ -750,6 +765,10 @@ namespace MBLisp
     Value Evaluator::Eq_Any BUILTIN_ARGLIST
     {
         return false;
+    }
+    bool Evaluator::Eq_ThreadHandle(ThreadHandle  lhs,ThreadHandle rhs)
+    {
+        return lhs.ID == rhs.ID;
     }
     Value Evaluator::Eq_Null BUILTIN_ARGLIST
     {
@@ -1161,10 +1180,6 @@ namespace MBLisp
         p_Invoke(Handler,Args,State,false,true);
         State.TraphandlerIndex = State.StackFrames.size();
     }
-    bool Evaluator::p_InTrapHandler(ExecutionState& State)
-    {
-        return State.TraphandlerIndex == State.StackFrames.size();
-    }
     void Evaluator::p_Invoke(Value& ObjectToCall,FuncArgVector& Arguments,ExecutionState& CurrentState,bool Setting,bool IsTrapHandler)
     {
         auto& CurrentCallStack = CurrentState.StackFrames;
@@ -1288,7 +1303,7 @@ namespace MBLisp
             p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,"Cannot invoke object"),true);
         }
         //after function invoked, trap it
-        if(m_DebugState.DebuggingActive() && m_DebugState.TrappingNewFunctions() && !IsTrapHandler && !p_InTrapHandler(CurrentState))
+        if(m_DebugState.DebuggingActive() && m_DebugState.TrappingNewFunctions() && !IsTrapHandler && !CurrentState.InTrapHandler())
         {
             if(!ObjectToCall.IsType<Function>())
             {
@@ -1379,7 +1394,7 @@ namespace MBLisp
                 {
                     if(!(CurrentState.TraphandlerIndex == CurrentState.StackFrames.size() +1  ))
                     {
-                        if(m_DebugState.IsTrapped(CurrentFrame.ExecutionPosition))
+                        if(m_DebugState.IsTrapped(CurrentState))
                         {
                             p_InvokeTrapHandler(CurrentState);
                             continue;
@@ -2253,6 +2268,8 @@ namespace MBLisp
         AddMethod<List,Int>("index",Index_List);
         AddMethod<List>("len",Len_List);
         AddMethod<List>("sort",Sort);
+        AddGeneric<Pop_List>("pop");
+        AddGeneric<Reverse_List>("reverse");
         //class
         AddMethod<ClassInstance,Symbol>("index",Index_ClassInstance);
         AddGeneric<Slots_ClassInstance>("slots");
@@ -2272,6 +2289,8 @@ namespace MBLisp
         AddMethod<ClassDefinition,ClassDefinition>("eq",Eq_Type);
         AddMethod<Any,Any>("eq",Eq_Any);
         AddMethod<Null,Null>("eq",Eq_Null);
+        AddMethod<ThreadHandle,ThreadHandle>("eq",Eq_Null);
+        AddGeneric<Eq_ThreadHandle>("eq");
         AddMethod<Int,Int>("minus",Minus_Int);
 
         //streams

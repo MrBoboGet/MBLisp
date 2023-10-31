@@ -31,6 +31,13 @@ namespace MBLisp
                     MinSleepTime = std::min(MinSleepTime,ThreadIt.second->SleepDuration);
                 }
             }
+            //NextID being TempPaused means that no better candidate exists, and
+            //given that this thread isn't in any way suspended would mean that  
+            //we should not switch
+            if(IsTempPaused && !(CurrentThreadInfo.HardPaused || CurrentThreadInfo.TemporaryPaused))
+            {
+                NextID = -1;
+            }
             if(NextID == -1 && m_ActiveThreads[m_CurrentThread]->SleepDuration > 0)
             {
                 std::this_thread::sleep_for(std::chrono::milliseconds(int(MinSleepTime*1000)));
@@ -97,6 +104,25 @@ namespace MBLisp
     {
         m_Exiting.store(true);
         for(auto& ThreadIt : m_ActiveThreads)
+        {
+            {
+                std::lock_guard<std::mutex> Lock(m_ThreadInfoMutex);
+                ThreadIt.second->WakedUp = true;
+                ThreadIt.second->WaitConditional.notify_one();
+            }
+            try
+            {
+                if(ThreadIt.second->SystemThread != nullptr)
+                {
+                    ThreadIt.second->SystemThread->join();
+                }
+            }
+            catch(...)
+            {
+                   
+            }
+        }
+        for(auto& ThreadIt : m_RemovedThreads)
         {
             {
                 std::lock_guard<std::mutex> Lock(m_ThreadInfoMutex);

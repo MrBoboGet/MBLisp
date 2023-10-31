@@ -117,6 +117,7 @@
     (set-trap-depth-changed "")
     (set-trap-signals false)
     (set stopped-state (Stopped-State))
+    (set trap-state (TrapState))
     true
 )
 (defun finished ()
@@ -126,8 +127,13 @@
     true
 )
 
+(set first-stop true)
+
 (defun trap-handler ()
-    (send-event "stopped" {reason: "breakpoint",threadId:0,allThreadsStopped: true})
+    (set reason "breakpoint")
+    (if (not first-stop) (set reason "step"))
+    (set first-stop false)
+    (send-event "stopped" {reason: reason,threadId: (. process-state 'id),allThreadsStopped: true})
     (stopped)
     (pause (. process-state 'id))
 )
@@ -151,14 +157,23 @@
     return-value
 )
 (defun handle-stepIn (arg)
- (set return-value (make-dict))
- (set (. trap-state 'trap-step) "step")
+ (set return-value (dict))
+ (set thread-to-resume (. arg "threadId"))
+ (set (. trap-state 'trap-depth-changed) "step")
+ (resume-execution)
+ return-value
+)
+(defun handle-stepOut (arg)
+ (set return-value (dict))
+ (set thread-to-resume (. arg "threadId"))
+ (set (. trap-state 'trap-depth-changed) "step")
  (resume-execution)
  return-value
 )
 (defun handle-next (arg)
  (set return-value (make-dict))
- (set (. trap-state 'trap-step) "next")
+ (set thread-to-resume (. arg "threadId"))
+ (set (. trap-state 'trap-depth-changed) "next")
  (resume-execution)
  return-value
 )
@@ -192,10 +207,19 @@
   {}
 )
 
+(defun filter (l p)
+    (set return-value (list))
+    (doit e l
+        (if  (p e) (append return-value e))
+    )
+    return-value
+)
+
+
 (defun handle-threads (arg)
  (set return-value (make-dict))
- (set threads (active-threads))
- (set (index return-value "threads") (map _{id: _ , name: (str _ )}  threads  ))
+ (set threads (filter (active-threads) _(not (eq (int (this-thread)) _))))
+ (set (index return-value "threads") (map _{id: _ , name: (str _ )}  threads))
  return-value
 )
 
@@ -221,6 +245,8 @@
 (defun handle-stackTrace (arg)
  (set return-value (dict))
  (set stack-frames (get-stack-frames (thread-handle (. arg "threadId"))))
+ (pop stack-frames)
+ (reverse stack-frames)
  (set (. return-value "stackFrames") (map create-stackframe  stack-frames))
  (set (. (slot stopped-state stack-frames) (. arg "threadId")) (. return-value "stackFrames"))
  return-value
@@ -353,6 +379,7 @@
 
 (set request-handlers (make-dict 
                         ("stepIn" handle-stepIn)
+                        ("stepOut" handle-stepIn)
                         ("next" handle-next)
                         ("initialize" handle-initialize)
                         ("setBreakpoints" handle-setBreakpoints)
@@ -412,10 +439,11 @@
 )
 (defun  send-event (name body)
    (set message-to-send {seq: (get-seq), type: "event",event: name,body: body})
-   (write debug-file  (js:to-json-string message-to-send))
-   (write debug-file  "\n")
+   (write debug-file (js:to-json-string message-to-send))
+   (write debug-file "\n")
    (flush debug-file)
    (js:send-rpc *standard-output* message-to-send)
+   (flush *standard-output*)
 )
 
 (set debug-file (open "DAPOutput.txt" "w"))
@@ -427,6 +455,7 @@
 )
 (defun main ()
     (set-trap-handler trap-handler)
+    (set-exclude-thread (this-thread) true)
     (while true
         (set next-message (js:read-rpc *standard-input*))
         (write debug-file  (js:to-json-string next-message))
