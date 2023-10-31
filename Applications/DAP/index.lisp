@@ -170,10 +170,17 @@
  (resume-execution)
  return-value
 )
+
+(defun get-thread-depth (thread-id)
+ (set thread-frames (. stopped-state 'stack-frames thread-id))
+ (get-depth (. stopped-state 'variables (. thread-frames 0 'id) 'value))
+)
+
 (defun handle-next (arg)
  (set return-value (make-dict))
  (set thread-to-resume (. arg "threadId"))
  (set (. trap-state 'trap-depth-changed) "next")
+ (set-target-depth (get-thread-depth thread-to-resume))
  (resume-execution)
  return-value
 )
@@ -238,17 +245,21 @@
     (set frame-id (slot return-value id))
     (set (. stopped-state 'stack-frames (slot return-value id)) return-value)
     (set new-var (StoredVar))
-    (set (slot new-var value) (get-frame-envir in-frame))
+    (set (slot new-var value) in-frame)
     (set (. (slot stopped-state variables) frame-id) new-var)
     return-value
 )
 (defun handle-stackTrace (arg)
  (set return-value (dict))
- (set stack-frames (get-stack-frames (thread-handle (. arg "threadId"))))
+ (set thread-id (. arg "threadId"))
+ (if (< 0 (len (. stopped-state 'stack-frames)) )
+    (return {stackFrames: (. stopped-state 'stack-frames thread-id)})
+ )
+ (set stack-frames (get-stack-frames (thread-handle thread-id)))
  (pop stack-frames)
  (reverse stack-frames)
  (set (. return-value "stackFrames") (map create-stackframe  stack-frames))
- (set (. (slot stopped-state stack-frames) (. arg "threadId")) (. return-value "stackFrames"))
+ (set (. (slot stopped-state stack-frames) thread-id) (. return-value "stackFrames"))
  return-value
 )
 
@@ -312,6 +323,9 @@
     )
     (set (. stopped-state 'sub-var-ids id) child-ids) 
     return-value
+)
+(defmethod get-vars ((var stackframe_t) id)
+    (get-vars (get-frame-envir var) id)
 )
 
 (defmethod get-vars ((var any_t) id)

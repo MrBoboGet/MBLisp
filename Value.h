@@ -611,7 +611,7 @@ public:
             Macro,
             Lambda,
             List,
-            std::unordered_map<Value,Value,Value_Hasher>,
+            std::unordered_map<Value,Value,Value::Value_Hasher>,
             GenericFunction,
             ClassDefinition,
             ClassInstance,
@@ -628,7 +628,7 @@ public:
         static constexpr bool IsReferenceType()
         {
             return TypeIn<T,ClassDefinition,DynamicVariable,Macro,Lambda,GenericFunction,ClassInstance,List,Scope,String,
-                std::unordered_map<Value,Value,Value_Hasher>>;
+                std::unordered_map<Value,Value,Value::Value_Hasher>>;
         }
         template<typename T>
         static constexpr bool IsBuiltin()

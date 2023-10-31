@@ -213,6 +213,7 @@ namespace MBLisp
         friend class OpCodeExtractor;
         Symbol m_Name;
         std::vector<OpCode> m_OpCodes;
+        bool m_Modified = false;
         struct LocationInfo
         {
             Location Loc;
@@ -294,6 +295,7 @@ namespace MBLisp
         void ClearTraps();
         void SetDebugID(int ID);
         int GetDebugID();
+        bool Modified();
         bool IsTrapped(IPIndex Position);
         int GetDepth(IPIndex Position) const;
         Location GetLocation(IPIndex Position) const;

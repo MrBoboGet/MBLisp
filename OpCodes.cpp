@@ -482,6 +482,7 @@ namespace MBLisp
     }
     void OpCodeList::Append(List const& ListToConvert)
     {
+        m_Modified = true;
         IPIndex PrevSize = m_OpCodes.size();
         EncodingState CurrentState;
         p_CreateOpCodes(ListToConvert,m_OpCodes,CurrentState);
@@ -495,6 +496,7 @@ namespace MBLisp
     }
     void OpCodeList::Append(Value const& ListToConvert)
     {
+        m_Modified = true;
         EncodingState CurrentState;
         p_CreateOpCodes(ListToConvert,m_OpCodes,CurrentState);
         //TODO fix with let/cc
@@ -553,10 +555,15 @@ namespace MBLisp
         {
             if(auto It = m_OpcodeLocationInfo.find(i); It != m_OpcodeLocationInfo.end())
             {
-                CurrentDepth = It->second.Depth;   
                 CurrentLocation = It->second.Loc;
+                m_DebugInfo[i].Depth = It->second.Depth;
+                CurrentDepth = It->second.Depth+1;
+                
             }
-            m_DebugInfo[i].Depth = CurrentDepth;   
+            else
+            {
+                m_DebugInfo[i].Depth = CurrentDepth;   
+            }
             m_DebugInfo[i].Loc = CurrentLocation;
         }
         assert(m_DebugInfo.size() == m_OpCodes.size());
@@ -620,6 +627,12 @@ namespace MBLisp
     void OpCodeExtractor::SetDebugID(int ID)
     {
         m_AssociatedList->m_DebugID = ID;
+    }
+    bool OpCodeExtractor::Modified()
+    {
+        bool ReturnValue = m_AssociatedList->m_Modified;
+        m_AssociatedList->m_Modified = false;
+        return ReturnValue;
     }
     int OpCodeExtractor::GetDebugID()
     {

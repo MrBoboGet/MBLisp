@@ -196,6 +196,10 @@ namespace MBLisp
     {
         return  Arguments[1].GetType<Dict>().find(Arguments[0]) != Arguments[1].GetType<Dict>().end();
     }
+    Int Evaluator::Len_Dict(Dict& DictToInspect)
+    {
+        return DictToInspect.size();
+    }
     Value Evaluator::Plus BUILTIN_ARGLIST
     {
         Value ReturnValue;
@@ -2262,6 +2266,7 @@ namespace MBLisp
         p_RegisterBuiltinClass<Any>("any_t");
         p_RegisterBuiltinClass<ThreadHandle>("thread_t");
         p_RegisterBuiltinClass<Scope>("envir_t");
+        p_RegisterBuiltinClass<LispStackFrame>("stackframe_t");
         
         //list
         AddMethod<List>("append",Append_List);
@@ -2315,6 +2320,7 @@ namespace MBLisp
         AddMethod<Dict,Any>("index",Index_Dict);
         AddMethod<Any,Dict>("in",In_Dict);
         AddMethod<Dict>("keys",Keys_Dict);
+        AddGeneric<Len_Dict>("len");
         
         //Strings
         AddMethod<String,String>("split",Split_String);
@@ -2360,6 +2366,7 @@ namespace MBLisp
         AddGeneric<GetScope>("get-frame-envir");
         AddGeneric<GetName_Stackframe>("get-frame-name");
         AddGeneric<GetLocation_StackFrame>("get-frame-location");
+        AddGeneric<GetDepth_StackFrame>("get-depth");
         AddGeneric<Thread_Handle>("thread-handle");
 
         m_GlobalScope->SetVariable(p_GetSymbolID("active-threads"),ActiveThreads);
@@ -2577,10 +2584,12 @@ namespace MBLisp
             if(StackFrame.ExecutionPosition.Finished())
             {
                 NewFrame.Position = StackFrame.ExecutionPosition.GetLocation(StackFrame.ExecutionPosition.OpCodeCount()-1);
+                NewFrame.Depth = StackFrame.ExecutionPosition.GetDepth(StackFrame.ExecutionPosition.OpCodeCount()-1);
             }
             else
             {
                 NewFrame.Position = StackFrame.ExecutionPosition.GetLocation(StackFrame.ExecutionPosition.GetIP());
+                NewFrame.Depth = StackFrame.ExecutionPosition.GetDepth(StackFrame.ExecutionPosition.GetIP());
             }
             ReturnValue.push_back(Value::EmplaceExternal<LispStackFrame>(std::move(NewFrame)));
         }
@@ -2606,7 +2615,10 @@ namespace MBLisp
         ReturnValue.SymbolLocation = StackeFrame.Position;
         return ReturnValue;
     }
-
+    Int Evaluator::GetDepth_StackFrame(LispStackFrame& StackeFrame)
+    {
+        return StackeFrame.Depth;
+    }
     Value Evaluator::GetInternalModule BUILTIN_ARGLIST
     {
         Value ReturnValue;
@@ -2788,6 +2800,7 @@ namespace MBLisp
             p_Eval(CurrentState,OpCodes,InstructionToExecute);
 
         }
+        bool  DEBUG_STATEMENT = true;
     }
     void Evaluator::LoadStd()
     {

@@ -286,6 +286,7 @@ namespace MBLisp
         static Value Index_Dict BUILTIN_ARGLIST;
         static Value Keys_Dict BUILTIN_ARGLIST;
         static Value In_Dict BUILTIN_ARGLIST;
+        static Int Len_Dict(Dict& DictToInspect);
 
 
         
@@ -365,6 +366,7 @@ namespace MBLisp
             Ref<Scope> StackScope;
             Symbol Name;
             Location Position;
+            Int Depth = -1;
         };
         static Value Thread BUILTIN_ARGLIST;
         static Value This_Thread BUILTIN_ARGLIST;
@@ -378,6 +380,7 @@ namespace MBLisp
         static Ref<Scope> GetScope(LispStackFrame& StackeFrame);
         static Symbol GetName_Stackframe(LispStackFrame& StackeFrame);
         static Symbol GetLocation_StackFrame(LispStackFrame& StackeFrame);
+        static Int GetDepth_StackFrame(LispStackFrame& StackeFrame);
 
 
         //Debugging
