@@ -248,6 +248,8 @@ namespace MBLisp
         static Value Stream_PeakByte BUILTIN_ARGLIST;
         static Value Stream_ReadByte BUILTIN_ARGLIST;
         static Value Stream_SkipWhitespace BUILTIN_ARGLIST;
+        static bool Seek_Stream(MBUtility::MBSearchableInputStream& InStream,Int Offset);
+        static Int Offset_Stream(MBUtility::MBSearchableInputStream& InStream);
         //Blocking
         
         //Non-blocking
@@ -376,6 +378,7 @@ namespace MBLisp
         static Value Resume BUILTIN_ARGLIST;
         static Value ActiveThreads BUILTIN_ARGLIST;
         static Value GetStackFrames BUILTIN_ARGLIST;
+        static Value StackCount BUILTIN_ARGLIST;
         static ThreadHandle Thread_Handle(Int ID);
         static Ref<Scope> GetScope(LispStackFrame& StackeFrame);
         static Symbol GetName_Stackframe(LispStackFrame& StackeFrame);

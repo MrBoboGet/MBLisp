@@ -18,6 +18,7 @@
 
 
 #include <MBUtility/FileStreams.h>
+#include <MBUtility/SearchableStreamReader.h>
 
 #include <iostream>
 #include "Threading.h"
@@ -674,6 +675,15 @@ namespace MBLisp
         Context.GetEvaluator().p_SkipWhiteSpace(Arguments[0].GetType<MBUtility::StreamReader>());
         return false;
     }
+    bool Evaluator::Seek_Stream(MBUtility::MBSearchableInputStream& InStream,Int Offset)
+    {
+        InStream.SetInputPosition(Offset);
+        return false;
+    }
+    Int Evaluator::Offset_Stream(MBUtility::MBSearchableInputStream& InStream)
+    {
+        return Int(InStream.GetInputPosition());
+    }
     Value Evaluator::Index_List BUILTIN_ARGLIST
     {
         assert(Arguments.size() >= 2 && Arguments[0].IsType<List>() && Arguments[0].GetRef<List>() != nullptr);
@@ -1159,10 +1169,6 @@ namespace MBLisp
             }
         }
         //TODO fix case where stack gets unwound
-        if(m_DebugState.DebuggingActive() && m_DebugState.TrappingSignals())
-        {
-            p_InvokeTrapHandler(CurrentState);
-        }
         if(!SignalFound)
         {
             auto& CurrentFrame = CurrentState.StackFrames.back();
@@ -1305,14 +1311,6 @@ namespace MBLisp
         {
             //throw std::runtime_error("Cannot invoke object");   
             p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,"Cannot invoke object"),true);
-        }
-        //after function invoked, trap it
-        if(m_DebugState.DebuggingActive() && m_DebugState.TrappingNewFunctions() && !IsTrapHandler && !CurrentState.InTrapHandler())
-        {
-            if(!ObjectToCall.IsType<Function>())
-            {
-                p_InvokeTrapHandler(CurrentState);
-            }
         }
     }
     
@@ -2309,6 +2307,8 @@ namespace MBLisp
         AddMethod<MBUtility::StreamReader>("read-line",Stream_ReadLine);
         AddMethod<MBUtility::StreamReader,String>("read-until",Stream_ReadUntil);
         AddMethod<MBUtility::MBOctetOutputStream,String>("write",Write_OutStream);
+        AddGeneric<Seek_Stream>("seek");
+        AddGeneric<Offset_Stream>("offset");
         AddGeneric<Flush>("flush");
 
         AddMethod<String>("out-stream",OutStream_String);
@@ -2363,6 +2363,7 @@ namespace MBLisp
         AddMethod<ThreadHandle>("remove",Remove);
         AddMethod<ThreadHandle>("resume",Resume);
         AddMethod<ThreadHandle>("get-stack-frames",GetStackFrames);
+        AddMethod<ThreadHandle>("stack-count",StackCount);
         AddGeneric<GetScope>("get-frame-envir");
         AddGeneric<GetName_Stackframe>("get-frame-name");
         AddGeneric<GetLocation_StackFrame>("get-frame-location");
@@ -2469,14 +2470,17 @@ namespace MBLisp
         String URIToOpen = Arguments[0].GetType<String>();
         if(Arguments.size() == 1)
         {
-            return Value::MakeExternal(MBUtility::StreamReader(std::make_unique<MBUtility::InputFileStream>(URIToOpen)));
+            return Value::EmplacePolymorphic<MBUtility::SearchableStreamReader,MBUtility::StreamReader,MBUtility::MBOctetInputStream,MBUtility::MBSearchableInputStream>( 
+                        std::make_unique<MBUtility::InputFileStream>( URIToOpen));
         }
         else if(Arguments.size() == 2)
         {
             String AccessString = Arguments[1].GetType<String>();
             if(AccessString.find('r') != AccessString.npos)
             {
-                return Value::MakeExternal(MBUtility::StreamReader(std::make_unique<MBUtility::InputFileStream>(URIToOpen)));
+                return Value::EmplacePolymorphic<MBUtility::SearchableStreamReader,MBUtility::StreamReader,MBUtility::MBOctetInputStream,MBUtility::MBSearchableInputStream>( 
+                        std::make_unique<MBUtility::InputFileStream>( URIToOpen));
+                //return Value::MakeExternal(MBUtility::StreamReader(std::make_unique<MBUtility::InputFileStream>(URIToOpen)));
             }
             else if(AccessString.find('w') != AccessString.npos)
             {
@@ -2558,6 +2562,19 @@ namespace MBLisp
             ReturnValue.push_back(Int(ID));
         }
         return ReturnValue;
+    }
+    Value Evaluator::StackCount BUILTIN_ARGLIST
+    {
+        ExecutionState* StateToInspect = nullptr;
+        if(Context.GetEvaluator().m_ThreadingState.CurrentID() == Arguments[0].GetType<ThreadHandle>().ID)
+        {
+            StateToInspect = &Context.GetState();
+        }
+        else
+        {
+            StateToInspect = Context.GetEvaluator().m_ThreadingState.GetState(Arguments[0].GetType<ThreadHandle>().ID);
+        }
+        return StateToInspect->StackFrames.size();
     }
     Value Evaluator::GetStackFrames BUILTIN_ARGLIST
     {
@@ -2783,6 +2800,8 @@ namespace MBLisp
         MBUtility::StreamReader& Reader = ReaderValue.GetType<MBUtility::StreamReader>();
         assert(ReaderValue.IsType<MBUtility::StreamReader>());
         Ref<ReadTable> TableRef  = CurrentState.GetCurrentScope().FindVariable(p_GetSymbolID("*READTABLE*")).GetRef<ReadTable>();
+
+        size_t BeginStackSize = CurrentState.StackSize();
         while(!Reader.EOFReached())
         {
             IPIndex InstructionToExecute = OpCodes->Size();
@@ -2798,8 +2817,9 @@ namespace MBLisp
                 OpCodes->Append(ListToEncode);
             }
             p_Eval(CurrentState,OpCodes,InstructionToExecute);
-
+            assert(BeginStackSize == CurrentState.StackSize());
         }
+        assert(BeginStackSize == CurrentState.StackSize());
         bool  DEBUG_STATEMENT = true;
     }
     void Evaluator::LoadStd()

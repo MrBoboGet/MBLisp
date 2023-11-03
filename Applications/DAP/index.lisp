@@ -42,7 +42,9 @@
 (defclass TrapState () 
     (trap-signals false)    
     (trap-depth-changed "")    
-    (trap-new-func false)
+    (depth-target -1)
+    (trap-stack-changed "")    
+    (stack-size-target -1)
 )
 (defclass StoredVar ()
     (evaluated false)
@@ -107,13 +109,16 @@
 (set process-state (ProcessState))
 
 (defun resume-execution () 
-    (set-trap-new-func (. trap-state 'trap-new-func))
     (set-trap-depth-changed (. trap-state 'trap-depth-changed))
+    (set-target-depth (. trap-state 'depth-target))
+
+    (set-trap-stack-changed (. trap-state 'trap-stack-changed))
+    (set-stack-size-target (. trap-state 'stack-size-target))
+
     (set-trap-signals (. trap-state 'trap-signals))
     (resume (. process-state 'id))
 )
 (defun stopped ()
-    (set-trap-new-func false)
     (set-trap-depth-changed "")
     (set-trap-signals false)
     (set stopped-state (Stopped-State))
@@ -160,13 +165,16 @@
  (set return-value (dict))
  (set thread-to-resume (. arg "threadId"))
  (set (. trap-state 'trap-depth-changed) "step")
+ (set (. trap-state 'depth-target) (get-thread-depth thread-to-resume))
+ (set (. trap-state 'stack-size-target) (+ (stack-count (thread-handle thread-to-resume)) -1))
  (resume-execution)
  return-value
 )
 (defun handle-stepOut (arg)
  (set return-value (dict))
  (set thread-to-resume (. arg "threadId"))
- (set (. trap-state 'trap-depth-changed) "step")
+ (set (. trap-state 'trap-stack-changed) "pop")
+ (set (. trap-state 'stack-size-target) (+ (stack-count (thread-handle thread-to-resume)) -1))
  (resume-execution)
  return-value
 )
@@ -177,10 +185,11 @@
 )
 
 (defun handle-next (arg)
- (set return-value (make-dict))
+ (set return-value (dict))
  (set thread-to-resume (. arg "threadId"))
  (set (. trap-state 'trap-depth-changed) "next")
- (set-target-depth (get-thread-depth thread-to-resume))
+ (set (. trap-state 'depth-target) (get-thread-depth thread-to-resume))
+ (set (. trap-state 'stack-size-target) (+ (stack-count (thread-handle thread-to-resume)) -1))
  (resume-execution)
  return-value
 )
@@ -197,8 +206,13 @@
   )
   (set source-info (. loaded-sources source-path))
   (set return-breakpoints (list))
+  (set source-stream (open source-path))
   (doit b breakpoints
-    (set lisp-position (symbol 'asd (get-byte-position (slot source-info file-index) (. b 'line) (.  b 'column) ) (path-id source-path)))
+    (set byte-position (get-byte-position (slot source-info file-index) (. b 'line) (.  b 'column) ))
+    (seek source-stream byte-position)
+    (skip-whitespace source-stream)
+    (set byte-position (position source-stream))
+    (set lisp-position (symbol 'asd byte-position (path-id source-path)))
     (set-trap lisp-position)
     (append (slot source-info breakpoints) lisp-position)
     (set return-breakpoint (Breakpoint))
@@ -362,6 +376,7 @@
  {}
 )
 (defun handle-continue (arg)
+    (set trap-state (TrapState))
     (resume-execution)
     {threadId: (int(. process-state 'id)),allThreadsContinued: true}
 )
@@ -393,7 +408,7 @@
 
 (set request-handlers (make-dict 
                         ("stepIn" handle-stepIn)
-                        ("stepOut" handle-stepIn)
+                        ("stepOut" handle-stepOut)
                         ("next" handle-next)
                         ("initialize" handle-initialize)
                         ("setBreakpoints" handle-setBreakpoints)

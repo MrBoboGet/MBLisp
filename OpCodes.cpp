@@ -551,20 +551,27 @@ namespace MBLisp
         m_DebugInfo.insert(m_DebugInfo.end(),m_OpCodes.size()-m_DebugInfo.size(),DebugInfo());
         int CurrentDepth = -1; 
         Location CurrentLocation;
-        for(size_t i = Offset; i < m_DebugInfo.size();i++)
+        //for(size_t i = Offset; i < m_DebugInfo.size();i++)
+        //{
+        //    if(auto It = m_OpcodeLocationInfo.find(i); It != m_OpcodeLocationInfo.end())
+        //    {
+        //        CurrentLocation = It->second.Loc;
+        //        m_DebugInfo[i].Depth = It->second.Depth;
+        //        CurrentDepth = It->second.Depth+1;
+        //        
+        //    }
+        //    else
+        //    {
+        //        m_DebugInfo[i].Depth = CurrentDepth;   
+        //    }
+        //    m_DebugInfo[i].Loc = CurrentLocation;
+        //}
+        
+        //O(n), walla
+        for(auto const& LocInfo : m_OpcodeLocationInfo)
         {
-            if(auto It = m_OpcodeLocationInfo.find(i); It != m_OpcodeLocationInfo.end())
-            {
-                CurrentLocation = It->second.Loc;
-                m_DebugInfo[i].Depth = It->second.Depth;
-                CurrentDepth = It->second.Depth+1;
-                
-            }
-            else
-            {
-                m_DebugInfo[i].Depth = CurrentDepth;   
-            }
-            m_DebugInfo[i].Loc = CurrentLocation;
+            m_DebugInfo[LocInfo.first].Depth = LocInfo.second.Depth;
+            m_DebugInfo[LocInfo.first].Loc = LocInfo.second.Loc;
         }
         assert(m_DebugInfo.size() == m_OpCodes.size());
     }
