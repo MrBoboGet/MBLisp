@@ -261,6 +261,7 @@ namespace MBLisp
         static Value Eq_Bool BUILTIN_ARGLIST;
         static Value Eq_Null BUILTIN_ARGLIST;
         static Value Eq_Type BUILTIN_ARGLIST;
+        static bool Is_Type(ClassDefinition& Lhs,ClassDefinition& Rhs);
         static Value Eq_Any BUILTIN_ARGLIST;
         static bool Eq_ThreadHandle(ThreadHandle  lhs,ThreadHandle rhs);
         static Value Minus_Int BUILTIN_ARGLIST;

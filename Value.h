@@ -1114,6 +1114,7 @@ public:
         explicit ClassDefinition(ClassID NewID)
         {
             ID = NewID;
+            Types.push_back(NewID);
         }
         Symbol Name;
         ClassID ID = 0;

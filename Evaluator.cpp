@@ -417,6 +417,7 @@ namespace MBLisp
         if (Parents.size() == 0)
         {
             TemporaryClass.Types.push_back(1u << UserClassBit);
+            TemporaryClass.Types.push_back(Value::GetTypeTypeID<ClassInstance>());
         }
         Parents.push_back(&TemporaryClass);
         p_MergeClasses(Parents,NewClass);
@@ -775,6 +776,20 @@ namespace MBLisp
     {
         return (Arguments[0].GetType<ClassDefinition>().ID == Arguments[1].GetType<ClassDefinition>().ID)
             || Arguments[0].GetType<ClassDefinition>().ID == 0 || Arguments[1].GetType<ClassDefinition>().ID == 0;
+    }
+    bool Evaluator::Is_Type(ClassDefinition& Lhs,ClassDefinition& Rhs)
+    {
+        bool ReturnValue = false;
+        if(Rhs.ID == 0)
+        {
+            return true;   
+        }
+        auto It = std::lower_bound(Lhs.Types.begin(),Lhs.Types.end(),Rhs.Types.back());
+        if(It != Lhs.Types.end() && *It == Rhs.Types.back())
+        {
+            ReturnValue = true;   
+        }
+        return ReturnValue;
     }
     Value Evaluator::Eq_Any BUILTIN_ARGLIST
     {
@@ -2159,7 +2174,7 @@ namespace MBLisp
             throw std::runtime_error("type requires exactly 1 argument: value to return the type of");   
         }
         Value ReturnValue;
-        if(!(Arguments[0].IsType<ClassDefinition>() && Arguments[0].IsType<ClassInstance>()))
+        if(!(Arguments[0].IsType<ClassDefinition>() || Arguments[0].IsType<ClassInstance>()))
         {
             if(Arguments[0].IsBuiltin())
             {
@@ -2290,6 +2305,7 @@ namespace MBLisp
         AddMethod<bool,bool>("eq",Eq_Bool);
         AddMethod<Int,Int>("eq",Eq_Int);
         AddMethod<ClassDefinition,ClassDefinition>("eq",Eq_Type);
+        AddGeneric<Is_Type>("is");
         AddMethod<Any,Any>("eq",Eq_Any);
         AddMethod<Null,Null>("eq",Eq_Null);
         AddMethod<ThreadHandle,ThreadHandle>("eq",Eq_Null);

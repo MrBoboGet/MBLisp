@@ -167,6 +167,7 @@
  (set (. trap-state 'trap-depth-changed) "step")
  (set (. trap-state 'depth-target) (get-thread-depth thread-to-resume))
  (set (. trap-state 'stack-size-target) (+ (stack-count (thread-handle thread-to-resume)) -1))
+ (set (. trap-state 'trap-stack-changed) "any")
  (resume-execution)
  return-value
 )
@@ -190,6 +191,7 @@
  (set (. trap-state 'trap-depth-changed) "next")
  (set (. trap-state 'depth-target) (get-thread-depth thread-to-resume))
  (set (. trap-state 'stack-size-target) (+ (stack-count (thread-handle thread-to-resume)) -1))
+ (set (. trap-state 'trap-stack-changed) "pop")
  (resume-execution)
  return-value
 )
@@ -292,7 +294,7 @@
     (set (. stored-var 'variable) return-value)
     (set (. stopped-state 'variables var-id) stored-var)
     (set var-type (type var))
-    (if (|| (eq var-type list_t) (eq var-type dict_t) (eq var-type object_t)) (set (. return-value 'variablesReference) var-id))
+    (if (|| (eq var-type list_t) (eq var-type dict_t) (is var-type object_t)) (set (. return-value 'variablesReference) var-id))
     return-value
 )
 
@@ -306,6 +308,7 @@
         (append return-value sub-var)
         (append child-ids current-id)
     )
+    (set (. stopped-state 'sub-var-ids id) child-ids) 
     return-value
 )
 (defmethod get-vars ((var dict_t) id)
@@ -319,6 +322,19 @@
          else 
             (set (. sub-var 'name) "{}")
         )
+        (append return-value sub-var)
+        (append child-ids current-id)
+    )
+    (set (. stopped-state 'sub-var-ids id) child-ids) 
+    return-value
+)
+(defmethod get-vars ((var object_t) id)
+    (set return-value (list))
+    (set child-ids (list))
+    (doit key (slots var)
+        (set current-id  (. stopped-state 'var-id))
+        (set sub-var (get-var (. var key)))
+        (set (. sub-var 'name) (str key))
         (append return-value sub-var)
         (append child-ids current-id)
     )
@@ -357,6 +373,16 @@
  (set (. indexed-var 'evaluated) true)
  (set new-vars (get-vars (slot indexed-var value)  var-ref))
  {variables: new-vars}
+)
+(defun handle-evaluate (arg)
+  (set expr (. arg "expression"))
+  (set eval-scope (new-environment))
+  (if (in "frameId" arg)  (set eval-scope (get-frame-envir (. stopped-state 'variables (. arg "frameId") 'value))))
+
+  (set form-to-evaluate (eval `(read-term ,(in-stream expr)) eval-scope))
+  (set result (eval form-to-evaluate eval-scope))
+  (set result-var (get-var result))
+  {result: (. result-var 'value), variablesReference: (. result-var 'variablesReference)}
 )
 
 
@@ -417,6 +443,7 @@
                         ("threads" handle-threads)
                         ("stackTrace" handle-stackTrace)
                         ("variables" handle-variables )
+                        ("evaluate" handle-evaluate)
                         ("scopes" handle-scopes )
                         ("launch" handle-launch)
                         ("continue" handle-continue )
