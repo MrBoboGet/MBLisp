@@ -32,6 +32,11 @@ namespace MBLisp
     {
         IPIndex UnwindBegin = -1;
     };
+    struct NonLocalGotoInfo
+    {
+        IPIndex ReturnAdress = -1;
+        int TargetUnwindDepth = -1;
+    };
     typedef FuncArgVector StackArgVector;
     struct StackFrame
     {
@@ -53,6 +58,7 @@ namespace MBLisp
         std::vector<SignalHandler> ActiveSignalHandlers;
         std::vector<int> SignalHandlerBunchSize;
         std::vector<IPIndex> ActiveUnwindProtectorsBegin;
+        std::vector<NonLocalGotoInfo> StoredGotos;
 
 
         //GC Stuff

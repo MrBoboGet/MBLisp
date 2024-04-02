@@ -1481,21 +1481,32 @@ namespace MBLisp
             else if(CurrentCode.IsType<OpCode_Goto>())
             {
                 OpCode_Goto& GotoCode = CurrentCode.GetType<OpCode_Goto>();
-                CurrentFrame.ExecutionPosition.SetIP(GotoCode.NewIP);
-                Value ValueToReturn;
-                if(GotoCode.ReturnTop)
+                if(GotoCode.NewUnwindSize == -1 || GotoCode.NewUnwindSize == CurrentFrame.ActiveUnwindProtectorsBegin.size())
                 {
-                    assert(CurrentFrame.ArgumentStack.size() != 0);
-                    ValueToReturn = CurrentFrame.ArgumentStack.back();
+                    CurrentFrame.ExecutionPosition.SetIP(GotoCode.NewIP);
+                    Value ValueToReturn;
+                    if(GotoCode.ReturnTop)
+                    {
+                        assert(CurrentFrame.ArgumentStack.size() != 0);
+                        ValueToReturn = CurrentFrame.ArgumentStack.back();
+                    }
+                    if(GotoCode.NewStackSize != -1)
+                    {
+                        assert(CurrentFrame.ArgumentStack.size() >= GotoCode.NewStackSize);
+                        CurrentFrame.ArgumentStack.resize(GotoCode.NewStackSize);
+                    }
+                    if(GotoCode.ReturnTop)
+                    {
+                        CurrentFrame.ArgumentStack.push_back(std::move(ValueToReturn));
+                    }
                 }
-                if(GotoCode.NewStackSize != -1)
+                else
                 {
-                    assert(CurrentFrame.ArgumentStack.size() >= GotoCode.NewStackSize);
-                    CurrentFrame.ArgumentStack.resize(GotoCode.NewStackSize);
-                }
-                if(GotoCode.ReturnTop)
-                {
-                    CurrentFrame.ArgumentStack.push_back(std::move(ValueToReturn));
+                    //return to this position, and execute the jump after the appropriate 
+                    //unwind handlers have been resolved
+                    NonLocalGotoInfo& GotoInfo = CurrentFrame.StoredGotos.emplace_back();
+                    GotoInfo.TargetUnwindDepth = GotoCode.NewUnwindSize;
+                    GotoInfo.ReturnAdress = CurrentFrame.ExecutionPosition.GetIP()-1;
                 }
             }
             else if(CurrentCode.IsType<OpCode_JumpNotTrue>())
@@ -1665,6 +1676,14 @@ namespace MBLisp
                     if(CurrentFrame.ActiveUnwindProtectorsBegin.size() > 0)
                     {
                         CurrentFrame.ExecutionPosition.SetIP(CurrentFrame.ActiveUnwindProtectorsBegin.back());
+                    }
+                }
+                else if(CurrentFrame.StoredGotos.size() > 0)
+                {
+                    if(CurrentFrame.ActiveUnwindProtectorsBegin.size() == CurrentFrame.StoredGotos.back().TargetUnwindDepth)
+                    {
+                        CurrentFrame.ExecutionPosition.SetIP(CurrentFrame.StoredGotos.back().ReturnAdress);
+                        CurrentFrame.StoredGotos.pop_back();
                     }
                 }
                 CurrentFrame.Unwinding = false;

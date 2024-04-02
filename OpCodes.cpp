@@ -103,12 +103,22 @@ namespace MBLisp
                         }
                         CurrentOffset += 2;
                     }
+                    int CurrentUnwindDepth = CurrentState.UnwindProtectDepth;
                     std::vector<std::pair<SymbolID,IPIndex>> NewUnresolvedSymbols;
                     for(auto const& Pair : CurrentState.UnResolvedGotos) 
                     {
                         if(SymbolToOffsetMap.find(Pair.first) != SymbolToOffsetMap.end())
                         {
-                            ListToAppend[Pair.second].GetType<OpCode_Goto>().NewIP = SymbolToOffsetMap[Pair.first];
+                            auto& OpCode = ListToAppend[Pair.second].GetType<OpCode_Goto>();
+                            OpCode.NewIP = SymbolToOffsetMap[Pair.first];
+                            if(OpCode.NewUnwindSize == CurrentUnwindDepth)
+                            {
+                                OpCode.NewUnwindSize = -1;
+                            }
+                            else
+                            {
+                                OpCode.NewUnwindSize = CurrentUnwindDepth;
+                            }
                         }
                         else
                         {
@@ -131,6 +141,7 @@ namespace MBLisp
                     SymbolID GoSymbol = ListToConvert[1].GetType<Symbol>().ID;
                     OpCode_Goto NewOpcode;
                     NewOpcode.NewStackSize = CurrentState.ArgumentStackCount;
+                    NewOpcode.NewUnwindSize = CurrentState.UnwindProtectDepth;
                     ListToAppend.push_back(NewOpcode);
                     CurrentState.UnResolvedGotos.push_back(std::make_pair(GoSymbol,GOIndex));
                 }
@@ -270,7 +281,9 @@ namespace MBLisp
                     }
                     IPIndex AddProtectIndex = ListToAppend.size();
                     ListToAppend.push_back(OpCode_UnwindProtect_Add());
+                    CurrentState.UnwindProtectDepth += 1;
                     p_CreateOpCodes(ListToConvert[1], ListToAppend, CurrentState);
+                    CurrentState.UnwindProtectDepth -= 1;
                     ListToAppend[AddProtectIndex].GetType<OpCode_UnwindProtect_Add>().UnwindBegin = ListToAppend.size();
                     p_CreateOpCodes(ListToConvert[2],ListToAppend,CurrentState);
                     ListToAppend.push_back(OpCode_UnwindProtect_Pop());
@@ -321,6 +334,7 @@ namespace MBLisp
                     ListToAppend.push_back(OpCode_AddSignalHandlers());
                     IPIndex UnwindProtectIndex = ListToAppend.size();
                     ListToAppend.push_back(OpCode_UnwindProtect_Add());
+                    CurrentState.UnwindProtectDepth += 1;
                     CurrentIndex = 2;
                     CurrentState.InSignalHandler += 1;
 
@@ -349,6 +363,7 @@ namespace MBLisp
                         ListToAppend[HandlerDoneIndex].GetType<OpCode_SignalHandler_Done>().HandlersEnd = HandlersEnd;
                         ListToAppend[HandlerDoneIndex].GetType<OpCode_SignalHandler_Done>().NewStackSize = CurrentState.ArgumentStackCount;
                     }
+                    CurrentState.UnwindProtectDepth -= 1;
                     ListToAppend[UnwindProtectIndex].GetType<OpCode_UnwindProtect_Add>().UnwindBegin = ListToAppend.size();
                     ListToAppend.push_back(OpCode_RemoveSignalHandlers());
                     ListToAppend.push_back(OpCode_UnwindProtect_Pop());
@@ -381,8 +396,10 @@ namespace MBLisp
                     }
                     ListToAppend.push_back(OpCode_PushBindings(ListToConvert[1].GetType<List>().size()));
                     IPIndex UnwindIndex = ListToAppend.size();
+                    CurrentState.UnwindProtectDepth += 1;
                     ListToAppend.push_back(OpCode_UnwindProtect_Add());
                     p_CreateOpCodes(ListToConvert[2],ListToAppend,CurrentState);
+                    CurrentState.UnwindProtectDepth -= 1;
                     IPIndex UnwindBegin = ListToAppend.size();
                     ListToAppend.push_back(OpCode_PopBindings());
                     ListToAppend.push_back(OpCode_UnwindProtect_Pop());

@@ -42,10 +42,12 @@ namespace MBLisp
     {
            
     };
+    //kinda overloaded, should probably split into separate parts
     struct OpCode_Goto
     {
         IPIndex NewIP = -1;
         int NewStackSize =  -1;
+        int NewUnwindSize = -1;
         bool ReturnTop = false;
     };
     struct OpCode_JumpNotTrue
@@ -243,6 +245,7 @@ namespace MBLisp
         {
             std::vector<std::pair<SymbolID,IPIndex>> UnResolvedGotos;
             int InSignalHandler = 0;
+            int UnwindProtectDepth = 0;
             int ArgumentStackCount = 0;
             bool InLambda = 0;
             std::vector<IPIndex> UnResolvedUnwinds;
