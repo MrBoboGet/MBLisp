@@ -1481,6 +1481,7 @@ namespace MBLisp
             else if(CurrentCode.IsType<OpCode_Goto>())
             {
                 OpCode_Goto& GotoCode = CurrentCode.GetType<OpCode_Goto>();
+                assert(GotoCode.NewUnwindSize -1 || GotoCode.NewUnwindSize <= CurrentFrame.ActiveUnwindProtectorsBegin.size());
                 if(GotoCode.NewUnwindSize == -1 || GotoCode.NewUnwindSize == CurrentFrame.ActiveUnwindProtectorsBegin.size())
                 {
                     CurrentFrame.ExecutionPosition.SetIP(GotoCode.NewIP);
@@ -1507,6 +1508,7 @@ namespace MBLisp
                     NonLocalGotoInfo& GotoInfo = CurrentFrame.StoredGotos.emplace_back();
                     GotoInfo.TargetUnwindDepth = GotoCode.NewUnwindSize;
                     GotoInfo.ReturnAdress = CurrentFrame.ExecutionPosition.GetIP()-1;
+                    CurrentFrame.ExecutionPosition.SetIP(CurrentFrame.ActiveUnwindProtectorsBegin.back());
                 }
             }
             else if(CurrentCode.IsType<OpCode_JumpNotTrue>())
@@ -1691,11 +1693,27 @@ namespace MBLisp
             else if(CurrentCode.IsType<OpCode_Unwind>())
             {
                 assert(CurrentFrame.SignalFrameIndex != -1);
-                CurrentState.UnwindForced = false;
-                CurrentState.UnwindingStack = true;
-                CurrentState.FrameTarget = CurrentFrame.SignalFrameIndex;
-                StackFrames[CurrentFrame.SignalFrameIndex].ExecutionPosition.SetIP(CurrentCode.GetType<OpCode_Unwind>().HandlersEnd);
-                StackFrames[CurrentFrame.SignalFrameIndex].ArgumentStack.resize(CurrentCode.GetType<OpCode_Unwind>().NewStackSize+1);
+                //like goto, execute current unwinds depths before
+                auto const& UnwindCode = CurrentCode.GetType<OpCode_Unwind>();
+                assert(UnwindCode.TargetUnwindDepth -1 || UnwindCode.TargetUnwindDepth <= CurrentFrame.ActiveUnwindProtectorsBegin.size());
+                if(UnwindCode.TargetUnwindDepth -1 || UnwindCode.TargetUnwindDepth == CurrentFrame.ActiveUnwindProtectorsBegin.size()
+                        || CurrentFrame.ActiveUnwindProtectorsBegin.size() == 0)
+                {
+                    CurrentState.UnwindForced = false;
+                    CurrentState.UnwindingStack = true;
+                    CurrentState.FrameTarget = CurrentFrame.SignalFrameIndex;
+                    StackFrames[CurrentFrame.SignalFrameIndex].ExecutionPosition.SetIP(CurrentCode.GetType<OpCode_Unwind>().HandlersEnd);
+                    StackFrames[CurrentFrame.SignalFrameIndex].ArgumentStack.resize(CurrentCode.GetType<OpCode_Unwind>().NewStackSize+1);
+                }
+                else
+                {
+                    //return to this position, and execute the jump after the appropriate 
+                    //unwind handlers have been resolved
+                    NonLocalGotoInfo& GotoInfo = CurrentFrame.StoredGotos.emplace_back();
+                    GotoInfo.TargetUnwindDepth = UnwindCode.TargetUnwindDepth;
+                    GotoInfo.ReturnAdress = CurrentFrame.ExecutionPosition.GetIP()-1;
+                    CurrentFrame.ExecutionPosition.SetIP(CurrentFrame.ActiveUnwindProtectorsBegin.back());
+                }
             }
             else if(CurrentCode.IsType<OpCode_PushBindings>())
             {

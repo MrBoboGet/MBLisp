@@ -292,20 +292,23 @@ namespace MBLisp
                 {
                     if(CurrentState.InSignalHandler == 0)
                     {
-                        throw std::runtime_error("unwind special can only occur within a signal handler");
+                        throw std::runtime_error(
+                                "unwind special can only occur within a signal handler");
                     }
                     if(ListToConvert.size() != 1)
                     {
                         throw std::runtime_error("unwind special from takes no arguments");   
                     }
                     CurrentState.UnResolvedUnwinds.push_back(ListToAppend.size());
-                    ListToAppend.push_back(OpCode_Unwind());
+                    ListToAppend.push_back(OpCode_Unwind(CurrentState.UnwindProtectDepth));
                 }
                 else if(CurrentSymbol == SymbolID(PrimitiveForms::signal_handlers))
                 {
                     if((ListToConvert.size() & 1) != 0)
                     {
-                        throw std::runtime_error("signal requires an even amount of arguments: the form to execute, and pairs of handlers");
+                        throw std::runtime_error(
+                                "signal requires an even amount of arguments: "
+                                "the form to execute, and pairs of handlers");
                     }
                     int CurrentIndex = 2;
                     std::vector<OpCode_AddSignalHandlers::SignalHandler> Handlers;
@@ -335,6 +338,8 @@ namespace MBLisp
                     IPIndex UnwindProtectIndex = ListToAppend.size();
                     ListToAppend.push_back(OpCode_UnwindProtect_Add());
                     CurrentState.UnwindProtectDepth += 1;
+
+                    int TargetUnwindDepth = CurrentState.UnwindProtectDepth;
                     CurrentIndex = 2;
                     CurrentState.InSignalHandler += 1;
 
@@ -346,7 +351,15 @@ namespace MBLisp
                     while(CurrentIndex < ListToConvert.size())
                     {
                         Handlers[(CurrentIndex-1)/2].HandlerBegin = ListToAppend.size();
-                        p_CreateOpCodes(ListToConvert[CurrentIndex+1],ListToAppend,CurrentState);
+                        EncodingState NewState;
+                        NewState.InSignalHandler += 1;
+                        p_CreateOpCodes(ListToConvert[CurrentIndex+1],ListToAppend,NewState);
+                        CurrentState.UnResolvedUnwinds.insert(CurrentState.UnResolvedUnwinds.end(),
+                                NewState.UnResolvedUnwinds.begin(),NewState.UnResolvedUnwinds.end());
+                        if(CurrentState.UnResolvedGotos.size() > 0)
+                        {
+                            throw std::runtime_error("Unresolved go statements in signal handler");   
+                        }
                         SignalHandlerDones.push_back(ListToAppend.size());
                         ListToAppend.push_back(OpCode_SignalHandler_Done());
                         CurrentIndex += 2;
@@ -355,9 +368,19 @@ namespace MBLisp
                     IPIndex HandlersEnd = ListToAppend.size();
                     for(IPIndex& UnwindIndexes : CurrentState.UnResolvedUnwinds)
                     {
-                        ListToAppend[UnwindIndexes].GetType<OpCode_Unwind>().HandlersEnd = HandlersEnd;
-                        ListToAppend[UnwindIndexes].GetType<OpCode_Unwind>().NewStackSize = CurrentState.ArgumentStackCount;
+                        auto& CurrentCode = ListToAppend[UnwindIndexes].GetType<OpCode_Unwind>();
+                        CurrentCode.HandlersEnd = HandlersEnd;
+                        CurrentCode.NewStackSize = CurrentState.ArgumentStackCount;
+                        if(CurrentCode.TargetUnwindDepth != TargetUnwindDepth)
+                        {
+                            CurrentCode.TargetUnwindDepth = TargetUnwindDepth;
+                        }
+                        else
+                        {
+                            CurrentCode.TargetUnwindDepth = -1;   
+                        }
                     }
+                    CurrentState.UnResolvedUnwinds.clear();
                     for(IPIndex& HandlerDoneIndex : SignalHandlerDones)
                     {
                         ListToAppend[HandlerDoneIndex].GetType<OpCode_SignalHandler_Done>().HandlersEnd = HandlersEnd;
@@ -433,6 +456,7 @@ namespace MBLisp
                     OpCode_Goto NewOpCode;
                     NewOpCode.NewStackSize = 0;
                     NewOpCode.ReturnTop =  true;
+                    NewOpCode.NewUnwindSize = CurrentState.UnwindProtectDepth;
                     CurrentState.UnresolvedReturns.push_back(UnresolvedReturn);
                     ListToAppend.push_back(NewOpCode);
                 }
@@ -533,7 +557,16 @@ namespace MBLisp
         {
             for(auto UnresolvedReturn : CurrentState.UnresolvedReturns)
             {
-                m_OpCodes[UnresolvedReturn].GetType<OpCode_Goto>().NewIP = m_OpCodes.size();
+                auto& CurrentCode = m_OpCodes[UnresolvedReturn].GetType<OpCode_Goto>();
+                CurrentCode.NewIP = m_OpCodes.size();
+                if(CurrentCode.NewUnwindSize == 0)
+                {
+                    CurrentCode.NewUnwindSize = -1;
+                }
+                else
+                {
+                    CurrentCode.NewUnwindSize = 0;
+                }
             }
         }
         if(CurrentState.UnResolvedGotos.size() != 0)

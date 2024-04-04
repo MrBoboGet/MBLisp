@@ -73,8 +73,13 @@ namespace MBLisp
     //signals and unwind stuff
     struct OpCode_Unwind
     {
+        OpCode_Unwind(int CurrentUnwindProtectCount)
+        {
+            TargetUnwindDepth = CurrentUnwindProtectCount;
+        }
         IPIndex HandlersEnd = -1;
         int NewStackSize =  -1;
+        int TargetUnwindDepth = -1;
     };
     struct OpCode_Signal
     {
