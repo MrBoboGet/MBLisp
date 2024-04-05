@@ -1156,6 +1156,17 @@ namespace MBLisp
         {
             auto& CurrentFrame = CurrentState.StackFrames.back();
             auto& StackFrames = CurrentState.StackFrames;
+            //signals cannot go past UnwindProtect handlers
+            //even non forced, as those could invoke unwind above
+            if(CurrentFrame.ProtectDepth > 0)
+            {
+                assert(CurrentFrame.ActiveUnwindProtectors.size() > 0);
+                auto const& CurrentProtector = CurrentFrame.ActiveUnwindProtectors.back();
+                CurrentFrame.ArgumentStack.resize(CurrentProtector.EndStackCount+1);
+                CurrentFrame.ExecutionPosition.SetIP(CurrentProtector.End);
+                return;
+            }
+
             if(CurrentFrame.SignalFrameIndex != -1 && i == CurrentFrameIndex)
             {
                 continue;   
@@ -1352,7 +1363,7 @@ namespace MBLisp
                 }
                 else
                 {
-                    if (CurrentState.StackFrames.back().ActiveUnwindProtectorsBegin.size() == 0)
+                    if (CurrentState.StackFrames.back().ActiveUnwindProtectors.size() == 0)
                     {
                         CurrentState.PopFrame();
                         if(StackFrames.size() == ReturnIndex)
@@ -1363,7 +1374,7 @@ namespace MBLisp
                     }
                     else if (CurrentState.StackFrames.back().Unwinding == false)
                     {
-                        CurrentState.StackFrames.back().ExecutionPosition.SetIP(CurrentState.StackFrames.back().ActiveUnwindProtectorsBegin.back());
+                        CurrentState.StackFrames.back().ExecutionPosition.SetIP(CurrentState.StackFrames.back().ActiveUnwindProtectors.back().Begin);
                         CurrentState.StackFrames.back().Unwinding = true;
                     }
                 }
@@ -1384,7 +1395,7 @@ namespace MBLisp
             {
                 assert(CurrentFrame.ArgumentStack.size() == 1);
                 assert(CurrentFrame.ActiveSignalHandlers.size() == 0);
-                assert(CurrentFrame.ActiveUnwindProtectorsBegin.size() == 0);
+                assert(CurrentFrame.ActiveUnwindProtectors.size() == 0);
                 assert(CurrentFrame.SignalHandlerBunchSize.size() == 0);
                 ReturnValue = std::move(CurrentFrame.ArgumentStack.back());
                 CurrentState.PopFrame();
@@ -1481,8 +1492,8 @@ namespace MBLisp
             else if(CurrentCode.IsType<OpCode_Goto>())
             {
                 OpCode_Goto& GotoCode = CurrentCode.GetType<OpCode_Goto>();
-                assert(GotoCode.NewUnwindSize -1 || GotoCode.NewUnwindSize <= CurrentFrame.ActiveUnwindProtectorsBegin.size());
-                if(GotoCode.NewUnwindSize == -1 || GotoCode.NewUnwindSize == CurrentFrame.ActiveUnwindProtectorsBegin.size())
+                assert(GotoCode.NewUnwindSize -1 || GotoCode.NewUnwindSize <= CurrentFrame.ActiveUnwindProtectors.size());
+                if(GotoCode.NewUnwindSize == -1 || GotoCode.NewUnwindSize == CurrentFrame.ActiveUnwindProtectors.size())
                 {
                     CurrentFrame.ExecutionPosition.SetIP(GotoCode.NewIP);
                     Value ValueToReturn;
@@ -1508,7 +1519,7 @@ namespace MBLisp
                     NonLocalGotoInfo& GotoInfo = CurrentFrame.StoredGotos.emplace_back();
                     GotoInfo.TargetUnwindDepth = GotoCode.NewUnwindSize;
                     GotoInfo.ReturnAdress = CurrentFrame.ExecutionPosition.GetIP()-1;
-                    CurrentFrame.ExecutionPosition.SetIP(CurrentFrame.ActiveUnwindProtectorsBegin.back());
+                    CurrentFrame.ExecutionPosition.SetIP(CurrentFrame.ActiveUnwindProtectors.back().Begin);
                 }
             }
             else if(CurrentCode.IsType<OpCode_JumpNotTrue>())
@@ -1667,22 +1678,31 @@ namespace MBLisp
             }
             else if(CurrentCode.IsType<OpCode_UnwindProtect_Add>())
             {
-                CurrentFrame.ActiveUnwindProtectorsBegin.push_back(CurrentCode.GetType<OpCode_UnwindProtect_Add>().UnwindBegin);
+                auto const& UnwindAddCode = CurrentCode.GetType<OpCode_UnwindProtect_Add>();
+                UnwindProtectInfo& NewInfo = CurrentFrame.ActiveUnwindProtectors.emplace_back();
+                NewInfo.Begin = UnwindAddCode.UnwindBegin;
+                NewInfo.End = UnwindAddCode.UnwindEnd;
+                NewInfo.EndStackCount = UnwindAddCode.EndStackCount;
+            }
+            else if(CurrentCode.IsType<OpCode_UnwindProtect_Begin>())
+            {
+                CurrentFrame.ProtectDepth += 1;
             }
             else if(CurrentCode.IsType<OpCode_UnwindProtect_Pop>())
             {
-                assert(CurrentFrame.ActiveUnwindProtectorsBegin.size() > 0);
-                CurrentFrame.ActiveUnwindProtectorsBegin.pop_back();
+                assert(CurrentFrame.ActiveUnwindProtectors.size() > 0);
+                CurrentFrame.ActiveUnwindProtectors.pop_back();
+                CurrentFrame.ProtectDepth -= 1;
                 if(CurrentState.UnwindingStack)
                 {
-                    if(CurrentFrame.ActiveUnwindProtectorsBegin.size() > 0)
+                    if(CurrentFrame.ActiveUnwindProtectors.size() > 0)
                     {
-                        CurrentFrame.ExecutionPosition.SetIP(CurrentFrame.ActiveUnwindProtectorsBegin.back());
+                        CurrentFrame.ExecutionPosition.SetIP(CurrentFrame.ActiveUnwindProtectors.back().Begin);
                     }
                 }
                 else if(CurrentFrame.StoredGotos.size() > 0)
                 {
-                    if(CurrentFrame.ActiveUnwindProtectorsBegin.size() == CurrentFrame.StoredGotos.back().TargetUnwindDepth)
+                    if(CurrentFrame.ActiveUnwindProtectors.size() == CurrentFrame.StoredGotos.back().TargetUnwindDepth)
                     {
                         CurrentFrame.ExecutionPosition.SetIP(CurrentFrame.StoredGotos.back().ReturnAdress);
                         CurrentFrame.StoredGotos.pop_back();
@@ -1695,9 +1715,9 @@ namespace MBLisp
                 assert(CurrentFrame.SignalFrameIndex != -1);
                 //like goto, execute current unwinds depths before
                 auto const& UnwindCode = CurrentCode.GetType<OpCode_Unwind>();
-                assert(UnwindCode.TargetUnwindDepth -1 || UnwindCode.TargetUnwindDepth <= CurrentFrame.ActiveUnwindProtectorsBegin.size());
-                if(UnwindCode.TargetUnwindDepth -1 || UnwindCode.TargetUnwindDepth == CurrentFrame.ActiveUnwindProtectorsBegin.size()
-                        || CurrentFrame.ActiveUnwindProtectorsBegin.size() == 0)
+                assert(UnwindCode.TargetUnwindDepth -1 || UnwindCode.TargetUnwindDepth <= CurrentFrame.ActiveUnwindProtectors.size());
+                if(UnwindCode.TargetUnwindDepth -1 || UnwindCode.TargetUnwindDepth == CurrentFrame.ActiveUnwindProtectors.size()
+                        || CurrentFrame.ActiveUnwindProtectors.size() == 0)
                 {
                     CurrentState.UnwindForced = false;
                     CurrentState.UnwindingStack = true;
@@ -1712,7 +1732,7 @@ namespace MBLisp
                     NonLocalGotoInfo& GotoInfo = CurrentFrame.StoredGotos.emplace_back();
                     GotoInfo.TargetUnwindDepth = UnwindCode.TargetUnwindDepth;
                     GotoInfo.ReturnAdress = CurrentFrame.ExecutionPosition.GetIP()-1;
-                    CurrentFrame.ExecutionPosition.SetIP(CurrentFrame.ActiveUnwindProtectorsBegin.back());
+                    CurrentFrame.ExecutionPosition.SetIP(CurrentFrame.ActiveUnwindProtectors.back().Begin);
                 }
             }
             else if(CurrentCode.IsType<OpCode_PushBindings>())

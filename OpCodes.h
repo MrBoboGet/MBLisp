@@ -106,6 +106,12 @@ namespace MBLisp
     struct OpCode_UnwindProtect_Add
     {
         IPIndex UnwindBegin = -1;
+        IPIndex UnwindEnd = -1;
+        int EndStackCount = -1;
+    };
+    struct OpCode_UnwindProtect_Begin
+    {
+           
     };
     struct OpCode_UnwindProtect_Pop
     {
@@ -173,6 +179,7 @@ namespace MBLisp
             OpCode_SignalHandler_Done,
             OpCode_RemoveSignalHandlers,
             OpCode_UnwindProtect_Add,
+            OpCode_UnwindProtect_Begin,
             OpCode_UnwindProtect_Pop,
             //let stuff
             OpCode_PushBindings,

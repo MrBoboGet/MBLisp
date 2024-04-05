@@ -285,7 +285,10 @@ namespace MBLisp
                     p_CreateOpCodes(ListToConvert[1], ListToAppend, CurrentState);
                     CurrentState.UnwindProtectDepth -= 1;
                     ListToAppend[AddProtectIndex].GetType<OpCode_UnwindProtect_Add>().UnwindBegin = ListToAppend.size();
+                    ListToAppend.push_back(OpCode_UnwindProtect_Begin());
                     p_CreateOpCodes(ListToConvert[2],ListToAppend,CurrentState);
+                    ListToAppend[AddProtectIndex].GetType<OpCode_UnwindProtect_Add>().UnwindEnd = ListToAppend.size();
+                    ListToAppend[AddProtectIndex].GetType<OpCode_UnwindProtect_Add>().EndStackCount = CurrentState.ArgumentStackCount;
                     ListToAppend.push_back(OpCode_UnwindProtect_Pop());
                 }
                 else if(CurrentSymbol == SymbolID(PrimitiveForms::unwind))
@@ -388,7 +391,10 @@ namespace MBLisp
                     }
                     CurrentState.UnwindProtectDepth -= 1;
                     ListToAppend[UnwindProtectIndex].GetType<OpCode_UnwindProtect_Add>().UnwindBegin = ListToAppend.size();
+                    ListToAppend[UnwindProtectIndex].GetType<OpCode_UnwindProtect_Add>().EndStackCount = CurrentState.ArgumentStackCount;
+                    ListToAppend.push_back(OpCode_UnwindProtect_Begin());
                     ListToAppend.push_back(OpCode_RemoveSignalHandlers());
+                    ListToAppend[UnwindProtectIndex].GetType<OpCode_UnwindProtect_Add>().UnwindEnd = ListToAppend.size();
                     ListToAppend.push_back(OpCode_UnwindProtect_Pop());
                     OpCode_AddSignalHandlers& SignalOpCode = ListToAppend[AddHandlersIndex].GetType<OpCode_AddSignalHandlers>();
                     SignalOpCode.Handlers = std::move(Handlers);
@@ -424,9 +430,12 @@ namespace MBLisp
                     p_CreateOpCodes(ListToConvert[2],ListToAppend,CurrentState);
                     CurrentState.UnwindProtectDepth -= 1;
                     IPIndex UnwindBegin = ListToAppend.size();
+                    ListToAppend.push_back(OpCode_UnwindProtect_Begin());
                     ListToAppend.push_back(OpCode_PopBindings());
+                    ListToAppend[UnwindIndex].GetType<OpCode_UnwindProtect_Add>().UnwindEnd = ListToAppend.size();
                     ListToAppend.push_back(OpCode_UnwindProtect_Pop());
                     ListToAppend[UnwindIndex].GetType<OpCode_UnwindProtect_Add>().UnwindBegin = UnwindBegin;
+                    ListToAppend[UnwindIndex].GetType<OpCode_UnwindProtect_Add>().EndStackCount = CurrentState.ArgumentStackCount;
                 }
                 else if(CurrentSymbol == SymbolID(PrimitiveForms::eval))
                 {
@@ -635,6 +644,7 @@ namespace MBLisp
     }
     void OpCodeExtractor::SetIP(IPIndex NewIP)
     {
+        assert(NewIP >= 0);
         m_IP = NewIP;
     }
     IPIndex OpCodeExtractor::GetIP() const

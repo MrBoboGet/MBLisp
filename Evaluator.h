@@ -38,6 +38,13 @@ namespace MBLisp
         int TargetUnwindDepth = -1;
     };
     typedef FuncArgVector StackArgVector;
+
+    struct UnwindProtectInfo
+    {
+        IPIndex Begin = -1;
+        IPIndex End = -1;
+        int EndStackCount = -1;
+    };
     struct StackFrame
     {
         //TODO MEGA HACKY 
@@ -55,9 +62,10 @@ namespace MBLisp
         //signal/unwind stuff
         int SignalFrameIndex = -1;
         bool Unwinding = false;
+        int ProtectDepth = 0;
         std::vector<SignalHandler> ActiveSignalHandlers;
         std::vector<int> SignalHandlerBunchSize;
-        std::vector<IPIndex> ActiveUnwindProtectorsBegin;
+        std::vector<UnwindProtectInfo> ActiveUnwindProtectors;
         std::vector<NonLocalGotoInfo> StoredGotos;
 
 

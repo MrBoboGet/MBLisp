@@ -413,3 +413,14 @@
 (defun =< (lhs rhs)
     (leq lhs rhs)
 )
+
+(defun member-reader (stream)
+    (set sym (read-term stream))
+    (set form (read-term stream))
+    (if (is (type sym) symbol_t)
+        `(index ,form (quote ,sym))
+    else 
+        `(index ,form ,sym)
+    )
+)
+(add-reader-character *READTABLE* ":" member-reader)
