@@ -36,6 +36,7 @@ namespace MBLisp
     {
         IPIndex ReturnAdress = -1;
         int TargetUnwindDepth = -1;
+        int StackSize = -1;
     };
     typedef FuncArgVector StackArgVector;
 
@@ -310,6 +311,7 @@ namespace MBLisp
         //String manip
         static Value Split_String BUILTIN_ARGLIST;
         static Value Len_String BUILTIN_ARGLIST;
+        static Value Append_String BUILTIN_ARGLIST;
 
         //Environment
         static Value Environment BUILTIN_ARGLIST;

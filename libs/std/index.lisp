@@ -424,3 +424,25 @@
     )
 )
 (add-reader-character *READTABLE* ":" member-reader)
+
+
+(defmethod str ((list list_t))
+    (set return-value "(")
+    (doit i (range 0 (len list))
+        (append return-value (str (index list i)))
+        (if (< (+ i 1) (len list)) (append return-value " "))
+    )
+    (append return-value ")")
+    return-value
+)
+
+(defmethod eq ((lhs list_t) (rhs list_t))
+    (if (not (eq (len lhs) (len rhs)))
+        (return false)
+    )
+    (set return-value true)
+    (doit i (range 0 (len lhs))
+        (if (not (eq (. lhs i) (. rhs i))) (return false))
+    )
+    return-value
+)

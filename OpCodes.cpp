@@ -465,7 +465,6 @@ namespace MBLisp
                     OpCode_Goto NewOpCode;
                     NewOpCode.NewStackSize = 0;
                     NewOpCode.ReturnTop =  true;
-                    NewOpCode.NewUnwindSize = CurrentState.UnwindProtectDepth;
                     CurrentState.UnresolvedReturns.push_back(UnresolvedReturn);
                     ListToAppend.push_back(NewOpCode);
                 }
@@ -479,13 +478,9 @@ namespace MBLisp
                 p_CreateFuncCall(ListToConvert,ListToAppend,CurrentState,false);
             }
         }
-        else if(ListToConvert[0].IsType<List>())
-        {
-            p_CreateFuncCall(ListToConvert, ListToAppend, CurrentState,false);
-        }
         else
         {
-            throw std::runtime_error("Only symbol or list can be first position of s-expression");
+            p_CreateFuncCall(ListToConvert, ListToAppend, CurrentState,false);
         }
         assert(ListToAppend.size() > CurrentPosition);
         if(!ListToConvert.GetLocation().IsEmpty())
@@ -568,14 +563,7 @@ namespace MBLisp
             {
                 auto& CurrentCode = m_OpCodes[UnresolvedReturn].GetType<OpCode_Goto>();
                 CurrentCode.NewIP = m_OpCodes.size();
-                if(CurrentCode.NewUnwindSize == 0)
-                {
-                    CurrentCode.NewUnwindSize = -1;
-                }
-                else
-                {
-                    CurrentCode.NewUnwindSize = 0;
-                }
+                CurrentCode.NewUnwindSize = 0;
             }
         }
         if(CurrentState.UnResolvedGotos.size() != 0)
