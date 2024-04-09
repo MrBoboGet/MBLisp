@@ -18,8 +18,17 @@ namespace MBLisp
         }
         else if( ValueToEncode.IsType<Symbol>())
         {
+            auto const& Sym = ValueToEncode.GetType<Symbol>();
             OpCode_PushVar NewCode;
-            NewCode.ID = ValueToEncode.GetType<Symbol>().ID;
+            if(auto It = CurrentState.LocalSymbols.find(Sym.ID); It != CurrentState.LocalSymbols.end())
+            {
+                NewCode.Local = true;
+                NewCode.ID = It->second;
+            }
+            else
+            {
+                NewCode.ID = Sym.ID;
+            }
             ListToAppend.push_back(NewCode);
         }
         else
@@ -197,17 +206,23 @@ namespace MBLisp
                             NewLambda.Definition->Arguments.push_back(Argument.GetType<Symbol>());
                         }
                     }
-                    NewLambda.Definition->Instructions = MakeRef<OpCodeList>(ListToConvert,2,true);
+                    int SubLambdaSymbolCount = 0;
+                    NewLambda.Definition->Instructions = MakeRef<OpCodeList>(ListToConvert,2,*NewLambda.Definition,CurrentState,SubLambdaSymbolCount);
+                    assert(SubLambdaSymbolCount >= CurrentState.TotalLocalSymbolCount);
+                    NewLambda.Definition->LocalSymCount = SubLambdaSymbolCount-CurrentState.TotalLocalSymbolCount;
+                    NewLambda.Definition->LocalSymBegin = CurrentState.TotalLocalSymbolCount;
+
                     OpCode_PushLiteral NewCode;
                     NewCode.Literal = std::move(NewLambda);
                     ListToAppend.push_back(std::move(NewCode));
                 }
-                else if(CurrentSymbol == SymbolID(PrimitiveForms::set))
+                else if(CurrentSymbol == SymbolID(PrimitiveForms::set) || CurrentSymbol == SymbolID(PrimitiveForms::setl))
                 {
                     if(ListToConvert.size() != 3)
                     {
                         throw std::runtime_error("Set requires exactly 2 arguments, the symbol to modify, and the new value");   
                     }
+                    bool IsLocalSet = CurrentSymbol == SymbolID(PrimitiveForms::setl) && ListToConvert[2].IsType<Symbol>() && CurrentState.InLambda;
                     p_CreateOpCodes(ListToConvert[2],ListToAppend,CurrentState);
                     if (!ListToConvert[1].IsType<List>())
                     {
@@ -215,10 +230,27 @@ namespace MBLisp
                         {
                             throw std::runtime_error("set special form requires either a symbol or function-call as the first argument");
                         }
-                        OpCode_PushLiteral LiteralToPush;
-                        LiteralToPush.Literal = ListToConvert[1];
-                        ListToAppend.push_back(LiteralToPush);
-                        ListToAppend.push_back(OpCode_Set());
+                        auto const& Sym = ListToConvert[1].GetType<Symbol>();
+                        if(CurrentState.LocalSymbols.find(Sym.ID) != CurrentState.LocalSymbols.end())
+                        {
+                            IsLocalSet = true;
+                        }
+                        if(!IsLocalSet)
+                        {
+                            OpCode_PushLiteral LiteralToPush;
+                            LiteralToPush.Literal = ListToConvert[1];
+                            ListToAppend.push_back(LiteralToPush);
+                            ListToAppend.push_back(OpCode_Set());
+                        }
+                        else
+                        {
+                            OpCode_PushLiteral LiteralToPush;
+                            LiteralToPush.Literal = ListToConvert[1];
+                            ListToAppend.push_back(LiteralToPush);
+                            OpCode_Set NewOpcode;
+                            NewOpcode.LocalSetIndex = CurrentState.GetLocalSymbolIndex(Sym.ID);
+                            ListToAppend.push_back(NewOpcode);
+                        }
                     }
                     else 
                     {
@@ -355,6 +387,9 @@ namespace MBLisp
                     {
                         Handlers[(CurrentIndex-1)/2].HandlerBegin = ListToAppend.size();
                         EncodingState NewState;
+                        NewState.TotalLocalSymbolCount = CurrentState.TotalLocalSymbolCount;
+                        NewState.LocalSymbols = CurrentState.LocalSymbols;
+
                         NewState.InSignalHandler += 1;
                         p_CreateOpCodes(ListToConvert[CurrentIndex+1],ListToAppend,NewState);
                         CurrentState.UnResolvedUnwinds.insert(CurrentState.UnResolvedUnwinds.end(),
@@ -365,6 +400,10 @@ namespace MBLisp
                         }
                         SignalHandlerDones.push_back(ListToAppend.size());
                         ListToAppend.push_back(OpCode_SignalHandler_Done());
+
+
+                        CurrentState.TotalLocalSymbolCount = NewState.TotalLocalSymbolCount;
+                        CurrentState.LocalSymbols = NewState.LocalSymbols;
                         CurrentIndex += 2;
                     }
                     CurrentState.InSignalHandler += -1;
@@ -552,24 +591,58 @@ namespace MBLisp
         }
         p_FillDebugInfo();
     }
-    OpCodeList::OpCodeList(List const& ListToConvert,int Offset,bool  InLambda)
+    //OpCodeList::OpCodeList(List const& ListToConvert,int Offset,bool  InLambda)
+    //{
+    //    EncodingState CurrentState;
+    //    CurrentState.InLambda = InLambda;
+    //    p_WriteProgn(ListToConvert,m_OpCodes,CurrentState,Offset);
+    //    if(InLambda)
+    //    {
+    //        for(auto UnresolvedReturn : CurrentState.UnresolvedReturns)
+    //        {
+    //            auto& CurrentCode = m_OpCodes[UnresolvedReturn].GetType<OpCode_Goto>();
+    //            CurrentCode.NewIP = m_OpCodes.size();
+    //            CurrentCode.NewUnwindSize = 0;
+    //        }
+    //    }
+    //    if(CurrentState.UnResolvedGotos.size() != 0)
+    //    {
+    //        throw std::runtime_error("go's to tags without corresponding label detected");
+    //    }
+    //    p_FillDebugInfo();
+    //}
+    OpCodeList::OpCodeList(List const& ListToConvert,int Offset,FunctionDefinition const& LambdaDef ,
+            EncodingState const& ParentState,int& OutTotalSymbolCount)
     {
         EncodingState CurrentState;
-        CurrentState.InLambda = InLambda;
-        p_WriteProgn(ListToConvert,m_OpCodes,CurrentState,Offset);
-        if(InLambda)
+        CurrentState.LocalSymbols = ParentState.LocalSymbols;
+        CurrentState.TotalLocalSymbolCount = ParentState.TotalLocalSymbolCount;
+        CurrentState.InLambda = true;
+        //add lambda symbols
+        for(auto const& Arg : LambdaDef.Arguments)
         {
-            for(auto UnresolvedReturn : CurrentState.UnresolvedReturns)
-            {
-                auto& CurrentCode = m_OpCodes[UnresolvedReturn].GetType<OpCode_Goto>();
-                CurrentCode.NewIP = m_OpCodes.size();
-                CurrentCode.NewUnwindSize = 0;
-            }
+            CurrentState.AddLocalSymbol(Arg.ID);
+        }
+        if(LambdaDef.RestParameter != 0)
+        {
+            CurrentState.AddLocalSymbol(LambdaDef.RestParameter);
+        }
+        if(LambdaDef.EnvirParameter != 0)
+        {
+            CurrentState.AddLocalSymbol(LambdaDef.EnvirParameter);   
+        }
+        p_WriteProgn(ListToConvert,m_OpCodes,CurrentState,Offset);
+        for(auto UnresolvedReturn : CurrentState.UnresolvedReturns)
+        {
+            auto& CurrentCode = m_OpCodes[UnresolvedReturn].GetType<OpCode_Goto>();
+            CurrentCode.NewIP = m_OpCodes.size();
+            CurrentCode.NewUnwindSize = 0;
         }
         if(CurrentState.UnResolvedGotos.size() != 0)
         {
             throw std::runtime_error("go's to tags without corresponding label detected");
         }
+        OutTotalSymbolCount = CurrentState.TotalLocalSymbolCount;
         p_FillDebugInfo();
     }
     OpCodeList::OpCodeList(SymbolID ArgID,SymbolID IndexFunc,std::vector<SlotDefinition> const& Initializers)

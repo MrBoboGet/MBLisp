@@ -7,6 +7,7 @@ namespace MBLisp
     struct OpCode_PushVar
     {
         SymbolID ID;
+        bool Local = false;
         OpCode_PushVar()
         {
                
@@ -30,6 +31,7 @@ namespace MBLisp
     };
     struct OpCode_Set
     {
+        int_least32_t LocalSetIndex = -1;
     };
     struct OpCode_PreSet
     {
@@ -158,6 +160,7 @@ namespace MBLisp
         bind_dynamic,
         eval,
         Return,
+        setl,
         LAST,
     };
     struct OpCode
@@ -262,6 +265,33 @@ namespace MBLisp
             bool InLambda = 0;
             std::vector<IPIndex> UnResolvedUnwinds;
             std::vector<IPIndex> UnresolvedReturns;
+            //
+            std::unordered_map<SymbolID,int> LocalSymbols;
+            int TotalLocalSymbolCount = 0;
+
+            int GetLocalSymbolIndex(SymbolID Symbol)
+            {
+                int ReturnValue = 0;
+                auto It = LocalSymbols.find(Symbol);
+                if(It != LocalSymbols.end())
+                {
+                    return It->second;   
+                }
+                else
+                {
+                    int NewIndex = TotalLocalSymbolCount;
+                    TotalLocalSymbolCount++;
+                    LocalSymbols[Symbol] = NewIndex;
+                    return NewIndex;
+                }
+                return ReturnValue;
+            }
+            void AddLocalSymbol(SymbolID Symbol)
+            {
+                int NewIndex = TotalLocalSymbolCount;
+                TotalLocalSymbolCount++;
+                LocalSymbols[Symbol] = NewIndex;
+            }
         };
         void p_CreateOpCodes(Value const& ValueToEncode,std::vector<OpCode>& ListToAppend,EncodingState& CurrentState);
         void p_CreateFuncCall(List const& ValueToEncode,std::vector<OpCode>& OutCodes,EncodingState& CurrentState,bool Setting);
@@ -274,7 +304,8 @@ namespace MBLisp
         OpCodeList();
         OpCodeList(Value const& ValueToEncode);
         OpCodeList(List const& ListToConvert);
-        OpCodeList(List const& ListToConvert,int Offset,bool InLambda);
+        //OpCodeList(List const& ListToConvert,int Offset,bool InLambda);
+        OpCodeList(List const& ListToConvert,int Offset,FunctionDefinition const& LamdaDef ,EncodingState const& ParentState,int& OutTotalSymbolCount);
         OpCodeList(SymbolID ArgID,SymbolID IndexFunc,std::vector<SlotDefinition> const& Initializers);
         void Append(List const& ListToConvert);
         void Append(Value const& ListToConvert);

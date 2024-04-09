@@ -57,11 +57,33 @@ namespace MBLisp
                 ReturnValue = Parent.AssociatedScope->TryGet(Variable);
                 if(ReturnValue != nullptr)
                 {
-                    break;   
+                    return ReturnValue;
                 }
             }
         }
         return ReturnValue;
+    }
+    Value& Scope::GetLocal(SymbolID Variable)
+    {
+        //maybe should use asserts instead, as this function should not be able to fail
+        if(Variable < m_LocalSymBegin)
+        {
+            if(m_ParentScope.size() == 0)
+            {
+                throw std::runtime_error("Invalid local symbol index");
+            }
+            //NOTE assumes that the first parent scope always is the parent lambda/scope
+            return m_ParentScope[0].AssociatedScope->GetLocal(Variable);
+        }
+        else
+        {
+            auto Index = Variable-m_LocalSymBegin;
+            if(Index >= m_LocalVars.size())
+            {
+                throw std::runtime_error("Invalid local symbol index: to large");   
+            }
+            return m_LocalVars[Index];
+        }
     }
     void Scope::Clear()
     {
@@ -84,6 +106,11 @@ namespace MBLisp
     void Scope::OverrideVariable(SymbolID Variable,Value NewValue)
     {
         m_Variables[Variable] = std::move(NewValue);
+    }
+    void Scope::SetLocalVariable(int Index,Value NewValue)
+    {
+        assert(Index < m_LocalVars.size());
+        m_LocalVars[Index] = std::move(NewValue);
     }
     std::vector<SymbolID> Scope::Vars() const
     {

@@ -377,6 +377,8 @@ public:
     struct FunctionDefinition
     {
         std::vector<Symbol> Arguments;
+        int LocalSymCount = 0;
+        int LocalSymBegin = 0;
         SymbolID RestParameter = 0;
         SymbolID EnvirParameter = 0;
         Ref<OpCodeList> Instructions;
@@ -567,7 +569,7 @@ public:
             return false;   
         }
     };
-    template<typename T,typename... Args> Ref<T> MakeRef(Args... Arguments);
+    template<typename T,typename... Args> Ref<T> MakeRef(Args&&... Arguments);
 
     template<typename TypeToCheck,typename... OtherType>
     inline constexpr bool TypeIn = i_TypeIn<TypeToCheck,OtherType...>::value;
@@ -1087,7 +1089,7 @@ public:
         }
     };
     template<typename T,typename... Args>
-    Ref<T> MakeRef(Args... Arguments)
+    Ref<T> MakeRef(Args&&... Arguments)
     {
         RefContent* NewContent =  new RefContent_Specialised<T>(std::forward<Args>(Arguments)...);
         NewContent->StoredClass = Value::GetTypeTypeID<T>();
@@ -1209,6 +1211,9 @@ public:
             bool Shadowing = false;
         };
         MBUtility::MBVector<ParentScope,4> m_ParentScope;
+        MBUtility::MBVector<Value,4> m_LocalVars;
+
+        int m_LocalSymBegin = 0;
         std::unordered_map<SymbolID,Value> m_Variables;
 
         ScopeStackframeInfo  m_StackFrameInfo;
@@ -1220,10 +1225,19 @@ public:
         //setters
         void SetVariable(SymbolID Variable,Value NewValue);
         void OverrideVariable(SymbolID Variable,Value NewValue);
+        void SetLocalVariable(int Index,Value NewValue);
         //getters
         Value FindVariable(SymbolID Variable);
         Value* TryGet(SymbolID Variable);
+        Value& GetLocal(SymbolID Variable);
 
+        Scope() = default;
+        Scope(int LocalCount,int LocalBegin)
+        {
+            m_LocalVars.resize(LocalCount);
+            m_LocalSymBegin = LocalBegin;
+        }
+        
         void Clear();
         size_t VarCount() const
         {

@@ -1276,12 +1276,16 @@ namespace MBLisp
                 }
             }
             StackFrame NewStackFrame(OpCodeExtractor(AssociatedLambda.Definition->Instructions));
-            NewStackFrame.StackScope = MakeRef<Scope>();
+            NewStackFrame.StackScope = MakeRef<Scope>(AssociatedLambda.Definition->LocalSymCount,
+                    AssociatedLambda.Definition->LocalSymBegin);
             NewStackFrame.StackScope->GetStackInfo().IsStackScope = true;
             NewStackFrame.StackScope->SetParentScope(AssociatedLambda.AssociatedScope);
+            int CurrentLocalIndex = 0;
             for(int i = 0; i < AssociatedLambda.Definition->Arguments.size();i++)
             {
-                NewStackFrame.StackScope->OverrideVariable(AssociatedLambda.Definition->Arguments[i].ID,Arguments[i]);   
+                //NewStackFrame.StackScope->OverrideVariable(AssociatedLambda.Definition->Arguments[i].ID,Arguments[i]);   
+                NewStackFrame.StackScope->SetLocalVariable(CurrentLocalIndex,Arguments[i]);   
+                CurrentLocalIndex++;
             }
             if(AssociatedLambda.Definition->RestParameter != 0)
             {
@@ -1290,11 +1294,15 @@ namespace MBLisp
                 {
                     RestList.push_back(Arguments[i]);
                 }
-                NewStackFrame.StackScope->OverrideVariable(AssociatedLambda.Definition->RestParameter,std::move(RestList));
+                //NewStackFrame.StackScope->OverrideVariable(AssociatedLambda.Definition->RestParameter,std::move(RestList));
+                NewStackFrame.StackScope->SetLocalVariable(CurrentLocalIndex,std::move(RestList));
+                CurrentLocalIndex++;
             }
             if(AssociatedLambda.Definition->EnvirParameter != 0)
             {
-                NewStackFrame.StackScope->OverrideVariable(AssociatedLambda.Definition->EnvirParameter,CurrentCallStack.back().StackScope);
+                //NewStackFrame.StackScope->OverrideVariable(AssociatedLambda.Definition->EnvirParameter,CurrentCallStack.back().StackScope);
+                NewStackFrame.StackScope->SetLocalVariable(CurrentLocalIndex,CurrentCallStack.back().StackScope);
+                CurrentLocalIndex++;
             }
             CurrentCallStack.push_back(std::move(NewStackFrame));
         }
@@ -1451,7 +1459,16 @@ namespace MBLisp
             else if(CurrentCode.IsType<OpCode_PushVar>())
             {
                 OpCode_PushVar& PushCode = CurrentCode.GetType<OpCode_PushVar>();
-                Value* VarPointer = CurrentFrame.StackScope->TryGet(PushCode.ID);
+                Value* VarPointer = nullptr;
+                if(!PushCode.Local)
+                {
+                    VarPointer = CurrentFrame.StackScope->TryGet(PushCode.ID);
+                }
+                else
+                {
+                    VarPointer = &CurrentFrame.StackScope->GetLocal(PushCode.ID);
+                }
+
                 if(VarPointer == nullptr)
                 {
                     p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,"Error finding variable with name \""+GetSymbolString(PushCode.ID)+"\""),true);
@@ -1580,6 +1597,7 @@ namespace MBLisp
             }
             else if(CurrentCode.IsType<OpCode_Set>())
             {
+                auto const& SetCode = CurrentCode.GetType<OpCode_Set>();
                 //first value of stack is symbol, second is value
                 assert(CurrentFrame.ArgumentStack.size() >= 2);
                 Value SymbolToAssign = std::move(*(CurrentFrame.ArgumentStack.end()-1));
@@ -1589,7 +1607,14 @@ namespace MBLisp
                 assert(!SymbolToAssign.IsType<List>() || SymbolToAssign.GetRef<List>() != nullptr);
                 if(SymbolToAssign.IsType<Symbol>())
                 {
-                    CurrentFrame.StackScope->SetVariable(SymbolToAssign.GetType<Symbol>().ID,AssignedValue);
+                    if(SetCode.LocalSetIndex == -1)
+                    {
+                        CurrentFrame.StackScope->SetVariable(SymbolToAssign.GetType<Symbol>().ID,AssignedValue);
+                    }
+                    else
+                    {
+                        CurrentFrame.StackScope->SetLocalVariable(SetCode.LocalSetIndex,AssignedValue);
+                    }
                 }
                 else if(SymbolToAssign.IsType<DynamicVariable>())
                 {
@@ -2286,6 +2311,7 @@ namespace MBLisp
                                   "bind-dynamic",
                                   "eval",
                                   "return",
+                                  "setl",
                                   })
         {
             p_GetSymbolID(String);
