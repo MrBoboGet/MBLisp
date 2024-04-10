@@ -1284,7 +1284,7 @@ namespace MBLisp
             for(int i = 0; i < AssociatedLambda.Definition->Arguments.size();i++)
             {
                 //NewStackFrame.StackScope->OverrideVariable(AssociatedLambda.Definition->Arguments[i].ID,Arguments[i]);   
-                NewStackFrame.StackScope->SetLocalVariable(CurrentLocalIndex,Arguments[i]);   
+                NewStackFrame.StackScope->SetLocalDirect(CurrentLocalIndex,Arguments[i]);   
                 CurrentLocalIndex++;
             }
             if(AssociatedLambda.Definition->RestParameter != 0)
@@ -1295,13 +1295,13 @@ namespace MBLisp
                     RestList.push_back(Arguments[i]);
                 }
                 //NewStackFrame.StackScope->OverrideVariable(AssociatedLambda.Definition->RestParameter,std::move(RestList));
-                NewStackFrame.StackScope->SetLocalVariable(CurrentLocalIndex,std::move(RestList));
+                NewStackFrame.StackScope->SetLocalDirect(CurrentLocalIndex,std::move(RestList));
                 CurrentLocalIndex++;
             }
             if(AssociatedLambda.Definition->EnvirParameter != 0)
             {
                 //NewStackFrame.StackScope->OverrideVariable(AssociatedLambda.Definition->EnvirParameter,CurrentCallStack.back().StackScope);
-                NewStackFrame.StackScope->SetLocalVariable(CurrentLocalIndex,CurrentCallStack.back().StackScope);
+                NewStackFrame.StackScope->SetLocalDirect(CurrentLocalIndex,CurrentCallStack.back().StackScope);
                 CurrentLocalIndex++;
             }
             CurrentCallStack.push_back(std::move(NewStackFrame));
@@ -2286,7 +2286,8 @@ namespace MBLisp
         }
         else if(Arguments[0].IsType<ClassDefinition>())
         {
-            return Arguments[0];   
+            //return Arguments[0];   
+            return Context.GetEvaluator().m_BuiltinTypeDefinitions[Value::GetTypeTypeID<ClassDefinition>()];
         }
         else if(Arguments[0].IsType<ClassInstance>())
         {

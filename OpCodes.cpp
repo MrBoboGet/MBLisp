@@ -222,7 +222,7 @@ namespace MBLisp
                     {
                         throw std::runtime_error("Set requires exactly 2 arguments, the symbol to modify, and the new value");   
                     }
-                    bool IsLocalSet = CurrentSymbol == SymbolID(PrimitiveForms::setl) && ListToConvert[2].IsType<Symbol>() && CurrentState.InLambda;
+                    bool IsLocalSet = CurrentSymbol == SymbolID(PrimitiveForms::setl) && ListToConvert[1].IsType<Symbol>() && CurrentState.InLambda;
                     p_CreateOpCodes(ListToConvert[2],ListToAppend,CurrentState);
                     if (!ListToConvert[1].IsType<List>())
                     {

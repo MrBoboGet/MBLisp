@@ -1226,6 +1226,8 @@ public:
         void SetVariable(SymbolID Variable,Value NewValue);
         void OverrideVariable(SymbolID Variable,Value NewValue);
         void SetLocalVariable(int Index,Value NewValue);
+        //assigns as direct offset in current scope
+        void SetLocalDirect(int Index,Value NewValue);
         //getters
         Value FindVariable(SymbolID Variable);
         Value* TryGet(SymbolID Variable);

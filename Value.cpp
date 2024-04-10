@@ -109,7 +109,27 @@ namespace MBLisp
     }
     void Scope::SetLocalVariable(int Index,Value NewValue)
     {
-        assert(Index < m_LocalVars.size());
+        if(Index < m_LocalSymBegin)
+        {
+            if(m_ParentScope.size() != 0)
+            {
+                //assumes first scope is parent scope
+                m_ParentScope[0].AssociatedScope->SetLocalVariable(Index,NewValue);
+            }
+            else
+            {
+                throw std::runtime_error("Unable to set local variable");
+            }
+        }
+        else
+        {
+            assert(Index-m_LocalSymBegin < m_LocalVars.size());
+            m_LocalVars[Index-m_LocalSymBegin] = std::move(NewValue);
+        }
+    }
+    void Scope::SetLocalDirect(int Index,Value NewValue)
+    {
+        assert(Index< m_LocalVars.size());
         m_LocalVars[Index] = std::move(NewValue);
     }
     std::vector<SymbolID> Scope::Vars() const
