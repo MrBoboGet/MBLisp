@@ -151,9 +151,9 @@
 
 (defmacro doit (boundvar iterable &rest body)
   (set it-var (gensym))
-  `(progn (set ,it-var (iterator ,iterable))
+  `(progn (setl ,it-var (iterator ,iterable))
           (while (next ,it-var)
-                 (set ,boundvar (current ,it-var))
+                 (setl ,boundvar (current ,it-var))
                  ,@body
           )
    )

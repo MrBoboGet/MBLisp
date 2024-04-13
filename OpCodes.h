@@ -267,6 +267,7 @@ namespace MBLisp
             std::vector<IPIndex> UnresolvedReturns;
             //
             std::unordered_map<SymbolID,int> LocalSymbols;
+            std::vector<SymbolID> LocalSymNames;
             int TotalLocalSymbolCount = 0;
 
             int GetLocalSymbolIndex(SymbolID Symbol)
@@ -282,6 +283,7 @@ namespace MBLisp
                     int NewIndex = TotalLocalSymbolCount;
                     TotalLocalSymbolCount++;
                     LocalSymbols[Symbol] = NewIndex;
+                    LocalSymNames.push_back(Symbol);
                     return NewIndex;
                 }
                 return ReturnValue;
@@ -289,6 +291,7 @@ namespace MBLisp
             void AddLocalSymbol(SymbolID Symbol)
             {
                 int NewIndex = TotalLocalSymbolCount;
+                LocalSymNames.push_back(Symbol);
                 TotalLocalSymbolCount++;
                 LocalSymbols[Symbol] = NewIndex;
             }
@@ -303,9 +306,12 @@ namespace MBLisp
         public:
         OpCodeList();
         OpCodeList(Value const& ValueToEncode);
+        OpCodeList(Scope& CurrentScope,Value const& ValueToEncode);
+
+
         OpCodeList(List const& ListToConvert);
         //OpCodeList(List const& ListToConvert,int Offset,bool InLambda);
-        OpCodeList(List const& ListToConvert,int Offset,FunctionDefinition const& LamdaDef ,EncodingState const& ParentState,int& OutTotalSymbolCount);
+        OpCodeList(List const& ListToConvert,int Offset,FunctionDefinition& LamdaDef ,EncodingState const& ParentState);
         OpCodeList(SymbolID ArgID,SymbolID IndexFunc,std::vector<SlotDefinition> const& Initializers);
         void Append(List const& ListToConvert);
         void Append(Value const& ListToConvert);

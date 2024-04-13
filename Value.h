@@ -377,6 +377,7 @@ public:
     struct FunctionDefinition
     {
         std::vector<Symbol> Arguments;
+        MBUtility::MBVector<std::pair<SymbolID,int>,4> LocalVars;
         int LocalSymCount = 0;
         int LocalSymBegin = 0;
         SymbolID RestParameter = 0;
@@ -1211,16 +1212,37 @@ public:
             bool Shadowing = false;
         };
         MBUtility::MBVector<ParentScope,4> m_ParentScope;
-        MBUtility::MBVector<Value,4> m_LocalVars;
-
-        int m_LocalSymBegin = 0;
         std::unordered_map<SymbolID,Value> m_Variables;
+
+        MBUtility::MBVector<Value,4> m_LocalVars;
+        MBUtility::MBVector<std::pair<SymbolID,int>,4> m_LocalVarsNames;
+        int m_LocalSymBegin = 0;
 
         ScopeStackframeInfo  m_StackFrameInfo;
     public:
         void SetParentScope(Ref<Scope> ParentScope);
         void AddParentScope(Ref<Scope> ParentScope);
         void SetShadowingParent(Ref<Scope> ParentScope);
+
+        //very niche, used to construct opcodes when eval in a specific scope
+        std::vector<std::pair<SymbolID,int>> GetLocalSyms() const;
+        int GetLocalSymBegin() const
+        {
+            return m_LocalSymBegin;   
+        }
+
+        int ParentCount() const
+        {
+            return m_ParentScope.size();   
+        }
+        Ref<Scope> GetParent(int Index)
+        {
+            if(Index < 0 || Index >= m_ParentScope.size())
+            {
+                throw std::runtime_error("Parent index out range in GetParent for scope");   
+            }
+            return m_ParentScope[Index].AssociatedScope;
+        }
 
         //setters
         void SetVariable(SymbolID Variable,Value NewValue);
@@ -1232,12 +1254,18 @@ public:
         Value FindVariable(SymbolID Variable);
         Value* TryGet(SymbolID Variable);
         Value& GetLocal(SymbolID Variable);
+        bool IsLocal(SymbolID Variable) const;
+        int TotalLocalSymCount() const
+        {
+            return m_LocalSymBegin + m_LocalVars.size();   
+        }
 
         Scope() = default;
-        Scope(int LocalCount,int LocalBegin)
+        Scope(FunctionDefinition const& FunctionDef)
         {
-            m_LocalVars.resize(LocalCount);
-            m_LocalSymBegin = LocalBegin;
+            m_LocalVars.resize(FunctionDef.LocalSymCount);
+            m_LocalSymBegin = FunctionDef.LocalSymBegin;
+            m_LocalVarsNames = FunctionDef.LocalVars;
         }
         
         void Clear();

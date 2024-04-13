@@ -1,6 +1,8 @@
 (import testing)
 
-(read-line *standard-input*)
+(set test 123)
+(set test2 (list 1 2 3))
+
 (new-module "setl")
 
 (defun recursive-setl ()

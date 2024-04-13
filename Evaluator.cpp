@@ -498,7 +498,7 @@ namespace MBLisp
         if(Context.IsMultiThreaded())
         {
             Lock = Arguments[0].GetLock();   
-            Context.PauseThread();
+            //Context.PauseThread();
         }
         Value ReturnValue;
         if(Arguments.size() != 1)
@@ -834,7 +834,7 @@ namespace MBLisp
     {
         Scope& Envir = Arguments[1].GetType<Scope>();
         Symbol& SymbolToCheck = Arguments[0].GetType<Symbol>();
-        return Envir.TryGet(SymbolToCheck.ID) != nullptr;
+        return Envir.IsLocal(SymbolToCheck.ID) || Envir.TryGet(SymbolToCheck.ID) != nullptr;
     }
     Value Evaluator::Str_Symbol BUILTIN_ARGLIST
     {
@@ -938,7 +938,15 @@ namespace MBLisp
     {
         Scope& AssociatedScope = Arguments[0].GetType<Scope>();
         SymbolID SymbolIndex = Arguments[1].GetType<Symbol>().ID;
-        Value* ReturnValue = AssociatedScope.TryGet(SymbolIndex);
+        Value* ReturnValue = nullptr;
+        if(AssociatedScope.IsLocal(SymbolIndex))
+        {
+            ReturnValue = &AssociatedScope.GetLocal(SymbolIndex);
+        }
+        else
+        {
+            ReturnValue = AssociatedScope.TryGet(SymbolIndex);
+        }
         if(ReturnValue == nullptr)
         {
             AssociatedScope.SetVariable(SymbolIndex,Value());
@@ -1238,10 +1246,6 @@ namespace MBLisp
                 CurrentState.CurrentCallContext.m_IsSetting = Setting;
                 Value Result = AssociatedFunc(CurrentState.CurrentCallContext,Arguments);
                 CurrentCallStack.back().ArgumentStack.push_back(std::move(Result));
-                if(CurrentState.CurrentCallContext.m_ThreadPaused)
-                {
-                    m_ThreadingState.TempSuspend(CurrentState.AssociatedThread,false);
-                }
             }
             catch(ContinueUnwind const& e)
             {
@@ -1250,6 +1254,11 @@ namespace MBLisp
             catch(std::exception const& e)
             {
                 p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState, String(e.what())),true);
+            }
+            if(CurrentState.CurrentCallContext.m_ThreadPaused)
+            {
+                m_ThreadingState.TempSuspend(CurrentState.AssociatedThread,false);
+                CurrentState.CurrentCallContext.m_ThreadPaused = false;
             }
             //for(auto& Arg : Arguments)
             //{
@@ -1276,8 +1285,7 @@ namespace MBLisp
                 }
             }
             StackFrame NewStackFrame(OpCodeExtractor(AssociatedLambda.Definition->Instructions));
-            NewStackFrame.StackScope = MakeRef<Scope>(AssociatedLambda.Definition->LocalSymCount,
-                    AssociatedLambda.Definition->LocalSymBegin);
+            NewStackFrame.StackScope = MakeRef<Scope>(*AssociatedLambda.Definition);
             NewStackFrame.StackScope->GetStackInfo().IsStackScope = true;
             NewStackFrame.StackScope->SetParentScope(AssociatedLambda.AssociatedScope);
             int CurrentLocalIndex = 0;
@@ -1867,7 +1875,7 @@ namespace MBLisp
                 Ref<OpCodeList> NewOpcodes;
                 try
                 {
-                    NewOpcodes = MakeRef<OpCodeList>(ValueToEvaluate); 
+                    NewOpcodes = MakeRef<OpCodeList>(*ScopeToUse,ValueToEvaluate); 
                 }
                 catch (std::exception const& e)
                 {

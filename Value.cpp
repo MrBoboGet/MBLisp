@@ -34,6 +34,15 @@ namespace MBLisp
         NewParent.Shadowing = true;
         m_ParentScope.push_back(std::move(NewParent));
     }
+    std::vector<std::pair<SymbolID,int>> Scope::GetLocalSyms() const
+    {
+        std::vector<std::pair<SymbolID,int>> ReturnValue;
+        for(auto const& Pair : m_LocalVarsNames)
+        {
+            ReturnValue.push_back( std::make_pair(Pair.first,Pair.second));
+        }
+        return ReturnValue;
+    }
     Value Scope::FindVariable(SymbolID Variable)
     {
         Value* ReturnValue = TryGet(Variable);
@@ -85,9 +94,22 @@ namespace MBLisp
             return m_LocalVars[Index];
         }
     }
+    bool Scope::IsLocal(SymbolID Variable) const
+    {
+        bool ReturnValue = false;
+        auto It = std::lower_bound(m_LocalVarsNames.begin(),m_LocalVarsNames.end(),Variable,
+                [](auto const& lhs, auto const& rhs){return lhs.first < rhs;});
+        if(It != m_LocalVarsNames.end() && It->first == Variable)
+        {
+            ReturnValue = true;
+        }
+        return ReturnValue;
+    }
     void Scope::Clear()
     {
         m_Variables.clear();
+        m_LocalVars.clear();
+        m_LocalSymBegin = 0;
     }
     void Scope::SetVariable(SymbolID Variable,Value NewValue)
     {
@@ -138,6 +160,10 @@ namespace MBLisp
         for(auto const& Element : m_Variables)
         {
             ReturnValue.push_back(Element.first);   
+        }
+        for(auto const& Pair : m_LocalVarsNames)
+        {
+            ReturnValue.push_back(Pair.first);
         }
         return ReturnValue;
     }

@@ -203,14 +203,12 @@ namespace MBLisp
                         }
                         else
                         {
-                            NewLambda.Definition->Arguments.push_back(Argument.GetType<Symbol>());
+                            auto const& Sym = Argument.GetType<Symbol>();
+                            NewLambda.Definition->Arguments.push_back(Sym);
                         }
                     }
-                    int SubLambdaSymbolCount = 0;
-                    NewLambda.Definition->Instructions = MakeRef<OpCodeList>(ListToConvert,2,*NewLambda.Definition,CurrentState,SubLambdaSymbolCount);
-                    assert(SubLambdaSymbolCount >= CurrentState.TotalLocalSymbolCount);
-                    NewLambda.Definition->LocalSymCount = SubLambdaSymbolCount-CurrentState.TotalLocalSymbolCount;
-                    NewLambda.Definition->LocalSymBegin = CurrentState.TotalLocalSymbolCount;
+                    NewLambda.Definition->Instructions = MakeRef<OpCodeList>(ListToConvert,2,*NewLambda.Definition,CurrentState);
+                    std::sort(NewLambda.Definition->LocalVars.begin(),NewLambda.Definition->LocalVars.end());
 
                     OpCode_PushLiteral NewCode;
                     NewCode.Literal = std::move(NewLambda);
@@ -554,6 +552,35 @@ namespace MBLisp
         }
         p_FillDebugInfo();
     }
+    OpCodeList::OpCodeList(Scope& AssociatedScope,Value const& ValueToEncode)
+    {
+        EncodingState CurrentState;
+        CurrentState.TotalLocalSymbolCount = AssociatedScope.TotalLocalSymCount();
+        Scope* CurrentScope = &AssociatedScope;
+        //TODO check for cycles...
+        while(CurrentScope != nullptr)
+        {
+            for(auto const& Pair : CurrentScope->GetLocalSyms())
+            {
+                CurrentState.LocalSymbols[Pair.first] = Pair.second + CurrentScope->GetLocalSymBegin();
+            }
+            if(CurrentScope->ParentCount() > 0)
+            {
+                CurrentScope = & (*CurrentScope->GetParent(0));
+            }
+            else
+            {
+                break;
+            }
+        }
+
+        p_CreateOpCodes(ValueToEncode,m_OpCodes,CurrentState);
+        if(CurrentState.UnResolvedGotos.size() != 0)
+        {
+            throw std::runtime_error("go's to tags without corresponding label detected");
+        }
+        p_FillDebugInfo();
+    }
     OpCodeList::OpCodeList(List const& ListToConvert)
     {
         EncodingState CurrentState;
@@ -611,9 +638,10 @@ namespace MBLisp
     //    }
     //    p_FillDebugInfo();
     //}
-    OpCodeList::OpCodeList(List const& ListToConvert,int Offset,FunctionDefinition const& LambdaDef ,
-            EncodingState const& ParentState,int& OutTotalSymbolCount)
+    OpCodeList::OpCodeList(List const& ListToConvert,int Offset,FunctionDefinition& LambdaDef ,
+            EncodingState const& ParentState)
     {
+        LambdaDef.LocalSymBegin = ParentState.TotalLocalSymbolCount;
         EncodingState CurrentState;
         CurrentState.LocalSymbols = ParentState.LocalSymbols;
         CurrentState.TotalLocalSymbolCount = ParentState.TotalLocalSymbolCount;
@@ -642,7 +670,15 @@ namespace MBLisp
         {
             throw std::runtime_error("go's to tags without corresponding label detected");
         }
-        OutTotalSymbolCount = CurrentState.TotalLocalSymbolCount;
+
+        //update function state to account for all locally defined symbols
+        for(auto const& Sym : CurrentState.LocalSymNames)
+        {
+            assert(CurrentState.LocalSymbols.find(Sym) != CurrentState.LocalSymbols.end());
+            LambdaDef.LocalVars.push_back(std::make_pair( Sym ,CurrentState.LocalSymbols[Sym]-LambdaDef.LocalSymBegin));
+        }
+        std::sort(LambdaDef.LocalVars.begin(),LambdaDef.LocalVars.end());
+        LambdaDef.LocalSymCount = CurrentState.TotalLocalSymbolCount-ParentState.TotalLocalSymbolCount;
         p_FillDebugInfo();
     }
     OpCodeList::OpCodeList(SymbolID ArgID,SymbolID IndexFunc,std::vector<SlotDefinition> const& Initializers)
