@@ -94,16 +94,16 @@ namespace MBLisp
             return m_LocalVars[Index];
         }
     }
-    bool Scope::IsLocal(SymbolID Variable) const
+    
+    Value* Scope::TryGetLocalByID(SymbolID Variable)
     {
-        bool ReturnValue = false;
         auto It = std::lower_bound(m_LocalVarsNames.begin(),m_LocalVarsNames.end(),Variable,
                 [](auto const& lhs, auto const& rhs){return lhs.first < rhs;});
         if(It != m_LocalVarsNames.end() && It->first == Variable)
         {
-            ReturnValue = true;
+            return &m_LocalVars[It->second];
         }
-        return ReturnValue;
+        return nullptr;
     }
     void Scope::Clear()
     {

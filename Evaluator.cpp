@@ -834,7 +834,7 @@ namespace MBLisp
     {
         Scope& Envir = Arguments[1].GetType<Scope>();
         Symbol& SymbolToCheck = Arguments[0].GetType<Symbol>();
-        return Envir.IsLocal(SymbolToCheck.ID) || Envir.TryGet(SymbolToCheck.ID) != nullptr;
+        return Envir.TryGetLocalByID(SymbolToCheck.ID) != nullptr || Envir.TryGet(SymbolToCheck.ID) != nullptr;
     }
     Value Evaluator::Str_Symbol BUILTIN_ARGLIST
     {
@@ -939,9 +939,9 @@ namespace MBLisp
         Scope& AssociatedScope = Arguments[0].GetType<Scope>();
         SymbolID SymbolIndex = Arguments[1].GetType<Symbol>().ID;
         Value* ReturnValue = nullptr;
-        if(AssociatedScope.IsLocal(SymbolIndex))
+        if(auto LocalVarPointer = AssociatedScope.TryGetLocalByID(SymbolIndex); LocalVarPointer != nullptr)
         {
-            ReturnValue = &AssociatedScope.GetLocal(SymbolIndex);
+            ReturnValue = LocalVarPointer;
         }
         else
         {

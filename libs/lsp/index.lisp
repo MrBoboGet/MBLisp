@@ -224,14 +224,6 @@
     )
 )
 
-(defmethod str ((ls list_t))
-    (setl return-value "(")
-    (doit e ls
-        (incr return-value (+ (str e) " "))
-    )
-    (incr return-value ")")
-    return-value
-)
 (set delayed-map (make-dict ('defun true) ('defmacro true) ('defmethod true) ('defclass true)))
 
 (defun extract-macros (envir ast tokens jumps diagnostics) 

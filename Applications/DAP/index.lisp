@@ -482,9 +482,9 @@
     )
     catch (any_t e)
     (
-      (set message "internal error")
+      (setl message "internal error")
       (if (applicable str e)
-        (catch-all (set message (str e)))
+        (catch-all (setl message (str e)))
       )
       (set (. return-value "success") false)
       (set (. return-value "body") {error: (get-error message)})
@@ -504,6 +504,44 @@
 
 (set debug-file (open "DAPOutput.txt" "w"))
 
+
+(defmethod str ((ls list_t ))
+    (setl return-value "")
+    (doit i (range 0 (len ls))
+        (setl elem (. ls i))
+        (setl elem-string "?")
+        (if (applicable str elem)
+            (setl elem-string (str elem))
+        )
+        (append return-value elem-string)
+        (if (< (+ i 1) (len ls))
+            (append return-value " ")
+        )
+    )
+    return-value
+)
+
+
+(defmethod str ((dic dict_t))
+    (setl return-value "{")
+    (setl i 0)
+    (doit key (keys dic)
+        (append return-value (str key))
+        (append return-value ": ")
+        (setl elem (. dic key))
+        (setl elem-string "?")
+        (if (applicable str elem)
+            (setl elem-string (str elem))
+        )
+        (append return-value elem-string)
+        (if (< (+ i 1) (len dic))
+            (append return-value " ")
+        )
+        (incr i 1)
+    )
+    (append return-value "}")
+    return-value
+)
 
 
 (defun stop-debugee ()

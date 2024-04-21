@@ -1254,7 +1254,7 @@ public:
         Value FindVariable(SymbolID Variable);
         Value* TryGet(SymbolID Variable);
         Value& GetLocal(SymbolID Variable);
-        bool IsLocal(SymbolID Variable) const;
+        Value* TryGetLocalByID(SymbolID Variable);
         int TotalLocalSymCount() const
         {
             return m_LocalSymBegin + m_LocalVars.size();   
