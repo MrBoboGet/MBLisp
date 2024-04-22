@@ -230,6 +230,7 @@ namespace MBLisp
         static Value Class BUILTIN_ARGLIST;
         static Value AddMethod BUILTIN_ARGLIST;
         static Value Generic BUILTIN_ARGLIST;
+        static Value ConstructDynamicVariable(Value DefaultValue);
         static Value Dynamic BUILTIN_ARGLIST;
 
         //Operators
@@ -426,6 +427,7 @@ namespace MBLisp
         class ContinueUnwind{};
         
         bool p_ValueIsType(ClassID TypeValue,Value const& ValueToInspect);
+        Value p_GetDynamicValue(Scope& AssociatedScope,ExecutionState& CurrentState,std::string const& VariableName);
 
         void p_Invoke(Value& ObjectToCall,FuncArgVector& Arguments,ExecutionState& CurrentState,bool Setting = false,bool IsTrapHandler = false);
         void p_InvokeTrapHandler(ExecutionState& State);
@@ -484,7 +486,8 @@ namespace MBLisp
         }
 
 
-        void p_LoadFile(ExecutionState&  CurrentState,std::filesystem::path const& LoadFilePath);
+        //returns the read-table
+        Value p_LoadFile(ExecutionState&  CurrentState,std::filesystem::path const& LoadFilePath,bool KeepReadtable = false);
 
 
         template<typename ClassToConvert, Value (ClassToConvert::*MemberMethod)()>

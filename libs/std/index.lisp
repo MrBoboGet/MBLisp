@@ -368,7 +368,7 @@
         ,temp-sym
      )
 )
-(load (plus (parent-path load-filepath) "/import.lisp"))
+(load (plus (parent-path load-filepath) "/import.lisp") true)
 
 (defun leq (lhs rhs)
     (|| (< lhs rhs) (eq lhs rhs))

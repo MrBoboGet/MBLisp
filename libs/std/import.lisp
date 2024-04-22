@@ -28,8 +28,8 @@
 )
 
 (set get-scope-func get-scope)
-(defmacro import (value &rest binding &envir envir)
-  (set script-dir (plus (parent-path (. envir 'load-filepath)) "/"))
+(defmacro import (value &rest binding)
+  (set script-dir (plus (parent-path load-filepath) "/"))
   (if (eq script-dir "/") (set script-dir ""))
   (set file-to-load "")
   (set is-internal false)

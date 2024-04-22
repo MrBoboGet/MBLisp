@@ -476,6 +476,14 @@ namespace MBLisp
         return GenericFunction();
     }
     std::atomic<DynamicVarID> g__CurrentDynamicVarID{1};
+    Value Evaluator::ConstructDynamicVariable(Value DefaultValue)
+    {
+        DynamicVariable ReturnValue;
+        ReturnValue.DefaultValue = std::move(DefaultValue);
+        ReturnValue.ID = g__CurrentDynamicVarID.load();
+        g__CurrentDynamicVarID.fetch_add(1);
+        return ReturnValue;
+    }
     Value Evaluator::Dynamic BUILTIN_ARGLIST
     {
         DynamicVariable ReturnValue;
@@ -483,10 +491,7 @@ namespace MBLisp
         {
             throw std::runtime_error("dynamic requires exacty 1 argument, the initial value for the dynamic variable");   
         }
-        ReturnValue.DefaultValue = std::move(Arguments[0]);
-        ReturnValue.ID = g__CurrentDynamicVarID.load();
-        g__CurrentDynamicVarID.fetch_add(1);
-        return ReturnValue;
+        return ConstructDynamicVariable(std::move(Arguments[0]));
     }
     Value Evaluator::Expand BUILTIN_ARGLIST
     {
@@ -511,8 +516,11 @@ namespace MBLisp
         }
         MBUtility::StreamReader& Reader = Arguments[0].GetType<MBUtility::StreamReader>();
         //copy
-        Ref<ReadTable> Table = Context.GetState().GetCurrentScope().FindVariable(Context.GetEvaluator().GetSymbolID("*READTABLE*")).GetRef<ReadTable>();
-        SymbolID URI = p_PathURI(Context.GetEvaluator(),Context.GetState().GetCurrentScope().FindVariable(Context.GetEvaluator().p_GetSymbolID("load-filepath")).GetType<String>());
+        Ref<ReadTable> Table = Context.GetEvaluator().p_GetDynamicValue(Context.GetState().GetCurrentScope(),Context.GetState(),"*READTABLE*").GetRef<ReadTable>();  
+        Ref<DynamicVariable> DynamicLoadFilepath = Context.GetState().GetCurrentScope().FindVariable(Context.GetEvaluator().p_GetSymbolID("load-filepath")).GetRef<DynamicVariable>();
+        assert(Context.GetState().DynamicBindings[DynamicLoadFilepath->ID].size() > 0);
+        Value CurrentLoadFilepath = Context.GetState().DynamicBindings[DynamicLoadFilepath->ID].back();
+        SymbolID URI = p_PathURI(Context.GetEvaluator(),CurrentLoadFilepath.GetType<String>());
         //TODO think through this functionality again, how needed is it for ":" expander, and could it be implemented in a more clean way
         //Ref<Scope> NewScope = Context.GetState().StackFrames.front().StackScope;
         ReturnValue = Context.GetEvaluator().p_ReadTerm(Context.GetState(),URI,Table,Reader,Arguments[0]);
@@ -1918,6 +1926,21 @@ namespace MBLisp
         }
         return ReturnValue;
     }
+    Value Evaluator::p_GetDynamicValue(Scope& AssociatedScope,ExecutionState& CurrentState,std::string const& VariableName)
+    {
+        Value ReturnValue;
+        Ref<DynamicVariable> DynamicVar = AssociatedScope.FindVariable(p_GetSymbolID(VariableName)).GetRef<DynamicVariable>();
+        auto& Bindings = CurrentState.DynamicBindings[DynamicVar->ID];
+        if(Bindings.size() == 0)
+        {
+            return DynamicVar->DefaultValue;   
+        }
+        else
+        {
+            return Bindings.back();
+        }
+        return ReturnValue;
+    }
     Value Evaluator::p_Eval(ExecutionState& CurrentState,Ref<OpCodeList> OpCodes,IPIndex Offset)
     {
         StackFrame NewFrame = StackFrame(OpCodeExtractor(OpCodes));
@@ -2213,25 +2236,7 @@ namespace MBLisp
         else if(auto ReaderIt = Table->Mappings.find(NextChar); ReaderIt != Table->Mappings.end())
         {
             Content.ReadByte();
-            Ref<ReadTable> PrevTable;
-            //TODO kinda hacky, should most likely rework *READTABLE* to be a true dynamic variable
-            if(ReaderIt->second.IsType<Lambda>())
-            {
-                PrevTable = ReaderIt->second.GetType<Lambda>().AssociatedScope->FindVariable( p_GetSymbolID("*READTABLE*")).GetRef<ReadTable>();
-                ReaderIt->second.GetType<Lambda>().AssociatedScope->SetVariable(p_GetSymbolID("*READTABLE*"), Table);
-            }
-            try
-            {
-                ReturnValue = Eval(CurrentState,ReaderIt->second,{StreamValue});
-            }
-            catch(...)
-            {
-                if(ReaderIt->second.IsType<Lambda>())
-                {
-                    ReaderIt->second.GetType<Lambda>().AssociatedScope->SetVariable(p_GetSymbolID("*READTABLE*"), Value(PrevTable));
-                }
-                throw;
-            }
+            ReturnValue = Eval(CurrentState,ReaderIt->second,{StreamValue});
         }
         else
         {
@@ -2524,7 +2529,6 @@ namespace MBLisp
         AddMethod<String>("path-id",PathID);
 
         
-        m_GlobalScope->SetVariable(p_GetSymbolID("*READTABLE*"),Value::MakeExternal(ReadTable()));
         //Readtables
         AddMethod<ReadTable,String>("add-reader-character",AddReaderCharacter);
         AddMethod<ReadTable,String>("remove-reader-character",RemoveReaderCharacter);
@@ -2532,18 +2536,12 @@ namespace MBLisp
         AddMethod<ReadTable,String>("remove-character-expander",RemoveCharacterExpander);
 
 
-        m_GlobalScope->SetVariable(p_GetSymbolID("*standard-input*"),Value::MakeExternal(MBUtility::StreamReader(std::make_unique<MBLSP::TerminalInput>())));
-        m_GlobalScope->SetVariable(p_GetSymbolID("*standard-output*"),Value::EmplacePolymorphic<MBUtility::TerminalOutput,MBUtility::MBOctetOutputStream>());
         m_GlobalScope->SetVariable(p_GetSymbolID("is-repl"),false);
-
-
-
-
-
-        //TEST
-        AddObjectMethod<&TestClass::TestTest>("test-test");
-        m_GlobalScope->SetVariable(p_GetSymbolID("test"), TestTest);
-        AddGeneric<GenericTest>("test-func");
+        m_GlobalScope->SetVariable(p_GetSymbolID("*standard-input*"),ConstructDynamicVariable(Value::MakeExternal(MBUtility::StreamReader(std::make_unique<MBLSP::TerminalInput>()))));
+        m_GlobalScope->SetVariable(p_GetSymbolID("*standard-output*"),ConstructDynamicVariable(Value::EmplacePolymorphic<MBUtility::TerminalOutput,MBUtility::MBOctetOutputStream>()));
+        m_GlobalScope->SetVariable(p_GetSymbolID("load-filepath"), ConstructDynamicVariable(std::string("")));
+        m_GlobalScope->SetVariable(p_GetSymbolID("load-envir"), ConstructDynamicVariable(Scope()));
+        m_GlobalScope->SetVariable(p_GetSymbolID("*READTABLE*"),ConstructDynamicVariable(Value::MakeExternal(ReadTable())));
     }
 
     Value Evaluator::TestTest BUILTIN_ARGLIST
@@ -2820,36 +2818,25 @@ namespace MBLisp
     Value Evaluator::Load BUILTIN_ARGLIST
     {
         Value ReturnValue = false;
-        if(Arguments.size() !=  1)
+        bool KeepBindings = true;
+        if(Arguments.size() ==  0 || Arguments.size() > 2)
         {
-            throw std::runtime_error("Load requires exactly 1 argument, the filepath to a source file to be evaluated");   
+            throw std::runtime_error("Load requires 1 argument, the filepath to a source file to be evaluated");   
         }
         if(!Arguments[0].IsType<String>())
         {
             throw  std::runtime_error("Load requires first argument to be a string");   
         }
+        if(Arguments.size() > 1)
+        {
+            if(!Arguments[1].IsType<bool>())
+            {
+                throw  std::runtime_error("Second argumen to load must be a bool");   
+            }
+            KeepBindings = Arguments[1].GetType<bool>();
+        }
         std::filesystem::path SourceFilepath = Arguments[0].GetType<String>();
-        SymbolID LoadFilepathSymbol = Context.GetEvaluator().GetSymbolID("load-filepath");
-        Value* CurrentLoadFilepath =  Context.GetState().GetCurrentScope().TryGet(Context.GetEvaluator().GetSymbolID("load-filepath"));
-        Value ValueToRestore = std::string("");
-        if(CurrentLoadFilepath != nullptr)
-        {
-            ValueToRestore = *CurrentLoadFilepath;
-        }
-        try
-        {
-          Context.GetEvaluator().p_LoadFile(Context.GetState(),SourceFilepath);
-        }
-        catch(LookupError const& e)
-        {
-            Context.GetState().GetCurrentScope().SetVariable(LoadFilepathSymbol,std::move(ValueToRestore));
-            throw std::runtime_error(e.what() + ( ": " + Context.GetEvaluator().GetSymbolString(e.GetSymbol())));
-        }
-        catch(...)
-        {
-            Context.GetState().GetCurrentScope().SetVariable(LoadFilepathSymbol,std::move(ValueToRestore));
-            throw;
-        }
+        Context.GetEvaluator().p_LoadFile(Context.GetState(),SourceFilepath,KeepBindings);
         return  ReturnValue;
     }
     //FSStuff
@@ -2911,7 +2898,7 @@ namespace MBLisp
         return std::filesystem::is_regular_file(Arguments[0].GetType<String>());
     }
     //
-    void Evaluator::p_LoadFile(ExecutionState&  CurrentState,std::filesystem::path const& LoadFilePath)
+    Value Evaluator::p_LoadFile(ExecutionState&  CurrentState,std::filesystem::path const& LoadFilePath,bool KeepReadtable)
     {
         Ref<OpCodeList> OpCodes = MakeRef<OpCodeList>();
         if(!std::filesystem::exists(LoadFilePath))
@@ -2919,34 +2906,75 @@ namespace MBLisp
             throw std::runtime_error("Source file \"" +LoadFilePath.generic_string() +"\" doesn't exist");
         }
         //updates  the load-filepath
-        CurrentState.GetCurrentScope().SetVariable(p_GetSymbolID("load-filepath"),LoadFilePath.generic_string());
-        SymbolID URI = p_PathURI(*this,LoadFilePath);
-        std::string Content = MBUtility::ReadWholeFile(LoadFilePath.generic_string());
-        Value ReaderValue = Value::MakeExternal(MBUtility::StreamReader(std::make_unique<MBUtility::IndeterminateStringStream>(Content)));
-        MBUtility::StreamReader& Reader = ReaderValue.GetType<MBUtility::StreamReader>();
-        assert(ReaderValue.IsType<MBUtility::StreamReader>());
-        Ref<ReadTable> TableRef  = CurrentState.GetCurrentScope().FindVariable(p_GetSymbolID("*READTABLE*")).GetRef<ReadTable>();
+        
+        Ref<DynamicVariable> DynamicLoadFilepath = CurrentState.GetCurrentScope().FindVariable(p_GetSymbolID("load-filepath")).GetRef<DynamicVariable>();
+        int OriginalVarDepth = CurrentState.DynamicBindings[DynamicLoadFilepath->ID].size();
+        CurrentState.DynamicBindings[DynamicLoadFilepath->ID].emplace_back(Value(LoadFilePath.generic_string()));
 
-        size_t BeginStackSize = CurrentState.StackSize();
-        while(!Reader.EOFReached())
+        //always load file with new *READTABLE* binding
+        Ref<DynamicVariable> ReadTableDyn = CurrentState.GetCurrentScope().FindVariable(p_GetSymbolID("*READTABLE*")).GetRef<DynamicVariable>();
+        if(!KeepReadtable)
         {
-            IPIndex InstructionToExecute = OpCodes->Size();
-            Value NewTerm = p_GetExecutableTerm(CurrentState,CurrentState.GetCurrentScope() ,p_ReadTerm(CurrentState,URI,TableRef,Reader,ReaderValue));
-            p_SkipWhiteSpace(Reader);
-            if(NewTerm.IsType<List>())
+            CurrentState.DynamicBindings[ReadTableDyn->ID].emplace_back(Value::EmplaceExternal<ReadTable>( ReadTableDyn->DefaultValue.GetType<ReadTable>()));
+        }
+        else
+        {
+            auto& Bindings = CurrentState.DynamicBindings[ReadTableDyn->ID];
+            if(Bindings.size() == 0)
             {
-                OpCodes->Append(NewTerm.GetType<List>());
+                Bindings.push_back(ReadTableDyn->DefaultValue);
             }
             else
             {
-                List ListToEncode = {std::move(NewTerm)};
-                OpCodes->Append(ListToEncode);
+                Bindings.push_back(Bindings.back());
             }
-            p_Eval(CurrentState,OpCodes,InstructionToExecute);
-            assert(BeginStackSize == CurrentState.StackSize());
         }
-        assert(BeginStackSize == CurrentState.StackSize());
-        bool  DEBUG_STATEMENT = true;
+        Ref<ReadTable> TableRef = CurrentState.DynamicBindings[ReadTableDyn->ID].back().GetRef<ReadTable>();
+        
+        Value ReturnValue = TableRef;
+        Ref<DynamicVariable> DynamicLoadEnvir = CurrentState.GetCurrentScope().FindVariable(p_GetSymbolID("load-envir")).GetRef<DynamicVariable>();
+        CurrentState.DynamicBindings[DynamicLoadEnvir->ID].emplace_back(CurrentState.GetScopeRef());
+        try
+        {
+            //CurrentState.GetCurrentScope().SetVariable(p_GetSymbolID("load-filepath"),LoadFilePath.generic_string());
+            SymbolID URI = p_PathURI(*this,LoadFilePath);
+            std::string Content = MBUtility::ReadWholeFile(LoadFilePath.generic_string());
+            Value ReaderValue = Value::MakeExternal(MBUtility::StreamReader(std::make_unique<MBUtility::IndeterminateStringStream>(Content)));
+            MBUtility::StreamReader& Reader = ReaderValue.GetType<MBUtility::StreamReader>();
+            assert(ReaderValue.IsType<MBUtility::StreamReader>());
+
+            size_t BeginStackSize = CurrentState.StackSize();
+            while(!Reader.EOFReached())
+            {
+                IPIndex InstructionToExecute = OpCodes->Size();
+                Value NewTerm = p_GetExecutableTerm(CurrentState,CurrentState.GetCurrentScope() ,p_ReadTerm(CurrentState,URI,TableRef,Reader,ReaderValue));
+                p_SkipWhiteSpace(Reader);
+                if(NewTerm.IsType<List>())
+                {
+                    OpCodes->Append(NewTerm.GetType<List>());
+                }
+                else
+                {
+                    List ListToEncode = {std::move(NewTerm)};
+                    OpCodes->Append(ListToEncode);
+                }
+                p_Eval(CurrentState,OpCodes,InstructionToExecute);
+                assert(BeginStackSize == CurrentState.StackSize());
+            }
+            assert(BeginStackSize == CurrentState.StackSize());
+            CurrentState.DynamicBindings[DynamicLoadFilepath->ID].pop_back();
+            CurrentState.DynamicBindings[ReadTableDyn->ID].pop_back();
+            CurrentState.DynamicBindings[DynamicLoadEnvir->ID].pop_back();
+            assert(CurrentState.DynamicBindings[DynamicLoadFilepath->ID].size() == OriginalVarDepth);
+        }
+        catch(...)
+        {
+            CurrentState.DynamicBindings[DynamicLoadFilepath->ID].pop_back();
+            CurrentState.DynamicBindings[ReadTableDyn->ID].pop_back();
+            CurrentState.DynamicBindings[DynamicLoadEnvir->ID].pop_back();
+            assert(CurrentState.DynamicBindings[DynamicLoadFilepath->ID].size() == OriginalVarDepth);
+        }
+        return ReturnValue;
     }
     void Evaluator::LoadStd()
     {
@@ -2958,7 +2986,8 @@ namespace MBLisp
                 ExecutionState CurrentState;
                 CurrentState.StackFrames.push_back(StackFrame());
                 CurrentState.StackFrames.back().StackScope = m_GlobalScope;
-                p_LoadFile(CurrentState,StdFile);
+                Value ReadTable = p_LoadFile(CurrentState,StdFile);
+                m_GlobalScope->FindVariable(p_GetSymbolID("*READTABLE*")).GetType<DynamicVariable>().DefaultValue = ReadTable;
             }
             catch (MBLisp::UncaughtSignal& e)
             {
@@ -2987,18 +3016,22 @@ namespace MBLisp
     void Evaluator::Repl()
     {
         LoadStd();
-        Value StdinValue = m_GlobalScope->FindVariable(p_GetSymbolID("*standard-input*"));
-        auto& Stdin  = StdinValue.GetType<MBUtility::StreamReader>();
         auto ReplScope = CreateDefaultScope();
-        Value TableValue = ReplScope->FindVariable(p_GetSymbolID("*READTABLE*"));
         m_GlobalScope->SetVariable(p_GetSymbolID("is-repl"),true);
-        ReplScope->SetVariable( p_GetSymbolID("load-filepath"),MBUnicode::PathToUTF8(std::filesystem::current_path()));
+        
         SymbolID URI = p_PathURI(*this,std::filesystem::current_path());
         Ref<OpCodeList> OpCodes = MakeRef<OpCodeList>();
         ExecutionState CurrentState;
+        Ref<DynamicVariable> LoadFilepath = m_GlobalScope->FindVariable(p_GetSymbolID("load-filepath")).GetRef<DynamicVariable>();
+        CurrentState.DynamicBindings[LoadFilepath->ID].push_back(MBUnicode::PathToUTF8(std::filesystem::current_path()));
+
+        Ref<DynamicVariable> StdinValueRef = m_GlobalScope->FindVariable(p_GetSymbolID("*standard-input*")).GetRef<DynamicVariable>();
+        Value& StdinValue = StdinValueRef->DefaultValue;
+        auto& Stdin  = StdinValue.GetType<MBUtility::StreamReader>();
+
         CurrentState.StackFrames.push_back(StackFrame());
         CurrentState.StackFrames.back().StackScope = ReplScope;
-        Ref<ReadTable> TableRef  = CurrentState.GetCurrentScope().FindVariable(p_GetSymbolID("*READTABLE*")).GetRef<ReadTable>();
+        Ref<ReadTable> TableRef  =  p_GetDynamicValue(CurrentState.GetCurrentScope(),CurrentState,"*READTABLE*").GetRef<ReadTable>();
         while(true)
         {
             size_t InitialStackSize = CurrentState.StackSize();
@@ -3043,8 +3076,7 @@ namespace MBLisp
     {
         Ref<Scope> ReturnValue = MakeRef<Scope>();
         ReturnValue->SetShadowingParent(m_GlobalScope);
-        ReturnValue->SetVariable(p_GetSymbolID("*READTABLE*"),Value::MakeExternal(
-                    ReadTable(m_GlobalScope->FindVariable(p_GetSymbolID("*READTABLE*")).GetType<ReadTable>())));
+        //ReturnValue->SetVariable(p_GetSymbolID("*READTABLE*"),Value::MakeExternal(ReadTable(m_GlobalScope->FindVariable(p_GetSymbolID("*READTABLE*")).GetType<ReadTable>())));
         return ReturnValue;
     }
     DebugState&  Evaluator::GetDebugState()
