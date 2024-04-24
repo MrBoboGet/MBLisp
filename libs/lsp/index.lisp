@@ -298,8 +298,6 @@
 
 (defun open-handler (handler uri content)
   (setl new-envir (new-environment))
-  (setl (index new-envir 'load-filepath) uri)
-  (setl load-filepath uri)
   (setl file-stream (in-stream content))
   (setl input-stream-symbol (gensym))
   (setl (index new-envir input-stream-symbol) file-stream)
@@ -312,36 +310,38 @@
   (setl delayed-forms (list))
   (setl diagnostics (list))
   (set-current-scope new-envir)
-  (catch-signals
-    (
-          (while (not (eof file-stream))
-                 (setl new-term (eval `(read-term ,file-stream) new-envir))
-                 (skip-whitespace file-stream)
-                 (if (should-execute-form new-term)
-                   (catch-all (eval new-term new-envir))
-                  else if (is-trivial-set-form new-term)
-                   (set-var new-envir (index new-term 1) null)
-                 )
-                 (if (&& (type-eq new-term list_t) (< 0 (len new-term)) (type-eq (. new-term 0) symbol_t) (in (. new-term 0) delayed-map))
-                        (append delayed-forms new-term)
-                  else
-                        (handle-form new-envir new-term semantic-tokens jump-symbols diagnostics)
-                 )
-          )
-    )    
-    catch (symbol-location loc)
-    (
-       (append jump-symbols (slot loc symbols))
-    )
-    catch (semantic-token new-token)
-    (
-       (append semantic-tokens (slot new-token content))
-       "ligma"
-    )
-    catch (any_t e)
-    (
-      false
-    )
+  (let ((load-filepath uri))
+      (catch-signals
+        (
+              (while (not (eof file-stream))
+                     (setl new-term (eval `(read-term ,file-stream) new-envir))
+                     (skip-whitespace file-stream)
+                     (if (should-execute-form new-term)
+                       (catch-all (eval new-term new-envir))
+                      else if (is-trivial-set-form new-term)
+                       (set-var new-envir (index new-term 1) null)
+                     )
+                     (if (&& (type-eq new-term list_t) (< 0 (len new-term)) (type-eq (. new-term 0) symbol_t) (in (. new-term 0) delayed-map))
+                            (append delayed-forms new-term)
+                      else
+                            (handle-form new-envir new-term semantic-tokens jump-symbols diagnostics)
+                     )
+              )
+        )    
+        catch (symbol-location loc)
+        (
+           (append jump-symbols (slot loc symbols))
+        )
+        catch (semantic-token new-token)
+        (
+           (append semantic-tokens (slot new-token content))
+           "ligma"
+        )
+        catch (any_t e)
+        (
+          false
+        )
+      )
   )
   (doit new-term delayed-forms
          (handle-form new-envir new-term semantic-tokens jump-symbols diagnostics)

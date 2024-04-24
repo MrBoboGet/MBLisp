@@ -104,6 +104,7 @@ namespace MBLisp
         ExecutionState& GetState();
         bool IsSetting();
         Value const& GetSetValue();
+        Value GetVariable(std::string const& VarName);
         void PauseThread();
         bool IsMultiThreaded();
     };
@@ -139,7 +140,6 @@ namespace MBLisp
         {
             return TraphandlerIndex != -1 && TraphandlerIndex <= StackFrames.size();
         }
-
         Scope& GetCurrentScope()
         {
             return *StackFrames.back().StackScope;

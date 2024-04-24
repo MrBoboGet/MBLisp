@@ -64,6 +64,24 @@ namespace MBLisp
         assert(m_AssociatedEvaluator != nullptr);
         return *m_AssociatedEvaluator;
     }
+    Value CallContext::GetVariable(std::string const& VarName)
+    {
+        Value ReturnValue = GetState().GetCurrentScope().FindVariable(GetEvaluator().p_GetSymbolID(VarName));
+        if(ReturnValue.IsType<DynamicVariable>())
+        {
+            auto const& DynVal = ReturnValue.GetType<DynamicVariable>();
+            auto const& Bindings = GetState().DynamicBindings[DynVal.ID];
+            if(Bindings.size() == 0)
+            {
+                return DynVal.DefaultValue;   
+            }
+            else
+            {
+                return Bindings.back();   
+            }
+        }
+        return ReturnValue;
+    }
     ExecutionState& CallContext::GetState()
     {
         return *m_CurrentState;
