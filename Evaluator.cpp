@@ -26,6 +26,7 @@
 
 #include "Modules/LSP/LSPModule.h"
 #include "Modules/Text/TextModule.h"
+#include "Modules/IO/IO.h"
 namespace MBLisp
 {
 
@@ -2832,6 +2833,7 @@ namespace MBLisp
         m_BuiltinModules["lsp-internal"] = std::make_unique<LSPModule>();
         m_BuiltinModules["debug"] = std::make_unique<DebugModule>();
         m_BuiltinModules["text"] = std::make_unique<TextModule>();
+        m_BuiltinModules["io"] = std::make_unique<IOModule>();
     }
     Value Evaluator::Load BUILTIN_ARGLIST
     {
@@ -2927,7 +2929,7 @@ namespace MBLisp
         
         Ref<DynamicVariable> DynamicLoadFilepath = CurrentState.GetCurrentScope().FindVariable(p_GetSymbolID("load-filepath")).GetRef<DynamicVariable>();
         int OriginalVarDepth = CurrentState.DynamicBindings[DynamicLoadFilepath->ID].size();
-        CurrentState.DynamicBindings[DynamicLoadFilepath->ID].emplace_back(Value(LoadFilePath.generic_string()));
+        CurrentState.DynamicBindings[DynamicLoadFilepath->ID].emplace_back(Value(std::filesystem::weakly_canonical(LoadFilePath).generic_string()));
 
         //always load file with new *READTABLE* binding
         Ref<DynamicVariable> ReadTableDyn = CurrentState.GetCurrentScope().FindVariable(p_GetSymbolID("*READTABLE*")).GetRef<DynamicVariable>();
@@ -3041,7 +3043,7 @@ namespace MBLisp
         Ref<OpCodeList> OpCodes = MakeRef<OpCodeList>();
         ExecutionState CurrentState;
         Ref<DynamicVariable> LoadFilepath = m_GlobalScope->FindVariable(p_GetSymbolID("load-filepath")).GetRef<DynamicVariable>();
-        CurrentState.DynamicBindings[LoadFilepath->ID].push_back(MBUnicode::PathToUTF8(std::filesystem::current_path()));
+        CurrentState.DynamicBindings[LoadFilepath->ID].push_back(MBUnicode::PathToUTF8(std::filesystem::weakly_canonical( std::filesystem::current_path())));
 
         Ref<DynamicVariable> StdinValueRef = m_GlobalScope->FindVariable(p_GetSymbolID("*standard-input*")).GetRef<DynamicVariable>();
         Value& StdinValue = StdinValueRef->DefaultValue;

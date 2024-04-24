@@ -26,6 +26,7 @@
                 "/Threading.cpp",
                 "/DebugInternals.cpp",
                 "/Modules/LSP/LSPModule.cpp",
+                "/Modules/IO/IO.cpp",
                 "/Modules/Text/TextModule.cpp"
             ],
             "TargetType": "Executable"

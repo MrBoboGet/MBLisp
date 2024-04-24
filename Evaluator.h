@@ -572,26 +572,51 @@ namespace MBLisp
         {
             if constexpr(sizeof...(TotalArgTypes) == sizeof...(SuppliedArgTypes))
             {
-                return Function(std::forward<SuppliedArgTypes>(Args)...);
+                if constexpr(!std::is_same_v<ReturnType,void>)
+                {
+                    return Function(std::forward<SuppliedArgTypes>(Args)...);
+                }
+                else
+                {
+                    Function(std::forward<SuppliedArgTypes>(Args)...);
+                }
             }
             else
             {
                 //+1 beccause the first argument  is always the type of the invoking object
-                return p_InvokeFunction(Function,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
-                    LispArgs[sizeof...(SuppliedArgTypes)].GetType<
-                    typename std::remove_cv<
-                        typename std::remove_reference<typename i_TypeExtractor<0,sizeof...(SuppliedArgTypes),TotalArgTypes...>::type>::type>::type>());
+                if constexpr(!std::is_same_v<void,ReturnType>)
+                {
+                    return p_InvokeFunction(Function,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
+                        LispArgs[sizeof...(SuppliedArgTypes)].GetType<
+                        typename std::remove_cv<
+                            typename std::remove_reference<typename i_TypeExtractor<0,sizeof...(SuppliedArgTypes),TotalArgTypes...>::type>::type>::type>());
+                }
+                else
+                {
+                    p_InvokeFunction(Function,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
+                        LispArgs[sizeof...(SuppliedArgTypes)].GetType<
+                        typename std::remove_cv<
+                            typename std::remove_reference<typename i_TypeExtractor<0,sizeof...(SuppliedArgTypes),TotalArgTypes...>::type>::type>::type>());
+                }
             }
         }
 
         template<typename ReturnType,auto Func>
         static Value p_FunctionConverter BUILTIN_ARGLIST
         {
-            if constexpr(std::is_same_v<ReturnType,Value> || Value::IsBuiltin<ReturnType>() || i_IsTemplateInstantiation<ReturnType,Ref>::value)
+            if constexpr(std::is_same_v<ReturnType,void>)
+            {
+                p_InvokeFunction(Func,Arguments);
+                return Value();
+            }
+            else if constexpr(std::is_same_v<ReturnType,Value> || Value::IsBuiltin<ReturnType>() || i_IsTemplateInstantiation<ReturnType,Ref>::value)
             {
                 return p_InvokeFunction(Func,Arguments);   
             }
-            return Value::EmplaceExternal<ReturnType>(p_InvokeFunction(Func,Arguments));
+            else
+            {
+                return Value::EmplaceExternal<ReturnType>(p_InvokeFunction(Func,Arguments));
+            }
         }
 
 
