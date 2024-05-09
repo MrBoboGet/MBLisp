@@ -17,6 +17,8 @@
 #include "DebugInternals.h"
 
 #include "Module.h"
+
+#include "FunctionObjectConverter.h"
 namespace MBLisp
 {
    
@@ -421,6 +423,11 @@ namespace MBLisp
             m_GlobalScope->SetVariable(p_GetSymbolID(Name),ClassDefinition(Value::GetTypeTypeID<T>()));
             m_BuiltinTypeDefinitions[Value::GetTypeTypeID<T>()] = m_GlobalScope->FindVariable(p_GetSymbolID(Name));
         }
+        template<typename Original,typename New>
+        void p_RegisterBuiltinClass()
+        {
+            m_BuiltinTypeDefinitions[Value::GetTypeTypeID<New>()] = m_BuiltinTypeDefinitions[Value::GetTypeTypeID<Original>()];
+        }
         Ref<Scope> m_GlobalScope = MakeRef<Scope>();
         //easiest possible testable variant
 
@@ -519,10 +526,6 @@ namespace MBLisp
 
         };
 
-        template<typename T,template <typename> class R>
-        struct i_IsTemplateInstantiation : std::false_type { };
-        template<typename T,template <typename> class R>
-        struct i_IsTemplateInstantiation<R<T>,R> : std::true_type { };
 
 
         template <
@@ -543,6 +546,10 @@ namespace MBLisp
             else
             {
                 //+1 beccause the first argument  is always the type of the invoking object
+                if(sizeof...(SuppliedArgTypes) + 1 >= LispArgs.size())
+                {
+                    throw std::runtime_error("Insufficient arguments supplied");   
+                }
                 return p_InvokeMemberMethod(InvokingObject,MemberMethod,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
                     LispArgs[sizeof...(SuppliedArgTypes)+1].GetType<
                     typename std::remove_cv<
@@ -554,7 +561,7 @@ namespace MBLisp
         static Value p_MemberMethodConverter BUILTIN_ARGLIST
         {
             ObjectType InvokingObject = Arguments[0].GetType<ObjectType>();
-            if constexpr(std::is_same_v<ReturnType,Value> || Value::IsBuiltin<ReturnType>() || i_IsTemplateInstantiation<ReturnType,Ref>::value)
+            if constexpr(std::is_same_v<ReturnType,Value> || Value::IsBuiltin<ReturnType>() || IsTemplateInstantiation<ReturnType,Ref>::value)
             {
                 return p_InvokeMemberMethod(InvokingObject,Func,Arguments);   
             }
@@ -584,6 +591,10 @@ namespace MBLisp
             else
             {
                 //+1 beccause the first argument  is always the type of the invoking object
+                if(sizeof...(SuppliedArgTypes) >= LispArgs.size())
+                {
+                    throw std::runtime_error("Insufficient arguments supplied");   
+                }
                 if constexpr(!std::is_same_v<void,ReturnType>)
                 {
                     return p_InvokeFunction(Function,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
@@ -609,7 +620,7 @@ namespace MBLisp
                 p_InvokeFunction(Func,Arguments);
                 return Value();
             }
-            else if constexpr(std::is_same_v<ReturnType,Value> || Value::IsBuiltin<ReturnType>() || i_IsTemplateInstantiation<ReturnType,Ref>::value)
+            else if constexpr(std::is_same_v<ReturnType,Value> || Value::IsBuiltin<ReturnType>() || IsTemplateInstantiation<ReturnType,Ref>::value)
             {
                 return p_InvokeFunction(Func,Arguments);   
             }
@@ -654,6 +665,22 @@ namespace MBLisp
             AssociatedFunction.AddMethod(std::move(Types),Value(p_FunctionConverter<ReturnType,Func>));
         }
 
+        template<typename T,typename ReturnType,typename ObjectType,typename... ArgTypes>
+        void p_AddFunctionObject(Ref<Scope>& ScopeToModify,std::string const& MethodName, ReturnType(ObjectType::* Func)(ArgTypes...),T Callable)
+        {
+            std::vector<ClassID> Types;
+            p_AddTypes<ArgTypes...>(Types);
+            SymbolID GenericSymbol = p_GetSymbolID(MethodName);
+            if(ScopeToModify->TryGet(GenericSymbol) == nullptr)
+            {
+                 ScopeToModify->SetVariable(GenericSymbol,GenericFunction());
+            }
+            GenericFunction& AssociatedFunction = ScopeToModify->FindVariable(GenericSymbol).GetType<GenericFunction>();
+            AssociatedFunction.Name = p_GetSymbolID(MethodName);
+            AssociatedFunction.AddMethod(std::move(Types),Value( FunctionObject( std::make_unique<FunctionObjectConverter<T>>(std::move(Callable)))));
+        }
+		
+
         static SymbolID p_PathURI(Evaluator& AssociatedEvaluator,std::string const& Path);
         static SymbolID p_PathURI(Evaluator& AssociatedEvaluator,std::filesystem::path const& Path);
     public:
@@ -678,6 +705,19 @@ namespace MBLisp
         {
             AddObjectMethod<Func>(ScopeToModify,MethodName,Func);
         }
+
+
+        template<typename T>
+        void AddFunctionObject(Ref<Scope>& ScopeToModify,std::string const& MethodName,T Object)
+        {
+            p_AddFunctionObject(ScopeToModify,MethodName,&T::operator(),std::move(Object));
+        }
+        template<typename  T>
+        void AddFunctionObject(std::string const& MethodName,T Object)
+        {
+            AddFunctionObject(m_GlobalScope,MethodName,std::move(Object));
+        }
+
 
         Evaluator();
 
@@ -752,5 +792,7 @@ namespace MBLisp
         Value Eval(ExecutionState& CurrentState,Value Callable,FuncArgVector Arguments);
         Value Eval(Ref<Scope> AssociatedScope,Value Callable,FuncArgVector Arguments);
         void Unwind(ExecutionState& CurrentState,int TargetIndex);
+
+        void AddInternalModule(std::string const& Name,Ref<Scope> ModuleScope);
     };
 }

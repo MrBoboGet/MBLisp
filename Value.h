@@ -552,6 +552,21 @@ public:
         }
     };
 
+    
+    class Invocable
+    {
+    public:
+        virtual Value operator() BUILTIN_ARGLIST = 0;
+    };
+
+    class FunctionObject 
+    {
+        std::unique_ptr<Invocable> m_Invocable;
+    public:
+        FunctionObject(){};
+        FunctionObject(std::unique_ptr<Invocable> Invocable) : m_Invocable(std::move(Invocable)) { }
+        inline Value operator() BUILTIN_ARGLIST;
+    };
 
 
     class DynamicVariable;
@@ -618,6 +633,7 @@ public:
             GenericFunction,
             ClassDefinition,
             ClassInstance,
+            FunctionObject,
             Value,
             DynamicVariable,
             Scope> BuiltinTypes;
@@ -631,6 +647,7 @@ public:
         static constexpr bool IsReferenceType()
         {
             return TypeIn<T,ClassDefinition,DynamicVariable,Macro,Lambda,GenericFunction,ClassInstance,List,Scope,String,
+                   FunctionObject,
                 std::unordered_map<Value,Value,Value::Value_Hasher>>;
         }
         template<typename T>
@@ -1292,4 +1309,14 @@ public:
     inline void RefDestructor<Scope>(Scope& ScopeToDelete)
     {
     }
+
+    inline Value FunctionObject::operator() BUILTIN_ARGLIST
+    {
+        if(m_Invocable == nullptr)
+        {
+            throw std::runtime_error("Invalid function object: m_Data was null");
+        }
+        return (*m_Invocable)(Context,Arguments);
+    }
+
 };

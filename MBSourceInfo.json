@@ -36,7 +36,14 @@
             "OutputName": "MBLisp",
             "Sources": 
             [
-                "/Evaluator.cpp"
+                "/Evaluator.cpp",
+                "/Value.cpp",
+                "/OpCodes.cpp",
+                "/Threading.cpp",
+                "/DebugInternals.cpp",
+                "/Modules/LSP/LSPModule.cpp",
+                "/Modules/IO/IO.cpp",
+                "/Modules/Text/TextModule.cpp"
             ],
             "TargetType": "Library"
         }

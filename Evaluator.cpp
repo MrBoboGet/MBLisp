@@ -1187,6 +1187,14 @@ namespace MBLisp
             CurrentState.UnwindingStack = false;
         }
     }
+    void Evaluator::AddInternalModule(std::string const& Name,Ref<Scope> ModuleScope)
+    {
+        if(m_BuiltinModules.find(Name) != m_BuiltinModules.end())
+        {
+            throw std::runtime_error("Mopdule with name \""+Name+"\" already defined");
+        }
+        m_BuiltinModules[Name] = std::make_unique<ScopeModule>(ModuleScope);
+    }
     void Evaluator::p_EmitSignal(ExecutionState& CurrentState,Value SignalValue,bool ForceUnwind)
     {
         //the signal form returns a value in the current frame, which
@@ -1287,11 +1295,36 @@ namespace MBLisp
                 m_ThreadingState.TempSuspend(CurrentState.AssociatedThread,false);
                 CurrentState.CurrentCallContext.m_ThreadPaused = false;
             }
-            //for(auto& Arg : Arguments)
-            //{
-            //    assert(!Arg.IsType<List>() || Arg.GetRef<List>() != nullptr);
-            //}
             assert(CurrentCallStack.back().ArgumentStack.size() == 0 || !CurrentCallStack.back().ArgumentStack.back().IsType<List>() || CurrentCallStack.back().ArgumentStack.back().GetRef<List>() != nullptr);
+        }
+        else if(ObjectToCall.IsType<FunctionObject>())
+        {
+            FunctionObject& ObjectToInvoke = ObjectToCall.GetType<FunctionObject>();
+            for(auto& Arg : Arguments)
+            {
+                assert(!Arg.IsType<List>() || Arg.GetRef<List>() != nullptr);
+            }
+            try
+            {
+                CurrentState.CurrentCallContext.m_IsSetting = Setting;
+                Value Result = ObjectToInvoke(CurrentState.CurrentCallContext,Arguments);
+                CurrentCallStack.back().ArgumentStack.push_back(std::move(Result));
+            }
+            catch(ContinueUnwind const& e)
+            {
+                   
+            }
+            catch(std::exception const& e)
+            {
+                p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState, String(e.what())),true);
+            }
+            if(CurrentState.CurrentCallContext.m_ThreadPaused)
+            {
+                m_ThreadingState.TempSuspend(CurrentState.AssociatedThread,false);
+                CurrentState.CurrentCallContext.m_ThreadPaused = false;
+            }
+            assert(CurrentCallStack.back().ArgumentStack.size() == 0 || !CurrentCallStack.back().ArgumentStack.back().IsType<List>() || CurrentCallStack.back().ArgumentStack.back().GetRef<List>() != nullptr);
+
         }
         else if(ObjectToCall.IsType<Lambda>())
         {
@@ -1597,10 +1630,6 @@ namespace MBLisp
                 //last value is the function to call, rest is arguments
                 //creates new stack frame
                 assert(CurrentFrame.ArgumentStack.size() != 0);
-                //if(!(CurrentFrame.ArgumentStack.back().IsType<Function>() || CurrentFrame.ArgumentStack.back().IsType<Lambda>()))
-                //{
-                //    throw std::runtime_error("can only invoke objects of type function");
-                //}
                 OpCode_CallFunc&  CallFuncCode = CurrentCode.GetType<OpCode_CallFunc>();
                 Value FunctionToCall = std::move(CurrentFrame.ArgumentStack[CurrentFrame.ArgumentStack.size()-(CallFuncCode.ArgumentCount+1)]);
                 FuncArgVector Arguments;
@@ -2413,6 +2442,7 @@ namespace MBLisp
         p_RegisterBuiltinClass<ThreadHandle>("thread_t");
         p_RegisterBuiltinClass<Scope>("envir_t");
         p_RegisterBuiltinClass<LispStackFrame>("stackframe_t");
+        p_RegisterBuiltinClass<Function,FunctionObject>();
         
         //list
         AddMethod<List>("append",Append_List);
