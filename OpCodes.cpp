@@ -441,7 +441,7 @@ namespace MBLisp
                 }
                 else if(CurrentSymbol == SymbolID(PrimitiveForms::bind_dynamic))
                 {
-                    if(ListToConvert.size() != 3)
+                        if(ListToConvert.size() != 3)
                     {
                         throw std::runtime_error("bind-dynamic requires exactly 2 arguments: list of binding triplets, form to execute in new binding");
                     }

@@ -23,6 +23,8 @@
     )
 )
 
+(set no-import-handler (dynamic null))
+
 (defun set-get-scope-func (new-func)
     (set get-scope-func new-func)
 )
@@ -51,7 +53,16 @@
         )
     )
     (if (&& (eq is-internal false) (eq file-to-load ""))
-        (error (plus "Cannot find module in working directory or user libs: " (str value)))
+        (if (eq no-import-handler null)
+            (error (plus "Cannot find module in working directory or user libs: " (str value)))
+         else
+            (set result-envir (no-import-handler value binding))
+            (if (< (len binding) 1)
+                (return `(add-parent (environment) ,result-envir))
+             else 
+                (return `(set ,(. binding 0) ,result-envir))
+            )
+        )
     )
    else if (eq (type value) string_t)
       (set file-to-load (plus script-dir value))

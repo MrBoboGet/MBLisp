@@ -126,8 +126,8 @@
   b
 )
 
-
-(defun read-json (stream)
+(defgeneric read-json)
+(defmethod read-json ((stream in-stream_t))
     (set return-value "")
     (skip-whitespace stream)
     (set first-byte (peek-byte stream))
@@ -153,6 +153,10 @@
         (set return-value (read-number stream))
     )
     return-value
+)
+(defmethod read-json ((string string_t))
+    (set stream (in-stream string))
+    (read-json stream)
 )
 (defun read-rpc (stream)
     (set content-line  "")

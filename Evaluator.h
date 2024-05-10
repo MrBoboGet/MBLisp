@@ -477,6 +477,10 @@ namespace MBLisp
             {
                 Types.push_back(0);
             }
+            else if constexpr(std::is_same_v<Type,Value>)
+            {
+                Types.push_back(0);
+            }
             else
             {
                 Types.push_back(Value::GetTypeTypeID<Type>());

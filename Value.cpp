@@ -72,6 +72,15 @@ namespace MBLisp
         }
         return ReturnValue;
     }
+    Value* Scope::GetOrCreate(SymbolID Variable)
+    {
+        Value* ReturnValue = TryGet(Variable);
+        if(ReturnValue != nullptr)
+        {
+            return ReturnValue;
+        }
+        return &m_Variables[Variable];
+    }
     Value& Scope::GetLocal(SymbolID Variable)
     {
         //maybe should use asserts instead, as this function should not be able to fail

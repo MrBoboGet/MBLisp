@@ -587,7 +587,7 @@ namespace MBLisp
         }
         String ReturnValue(BytesToRead,0);
         size_t ReadBytes = Arguments[0].GetType<MBUtility::StreamReader>().Read(ReturnValue.data(),BytesToRead);
-        ReturnValue.resize(BytesToRead);
+        ReturnValue.resize(ReadBytes);
         return ReturnValue;
     }
     Value Evaluator::Stream_ReadLine BUILTIN_ARGLIST
@@ -1671,26 +1671,34 @@ namespace MBLisp
                 assert(!SymbolToAssign.IsType<List>() || SymbolToAssign.GetRef<List>() != nullptr);
                 if(SymbolToAssign.IsType<Symbol>())
                 {
+                    Value* Variable = nullptr;
                     if(SetCode.LocalSetIndex == -1)
                     {
-                        CurrentFrame.StackScope->SetVariable(SymbolToAssign.GetType<Symbol>().ID,AssignedValue);
+                        //CurrentFrame.StackScope->SetVariable(SymbolToAssign.GetType<Symbol>().ID,AssignedValue);
+                        Variable = CurrentFrame.StackScope->GetOrCreate(SymbolToAssign.GetType<Symbol>().ID);
                     }
                     else
                     {
-                        CurrentFrame.StackScope->SetLocalVariable(SetCode.LocalSetIndex,AssignedValue);
+                        //CurrentFrame.StackScope->SetLocalVariable(SetCode.LocalSetIndex,AssignedValue);
+                        Variable = &CurrentFrame.StackScope->GetLocal(SetCode.LocalSetIndex);
                     }
-                }
-                else if(SymbolToAssign.IsType<DynamicVariable>())
-                {
-                    DynamicVariable& AssociatedVariable = SymbolToAssign.GetType<DynamicVariable>();
-                    if(auto It = CurrentState.DynamicBindings.find(AssociatedVariable.ID); It != CurrentState.DynamicBindings.end()
-                            && It->second.size() != 0)
+                    assert(Variable != nullptr);
+                    if(!Variable->IsType<DynamicVariable>())
                     {
-                        It->second.back() = AssignedValue;
+                        *Variable = AssignedValue;
                     }
                     else
                     {
-                        AssociatedVariable.DefaultValue = AssignedValue;
+                        DynamicVariable& AssociatedVariable = Variable->GetType<DynamicVariable>();
+                        if(auto It = CurrentState.DynamicBindings.find(AssociatedVariable.ID); It != CurrentState.DynamicBindings.end()
+                                && It->second.size() != 0)
+                        {
+                            It->second.back() = AssignedValue;
+                        }
+                        else
+                        {
+                            AssociatedVariable.DefaultValue = AssignedValue;
+                        }
                     }
                 }
                 else
@@ -2037,6 +2045,12 @@ namespace MBLisp
             }
         }
         //head wasn't macro, try to expand children
+        if(ListToExpand[0].IsType<Symbol>() && ListToExpand[0].GetType<Symbol>().ID
+                == p_GetSymbolID("quote"))
+        {
+            return ListToExpand;   
+        }
+        
         List NewList;
         NewList.SetLocation(ListToExpand.GetLocation());
         NewList.SetDepth(ListToExpand.GetDepth());
@@ -2443,6 +2457,7 @@ namespace MBLisp
         p_RegisterBuiltinClass<Scope>("envir_t");
         p_RegisterBuiltinClass<LispStackFrame>("stackframe_t");
         p_RegisterBuiltinClass<Function,FunctionObject>();
+        p_RegisterBuiltinClass<MBUtility::StreamReader>("in-stream_t");
         
         //list
         AddMethod<List>("append",Append_List);

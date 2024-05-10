@@ -1270,6 +1270,7 @@ public:
         //getters
         Value FindVariable(SymbolID Variable);
         Value* TryGet(SymbolID Variable);
+        Value* GetOrCreate(SymbolID Variable);
         Value& GetLocal(SymbolID Variable);
         Value* TryGetLocalByID(SymbolID Variable);
         int TotalLocalSymCount() const

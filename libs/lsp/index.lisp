@@ -1,6 +1,9 @@
 (import lsp-internal lsp)
 (import lsp.types)
+(import dump)
 (set handler (lsp:create-lsp-server))
+
+(import eval-lsp)
 
 
 (defun if-token-extractor (envir ast)
@@ -190,9 +193,6 @@
   )
   return-value
 )
-(defmacro eval-lsp (&rest body)
-    `(progn ,@body)
-)
 (set read-time-forms (make-dict 
                     ('defun true) 
                     ('defmacro true)
@@ -296,13 +296,24 @@
     )
 )
 
+(defun import-program-envir (sym binding)
+    (set string (str sym))
+    (set path (+ (user-home-dir) "/.mblisp/modules/" string  ".json"))
+    (if (exists path)
+        (set data (read-bytes (open path) 100000))
+        (set result-envir (dump-to-envir data))
+        (return result-envir)
+    )
+    (error "Could not find import")
+)
+
 (defun open-handler (handler uri content)
   (setl new-envir (new-environment))
   (setl file-stream (in-stream content))
   (setl input-stream-symbol (gensym))
   (setl (index new-envir input-stream-symbol) file-stream)
 
-
+  (set no-import-handler import-program-envir)
   (setl jump-symbols (list))
 
   (setl semantic-tokens (list))
