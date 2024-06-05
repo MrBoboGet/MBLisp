@@ -9,9 +9,6 @@
 #include <MBUtility/MBVector.h>
 
 
-#include <thread>
-#include <mutex>
-#include <condition_variable>
 
 #include "Threading.h"
 #include "DebugInternals.h"
@@ -256,6 +253,7 @@ namespace MBLisp
 
         //Streams
         static Value Stream_ReadTerm BUILTIN_ARGLIST;
+        static Value Stream_Symbol BUILTIN_ARGLIST;
         static Value Stream_ReadString BUILTIN_ARGLIST;
         static Value Stream_ReadNumber BUILTIN_ARGLIST;
         static Value Stream_ReadBytes BUILTIN_ARGLIST;
@@ -498,7 +496,7 @@ namespace MBLisp
 
 
         //returns the read-table
-        Value p_LoadFile(ExecutionState&  CurrentState,std::filesystem::path const& LoadFilePath,bool KeepReadtable = false);
+        Value p_LoadFile(ExecutionState& CurrentState,std::filesystem::path const& LoadFilePath,bool KeepReadtable = false);
 
 
         template<typename ClassToConvert, Value (ClassToConvert::*MemberMethod)()>
@@ -795,6 +793,7 @@ namespace MBLisp
         void Repl();
         Value Eval(ExecutionState& CurrentState,Value Callable,FuncArgVector Arguments);
         Value Eval(Ref<Scope> AssociatedScope,Value Callable,FuncArgVector Arguments);
+        Value Eval(Value Callable,FuncArgVector Arguments);
         void Unwind(ExecutionState& CurrentState,int TargetIndex);
 
         void AddInternalModule(std::string const& Name,Ref<Scope> ModuleScope);

@@ -1,6 +1,7 @@
 (import lsp-internal lsp)
 (import lsp.types)
 (import dump)
+(import json)
 (set handler (lsp:create-lsp-server))
 
 (import eval-lsp)
@@ -245,6 +246,8 @@
                 (signal (symbol-location sym (name value)))
             )
         )
+        (setl DEBUG-RANGE (range macro-offset (len ast)))
+        (write debug-file (to-json-string DEBUG-RANGE))
         (doit i (range macro-offset (len ast))
             (insert-elements return-value (extract-macros envir (. ast i) tokens jumps diagnostics))
         )
@@ -273,11 +276,12 @@
     )
     catch (any_t e)
     (
+      (write debug-file (str e))
       false
     )
    )
 )
-
+(set debug-file (open "DEBUG_LSP.txt" "w"))
 
 (set loaded-files (make-dict))
 
@@ -350,6 +354,7 @@
         )
         catch (any_t e)
         (
+          (write debug-file (str e))
           false
         )
       )

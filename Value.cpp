@@ -72,9 +72,31 @@ namespace MBLisp
         }
         return ReturnValue;
     }
+    Value* Scope::TryGetNonShadowing(SymbolID Variable)
+    {
+        Value* ReturnValue = nullptr;
+        if(auto VarIt = m_Variables.find(Variable); VarIt != m_Variables.end())
+        {
+            return &VarIt->second;
+        }
+        else if(m_ParentScope.size() != 0)
+        {
+            for(auto& Parent : m_ParentScope)
+            {
+                if(Parent.Shadowing)
+                    continue;
+                ReturnValue = Parent.AssociatedScope->TryGet(Variable);
+                if(ReturnValue != nullptr)
+                {
+                    return ReturnValue;
+                }
+            }
+        }
+        return ReturnValue;
+    }
     Value* Scope::GetOrCreate(SymbolID Variable)
     {
-        Value* ReturnValue = TryGet(Variable);
+        Value* ReturnValue = TryGetNonShadowing(Variable);
         if(ReturnValue != nullptr)
         {
             return ReturnValue;

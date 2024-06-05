@@ -28,3 +28,4 @@
   `(,\. ,@(index symbol-parts 0) ,@symbol-symbols)
 )
 (add-character-expander *READTABLE* ":" expand-sym-string)
+

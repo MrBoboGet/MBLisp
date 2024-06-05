@@ -555,6 +555,28 @@ namespace MBLisp
         }
         return Context.GetEvaluator().p_ReadString(Arguments[0].GetType<MBUtility::StreamReader>());
     }
+    Value Evaluator::Stream_Symbol BUILTIN_ARGLIST
+    {
+        BuiltinLock Lock;
+        if(Context.IsMultiThreaded())
+        {
+            Lock = Arguments[0].GetLock();   
+            Context.PauseThread();
+        }
+        auto& Stream = Arguments[0].GetType<MBUtility::StreamReader>();
+        PositionType Pos = Stream.Position();
+        std::string SymbolString = Stream.ReadWhile([](char CharToRead)
+                {
+                    return (CharToRead > ' ' && CharToRead < 0x7f) && CharToRead != '"' && CharToRead != '(' && CharToRead != ')' 
+                    //kinda hacky/temporary, maybe should add the ability to alter which characters can appear within a symbol, like in common lisp...
+                    && CharToRead != '{' && CharToRead != '}' && CharToRead != '[' && CharToRead != ']' && CharToRead != ',';
+                });
+        Symbol ReturnValue = Context.GetEvaluator().p_GetSymbolID(SymbolString);
+        ReturnValue.SymbolLocation.Position = Pos;
+        //TODO maybe default location to current load-filepath?
+        //ReturnValue.SymbolLocation.URI = 
+        return ReturnValue;
+    }
     Value Evaluator::Stream_ReadNumber BUILTIN_ARGLIST
     {
         BuiltinLock Lock;
@@ -1159,6 +1181,13 @@ namespace MBLisp
         p_Invoke(Callable,Arguments,CurrentState);
         return p_Eval(CurrentState,CurrentState.StackFrames.size()-1);
     }
+    Value Evaluator::Eval(Value Callable,FuncArgVector Arguments)
+    {
+        ExecutionState State;
+        State.StackFrames.push_back(StackFrame());
+        State.StackFrames.back().StackScope = m_GlobalScope;
+        return Eval(State,std::move(Callable),std::move(Arguments));
+    }
     Value Evaluator::Eval(Ref<Scope> AssociatedScope,Value Callable,FuncArgVector Arguments)
     {
         ExecutionState NewState;   
@@ -1577,7 +1606,7 @@ namespace MBLisp
                 {
                     LiteralToPush = Value(LiteralToPush.GetType<String>());
                 }
-                CurrentFrame.ArgumentStack.push_back(LiteralToPush);
+                 CurrentFrame.ArgumentStack.push_back(LiteralToPush);
             }
             else if(CurrentCode.IsType<OpCode_Goto>())
             {
@@ -2044,6 +2073,22 @@ namespace MBLisp
                 }
             }
         }
+        else if(ListToExpand[0].IsType<Macro>())
+        {
+            Macro const& AssociatedMacro = ListToExpand[0].GetType<Macro>();
+            FuncArgVector Arguments;
+            for(int i = 1; i < ListToExpand.size();i++)
+            {
+                Arguments.push_back(ListToExpand[i]);
+            }
+            ReturnValue =  p_Expand(CurrentState,Namespace,Eval(CurrentState,*AssociatedMacro.Callable,std::move(Arguments)));
+            if(ReturnValue.IsType<List>())
+            {
+                ReturnValue.GetType<List>().SetLocation(ListToExpand.GetLocation());   
+                ReturnValue.GetType<List>().SetDepth(ListToExpand.GetDepth());   
+            }
+            return ReturnValue;
+        }
         //head wasn't macro, try to expand children
         if(ListToExpand[0].IsType<Symbol>() && ListToExpand[0].GetType<Symbol>().ID
                 == p_GetSymbolID("quote"))
@@ -2497,6 +2542,7 @@ namespace MBLisp
         AddMethod<MBUtility::StreamReader>("skip-whitespace",Stream_SkipWhitespace);
         AddMethod<MBUtility::StreamReader,Int>("read-bytes",Stream_ReadBytes);
         AddMethod<MBUtility::StreamReader>("read-string",Stream_ReadString);
+        AddMethod<MBUtility::StreamReader>("read-symbol",Stream_Symbol);
         AddMethod<MBUtility::StreamReader>("read-number",Stream_ReadNumber);
         AddMethod<MBUtility::StreamReader>("read-line",Stream_ReadLine);
         AddMethod<MBUtility::StreamReader,String>("read-until",Stream_ReadUntil);

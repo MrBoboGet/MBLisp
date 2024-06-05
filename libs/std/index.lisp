@@ -425,6 +425,31 @@
 )
 (add-reader-character *READTABLE* ":" member-reader)
 
+(defun comment-reader (stream)
+    (read-line stream)
+    null
+)
+(add-reader-character *READTABLE* "#" comment-reader)
+
+(defun comment-reader (stream)
+    (read-line stream)
+    null
+)
+(add-reader-character *READTABLE* "#" comment-reader)
+
+(defun stream-reader (stream &envir envir)
+    (setl return-value null)
+    (setl sym (read-symbol stream))
+    (if (in sym envir)
+        (setl reader (index envir sym))
+        (setl return-value (reader stream))
+     else
+        (error "stream-reader needs a symbol taking a callable as the first argument")
+    )
+    return-value
+)
+(add-reader-character *READTABLE* "@" stream-reader)
+
 
 (defmethod str ((list list_t))
     (set return-value "(")

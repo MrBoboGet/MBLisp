@@ -2,7 +2,6 @@
 #include <cstdint>
 #include <stdexcept>
 #include <type_traits>
-#include <typeinfo>
 #include <vector>
 #include <string>
 #include <variant>
@@ -1270,6 +1269,7 @@ public:
         //getters
         Value FindVariable(SymbolID Variable);
         Value* TryGet(SymbolID Variable);
+        Value* TryGetNonShadowing(SymbolID Variable);
         Value* GetOrCreate(SymbolID Variable);
         Value& GetLocal(SymbolID Variable);
         Value* TryGetLocalByID(SymbolID Variable);

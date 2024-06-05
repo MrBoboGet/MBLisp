@@ -24,6 +24,26 @@ namespace MBLisp
     template<typename... T>
     using First_v = typename First<T...>::type;
 
+
+    template<int N,typename... Types>
+    struct Nth 
+    {
+        typedef void type;
+    };
+    template<typename Head,typename... Tail>
+    struct Nth<0,Head,Tail...>
+    {
+        typedef Head type;
+    };
+    template<int N,typename Head,typename... Tail>
+    struct Nth<N,Head,Tail...>
+    {
+        typedef typename Nth<N-1,Tail...>::type type;
+    };
+
+    template<size_t N,typename... T>
+    using Nth_v = typename Nth<N,T...>::type;
+
     template<typename T>
     Value ToBuiltin(T&& RegularValue)
     {
@@ -92,7 +112,7 @@ namespace MBLisp
                 {
                     throw std::runtime_error("Insufficient amount of arguments supplied");
                 }
-                return p_Invoke(Args,Func,std::forward<SuppliedArgs>(SuppliedArgs)...,FromBuiltin<First_v<TotalArgTypes...>>(Args[sizeof...(SuppliedArgs)]));
+                return p_Invoke(Args,Func,std::forward<SuppliedArgTypes>(SuppliedArgs)...,FromBuiltin<Nth_v<sizeof...(SuppliedArgTypes),TotalArgTypes...>>(Args[sizeof...(SuppliedArgs)]));
             }
         }
     public:
