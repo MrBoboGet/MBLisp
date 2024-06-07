@@ -431,12 +431,6 @@
 )
 (add-reader-character *READTABLE* "#" comment-reader)
 
-(defun comment-reader (stream)
-    (read-line stream)
-    null
-)
-(add-reader-character *READTABLE* "#" comment-reader)
-
 (defun stream-reader (stream &envir envir)
     (setl return-value null)
     (setl sym (read-symbol stream))
@@ -460,7 +454,6 @@
     (append return-value ")")
     return-value
 )
-
 (defmethod eq ((lhs list_t) (rhs list_t))
     (if (not (eq (len lhs) (len rhs)))
         (return false)

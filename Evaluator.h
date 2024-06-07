@@ -767,8 +767,6 @@ namespace MBLisp
             AddMethod<ClassType>(m_GlobalScope,MethodName,p_MemberConverter<ClassType,MemberMethod>);
         }
 
-        
-
         class TestClass
         {
             String m_InteralString =  "UwU";

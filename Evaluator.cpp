@@ -375,8 +375,8 @@ namespace MBLisp
 
             std::vector<SlotDefinition> TempSlots;
             std::swap(NewSlots,TempSlots);
-            std::merge(TempSlots.begin(),TempSlots.end(),Class->SlotDefinitions.begin(),Class->SlotDefinitions.end(),std::inserter(TempSlots,TempSlots.begin()));
-            std::swap(NewSlots, TempSlots);
+            std::merge(TempSlots.begin(),TempSlots.end(),Class->SlotDefinitions.begin(),Class->SlotDefinitions.end(),std::inserter(NewSlots,NewSlots.begin()));
+            //std::swap(NewSlots, TempSlots);
         }
         NewClass.Types = std::move(NewClasses);
         NewClass.SlotDefinitions = std::move(NewSlots);
@@ -3084,6 +3084,7 @@ namespace MBLisp
             CurrentState.DynamicBindings[ReadTableDyn->ID].pop_back();
             CurrentState.DynamicBindings[DynamicLoadEnvir->ID].pop_back();
             assert(CurrentState.DynamicBindings[DynamicLoadFilepath->ID].size() == OriginalVarDepth);
+            throw;
         }
         return ReturnValue;
     }

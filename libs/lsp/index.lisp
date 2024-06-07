@@ -368,6 +368,14 @@
   (lsp:set-document-jumps handler uri jump-symbols)
 )
 (defun main ()
-    (lsp:add-on-open-handler handler open-handler)
-    (lsp:handle-requests handler)
+    (catch-signals 
+        (
+            (lsp:add-on-open-handler handler open-handler)
+            (lsp:handle-requests handler)
+        )
+        catch (any_t e)
+        (
+            (write debug-file (str e))
+        )
+    )
 )

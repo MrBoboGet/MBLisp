@@ -125,7 +125,6 @@
   (read-comma-delimited-object "[" "]" _(append b (read-json _)) stream)
   b
 )
-
 (defgeneric read-json)
 (defmethod read-json ((stream in-stream_t))
     (set return-value "")
