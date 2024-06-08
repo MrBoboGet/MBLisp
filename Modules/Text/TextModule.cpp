@@ -3,6 +3,67 @@
 
 namespace MBLisp
 {
+
+    //
+    Value& SymbolStore::operator[](std::string const& String)
+    {
+        return m_Contents[String];
+    }
+    Value SymbolStore::Index BUILTIN_ARGLIST
+    {
+        auto& Store = Arguments[0].GetType<SymbolStore>();
+        auto const& AssociatedString = Context.GetEvaluator().GetSymbolString(Arguments[1].GetType<Symbol>().ID);
+        if(Context.IsSetting())
+        {
+            Store[AssociatedString] = Context.GetSetValue();
+            return Value();
+        }
+        return Store[AssociatedString];
+    }
+    //
+   
+    //
+    StreamTokenizer::StreamTokenizer(std::string const& Skip,List const& Tokens)
+    {
+        std::vector<std::string> Regexes;
+        for(auto const& Regex : Tokens)
+        {
+            if(!Regex.IsType<String>())
+            {
+                throw std::runtime_error("StreamTokenizer needs list of regexes");
+            }
+            Regexes.emplace_back(Regex.GetType<String>());
+        }
+        m_Tokenizer.SetRegexes(Skip,Regexes);
+    }
+    StreamTokenizer StreamTokenizer::Construct(std::string const& Skip,List const& Tokens)
+    {
+        return  StreamTokenizer(Skip,Tokens);
+    }
+    void StreamTokenizer::SetStream(Ref<MBUtility::StreamReader> Content)
+    {
+        m_Stream = Content;
+        m_Tokenizer.SetData(m_Stream->begin(),m_Stream->end());
+    }
+    SymbolStore StreamTokenizer::Peek(int Depth)
+    {
+        SymbolStore ReturnValue;
+        auto Result = m_Tokenizer.Peek(Depth);
+
+        ReturnValue["value"] = Result.Value;
+        ReturnValue["type"] = Value(Result.Type);
+
+        return ReturnValue;
+    }
+    void StreamTokenizer::ConsumeToken(int Depth)
+    {
+        size_t CurrentByteOffset = m_Tokenizer.Peek().ByteOffset;
+        m_Stream->Consume(m_Tokenizer.GetFront(),CurrentByteOffset-m_LastConsumedByteOffset);
+        m_LastConsumedByteOffset = CurrentByteOffset;
+        m_Tokenizer.ConsumeToken();
+    }
+
+    //
     MBLSP::LineIndex TextModule::CreateLineIndex(String const& Data)
     {
         return MBLSP::LineIndex(Data);
@@ -93,6 +154,15 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<GetCol>(ReturnValue,"get-col");
         AssociatedEvaluator.AddGeneric<JSONEscape>(ReturnValue,"json-escape");
 
+        //StreamTokenizer
+        
+        AssociatedEvaluator.AddGeneric<SymbolStore::Index>("index");
+        AssociatedEvaluator.AddGeneric<&StreamTokenizer::Construct>(ReturnValue,"tokenizer");
+        AssociatedEvaluator.AddObjectMethod<&StreamTokenizer::SetStream>(ReturnValue,"set-stream");
+        AssociatedEvaluator.AddObjectMethod<&StreamTokenizer::Peek>(ReturnValue,"peek");
+        AssociatedEvaluator.AddObjectMethod<&StreamTokenizer::ConsumeToken>(ReturnValue,"consume-token");
+        
+        constexpr bool IsRef = IsTemplateInstantiation<Ref<MBUtility::StreamReader>,Ref>::value;
         return ReturnValue;
     }
 }

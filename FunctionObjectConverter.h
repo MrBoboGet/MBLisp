@@ -8,7 +8,9 @@ namespace MBLisp
     template<typename T,template <typename> class R>
     struct IsTemplateInstantiation : std::false_type { };
     template<typename T,template <typename> class R>
-    struct IsTemplateInstantiation<R<T>,R> : std::true_type { };
+    struct IsTemplateInstantiation<R<T>,R> : std::true_type { 
+        typedef T type;
+    };
 
     template<typename... Types>
     struct First 

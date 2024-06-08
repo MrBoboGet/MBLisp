@@ -514,11 +514,11 @@ namespace MBLisp
         { 
             typedef T type;
         };
-        template <int CurrentIndex,int TargetIndex,typename T>
-        struct i_TypeExtractor<CurrentIndex,TargetIndex,Ref<T>>
-        { 
-            typedef T type;
-        };
+        //template <int CurrentIndex,int TargetIndex,typename T>
+        //struct i_TypeExtractor<CurrentIndex,TargetIndex,Ref<T>>
+        //{ 
+        //    typedef T type;
+        //};
         template <int CurrentIndex,int TargetIndex,typename T,typename... Rest>
         struct i_TypeExtractor<CurrentIndex,TargetIndex,T,Rest...> : 
         std::conditional_t<CurrentIndex == TargetIndex,
@@ -552,10 +552,20 @@ namespace MBLisp
                 {
                     throw std::runtime_error("Insufficient arguments supplied");   
                 }
-                return p_InvokeMemberMethod(InvokingObject,MemberMethod,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
-                    LispArgs[sizeof...(SuppliedArgTypes)+1].GetType<
-                    typename std::remove_cv<
-                        typename std::remove_reference<typename i_TypeExtractor<0,sizeof...(SuppliedArgTypes),TotalArgTypes...>::type>::type>::type>());
+                typedef typename std::remove_cv<
+                        typename std::remove_reference<typename i_TypeExtractor<0,sizeof...(SuppliedArgTypes),TotalArgTypes...>::type>::type>::type 
+                        ArgType;
+                typedef IsTemplateInstantiation<ArgType,Ref> IsRefType;
+                if constexpr(IsRefType::value)
+                {
+                    return p_InvokeMemberMethod(InvokingObject,MemberMethod,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
+                        LispArgs[sizeof...(SuppliedArgTypes)+1].GetRef<IsRefType::type>());
+                }
+                else
+                {
+                    return p_InvokeMemberMethod(InvokingObject,MemberMethod,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
+                        LispArgs[sizeof...(SuppliedArgTypes)+1].GetType<ArgType>());
+                }
             }
         }
 
@@ -567,7 +577,15 @@ namespace MBLisp
             {
                 return p_InvokeMemberMethod(InvokingObject,Func,Arguments);   
             }
-            return Value::EmplaceExternal<ReturnType>(p_InvokeMemberMethod(InvokingObject,Func,Arguments));
+            if constexpr(!std::is_same_v<ReturnType,void>)
+            {
+                return Value::EmplaceExternal<ReturnType>(p_InvokeMemberMethod(InvokingObject,Func,Arguments));
+            }
+            else
+            {
+               p_InvokeMemberMethod(InvokingObject,Func,Arguments);
+               return Value();
+            }
         }
 
         template <
@@ -628,7 +646,15 @@ namespace MBLisp
             }
             else
             {
-                return Value::EmplaceExternal<ReturnType>(p_InvokeFunction(Func,Arguments));
+                if constexpr(!std::is_same_v<ReturnType,void>)
+                {
+                    return Value::EmplaceExternal<ReturnType>(p_InvokeFunction(Func,Arguments));
+                }
+                else
+                {
+                    p_InvokeFunction(Func,Arguments);
+                    return Value();
+                }
             }
         }
 
