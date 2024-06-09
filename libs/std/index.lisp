@@ -414,6 +414,15 @@
     (leq lhs rhs)
 )
 
+(defmacro dowhile (condition &rest body)
+    `(progn 
+        (progn ,@body)
+        (while ,condition
+            ,@body
+        )
+     )
+)
+
 (defun member-reader (stream)
     (set sym (read-term stream))
     (set form (read-term stream))

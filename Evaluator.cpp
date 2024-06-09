@@ -276,8 +276,9 @@ namespace MBLisp
                     Indexes[URI] = MBLSP::LineIndex(MBUtility::ReadWholeFile(URI));   
                 }
                 MBLSP::Position Position = Indexes[URI].ByteOffsetToPosition(Frame.FrameLocation.Position);
-                ReturnValue  += " line: "+std::to_string(Position.line +1);
-                ReturnValue  += " col: "+std::to_string(Position.character +1);
+                ReturnValue += " " + URI;
+                ReturnValue += " line: "+std::to_string(Position.line +1);
+                ReturnValue += " col: "+std::to_string(Position.character +1);
             }
             ReturnValue  += "\n";
         }
@@ -453,6 +454,7 @@ namespace MBLisp
         NewClass.SlotInitializers = SlotInitializers;
         i___CurrentClassID++;
         NewClass.Types.push_back(i___CurrentClassID);
+        NewClass.Envir = Context.GetState().GetScopeRef();
         NewClass.ID = i___CurrentClassID;
         return NewClass;
     }
@@ -745,7 +747,7 @@ namespace MBLisp
         Int Index = Arguments[1].GetType<Int>();
         if(Index >= AssociatedList.size() || Index < 0)
         {
-            throw std::runtime_error("Index out of range when indexing list"); 
+            throw std::runtime_error("Index out of range when indexing list: " + std::to_string(Index)); 
         }
         Value& AssociatedValue = AssociatedList[Index];
         assert(!AssociatedValue.IsType<List>() || AssociatedValue.GetRef<List>() != nullptr);
@@ -754,6 +756,20 @@ namespace MBLisp
             AssociatedValue = Context.GetSetValue();
         }
         assert(!AssociatedValue.IsType<List>() || AssociatedValue.GetRef<List>() != nullptr);
+        return AssociatedValue;
+    }
+    Value Evaluator::Back_List BUILTIN_ARGLIST
+    {
+        List& AssociatedList = Arguments[0].GetType<List>();
+        if(AssociatedList.size() == 0)
+        {
+            throw std::runtime_error("error accessing back element of list: list was empty");   
+        }
+        Value& AssociatedValue = AssociatedList[AssociatedList.size()-1];
+        if(Context.IsSetting())
+        {
+            AssociatedValue = Context.GetSetValue();
+        }
         return AssociatedValue;
     }
     Value Evaluator::Append_List BUILTIN_ARGLIST
@@ -1414,7 +1430,7 @@ namespace MBLisp
             }
             StackFrame NewStackFrame(OpCodeExtractor(NewInstance->AssociatedClass->SlotInitializers->Instructions));
             NewStackFrame.StackScope = MakeRef<Scope>();
-            NewStackFrame.StackScope->SetParentScope(m_GlobalScope);
+            NewStackFrame.StackScope->SetParentScope(NewInstance->AssociatedClass->Envir);
             Value NewValue = NewInstance;
             NewStackFrame.StackScope->OverrideVariable(p_GetSymbolID("INIT"),NewValue);
             if(NewInstance->AssociatedClass->Constructor != nullptr)
@@ -2506,6 +2522,7 @@ namespace MBLisp
         
         //list
         AddMethod<List>("append",Append_List);
+        AddMethod<List>("back",Back_List);
         AddMethod<List,Int>("index",Index_List);
         AddMethod<List>("len",Len_List);
         AddMethod<List>("sort",Sort);

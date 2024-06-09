@@ -169,6 +169,10 @@ namespace MBLisp
         Ref<Scope> AssociatedScope;
         const char* what() const noexcept 
         {
+            if(ThrownValue.IsType<String>())
+            {
+                return ThrownValue.GetType<String>().c_str();
+            }
             return "Uncaught signal";   
         }
     };
@@ -240,6 +244,7 @@ namespace MBLisp
         //List
         static Value Index_List BUILTIN_ARGLIST;
         static Value Append_List BUILTIN_ARGLIST;
+        static Value Back_List BUILTIN_ARGLIST;
         static Value Len_List BUILTIN_ARGLIST;
         static Value Flatten_1 BUILTIN_ARGLIST;
         static Value Pop_List(List& ListToModify);
@@ -471,6 +476,7 @@ namespace MBLisp
         void p_AddType(std::vector<ClassID>& Types)
         {
             typedef typename std::remove_cv<typename std::remove_reference<T>::type>::type Type;
+            typedef IsTemplateInstantiation<Type,Ref> IsRefType;
             if constexpr(std::is_same_v<Type,Any>)
             {
                 Types.push_back(0);
@@ -478,6 +484,11 @@ namespace MBLisp
             else if constexpr(std::is_same_v<Type,Value>)
             {
                 Types.push_back(0);
+            }
+            else if constexpr(IsRefType::value)
+            {
+                //Types.push_back(0);
+                p_AddType<IsRefType::type>(Types);
             }
             else
             {
@@ -572,7 +583,7 @@ namespace MBLisp
         template<typename ObjectType,typename ReturnType,auto Func>
         static Value p_MemberMethodConverter BUILTIN_ARGLIST
         {
-            ObjectType InvokingObject = Arguments[0].GetType<ObjectType>();
+            ObjectType& InvokingObject = Arguments[0].GetType<ObjectType>();
             if constexpr(std::is_same_v<ReturnType,Value> || Value::IsBuiltin<ReturnType>() || IsTemplateInstantiation<ReturnType,Ref>::value)
             {
                 return p_InvokeMemberMethod(InvokingObject,Func,Arguments);   
@@ -665,7 +676,10 @@ namespace MBLisp
             static_assert(std::is_same_v<decltype(Func),decltype(MemberMethod)>,"Func and supplied func has to be of the same argument");
             std::vector<ClassID> Types;
             p_AddType<ClassType>(Types);
-            p_AddTypes<ArgTypes...>(Types);
+            if constexpr(sizeof...(ArgTypes) > 0)
+            {
+                p_AddTypes<ArgTypes...>(Types);
+            }
             SymbolID GenericSymbol = p_GetSymbolID(MethodName);
             if(ScopeToModify->TryGet(GenericSymbol) == nullptr)
             {
@@ -682,7 +696,10 @@ namespace MBLisp
         {
             static_assert(std::is_same_v<decltype(Func),decltype(MemberMethod)>,"Func and supplied func has to be of the same argument");
             std::vector<ClassID> Types;
-            p_AddTypes<ArgTypes...>(Types);
+            if constexpr(sizeof...(ArgTypes) > 0)
+            {
+                p_AddTypes<ArgTypes...>(Types);
+            }
             SymbolID GenericSymbol = p_GetSymbolID(MethodName);
             if(ScopeToModify->TryGet(GenericSymbol) == nullptr)
             {
@@ -697,7 +714,10 @@ namespace MBLisp
         void p_AddFunctionObject(Ref<Scope>& ScopeToModify,std::string const& MethodName, ReturnType(ObjectType::* Func)(ArgTypes...),T Callable)
         {
             std::vector<ClassID> Types;
-            p_AddTypes<ArgTypes...>(Types);
+            if constexpr(sizeof...(ArgTypes) > 0)
+            {
+                p_AddTypes<ArgTypes...>(Types);
+            }
             SymbolID GenericSymbol = p_GetSymbolID(MethodName);
             if(ScopeToModify->TryGet(GenericSymbol) == nullptr)
             {

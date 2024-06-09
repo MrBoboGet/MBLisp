@@ -1,6 +1,11 @@
 #include "TextModule.h"
 #include "../../Evaluator.h"
 
+#include <MBCC/MBCC.h>
+#include <MBCC/Compilers/MBLisp.h>
+
+#include <MBUtility/StreamUtils.h>
+
 namespace MBLisp
 {
 
@@ -45,7 +50,7 @@ namespace MBLisp
         m_Stream = Content;
         m_Tokenizer.SetData(m_Stream->begin(),m_Stream->end());
     }
-    SymbolStore StreamTokenizer::Peek(int Depth)
+    SymbolStore StreamTokenizer::Peek(Int Depth)
     {
         SymbolStore ReturnValue;
         auto Result = m_Tokenizer.Peek(Depth);
@@ -55,7 +60,7 @@ namespace MBLisp
 
         return ReturnValue;
     }
-    void StreamTokenizer::ConsumeToken(int Depth)
+    void StreamTokenizer::ConsumeToken()
     {
         size_t CurrentByteOffset = m_Tokenizer.Peek().ByteOffset;
         m_Stream->Consume(m_Tokenizer.GetFront(),CurrentByteOffset-m_LastConsumedByteOffset);
@@ -144,6 +149,19 @@ namespace MBLisp
         MBLSP::Position BytePosition = Index.ByteOffsetToPosition(ByteOffset.SymbolLocation.Position);
         return BytePosition.character;
     }
+    String TextModule::GenerateParser(MBUtility::StreamReader& Content,Int k)
+    {
+        String ReturnValue;
+        std::string Contents = MBUtility::ReadAll( static_cast<MBUtility::IndeterminateInputStream&>(Content));
+        MBCC::MBCCDefinitions Definitions = MBCC::MBCCDefinitions::ParseDefinitions(Contents.data(),Contents.size(),0);
+        MBCC::GrammarOptions Options;
+        Options.k = k;
+        MBCC::ParserInfo Info = MBCC::ParserCompilerHandler::CreateParserInfo(std::move(Definitions),std::move(Options));
+        MBCC::LispParser Parser;
+        MBUtility::MBStringOutputStream OutStream(ReturnValue);
+        Parser.WriteParser(Info.Grammar,Info.LOOK,OutStream);
+        return ReturnValue;
+    }
     Ref<Scope> TextModule::GetModuleScope(Evaluator& AssociatedEvaluator) 
     {
         Ref<Scope> ReturnValue = MakeRef<Scope>();
@@ -156,8 +174,9 @@ namespace MBLisp
 
         //StreamTokenizer
         
-        AssociatedEvaluator.AddGeneric<SymbolStore::Index>("index");
+        AssociatedEvaluator.AddMethod<SymbolStore,Symbol>("index",SymbolStore::Index);
         AssociatedEvaluator.AddGeneric<&StreamTokenizer::Construct>(ReturnValue,"tokenizer");
+        AssociatedEvaluator.AddGeneric<GenerateParser>(ReturnValue,"generate-parser");
         AssociatedEvaluator.AddObjectMethod<&StreamTokenizer::SetStream>(ReturnValue,"set-stream");
         AssociatedEvaluator.AddObjectMethod<&StreamTokenizer::Peek>(ReturnValue,"peek");
         AssociatedEvaluator.AddObjectMethod<&StreamTokenizer::ConsumeToken>(ReturnValue,"consume-token");

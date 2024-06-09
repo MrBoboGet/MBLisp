@@ -24,11 +24,11 @@ namespace MBLisp
     public:
         StreamTokenizer(std::string const& Skip,List const& Tokens);
         StreamTokenizer(StreamTokenizer&&) noexcept = default;
-        StreamTokenizer(StreamTokenizer const&) noexcept = default;
+        StreamTokenizer(StreamTokenizer const&) = default;
         void SetStream(Ref<MBUtility::StreamReader> Content);
         static StreamTokenizer Construct(std::string const& Skip,List const& Tokens);
-        SymbolStore Peek(int Depth);
-        void ConsumeToken(int Depth);
+        SymbolStore Peek(Int Depth);
+        void ConsumeToken();
     };
 
     class TextModule : public Module
@@ -40,7 +40,7 @@ namespace MBLisp
         static Int GetLine(MBLSP::LineIndex const& Index, Symbol ByteOffset);
         static Int GetCol(MBLSP::LineIndex const& Index, Symbol ByteOffset);
 
-
+        static String GenerateParser(MBUtility::StreamReader& Content,Int k);
     public:
         virtual Ref<Scope> GetModuleScope(Evaluator& AssociatedEvaluator);
     };

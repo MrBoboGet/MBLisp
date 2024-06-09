@@ -16,10 +16,11 @@ namespace MBLisp
         static std::string NormalizePath(std::filesystem::path const& Path);
 
        
-        static std::string FileName(std::string const& FileName);
-        static std::string Extension(std::string const& Path);
-        static std::string Relative(std::string const& Base,std::string const& Path);
-        static std::string RelativeCWD(std::string const& Path);
+        static String FileName(std::string const& FileName);
+        static String Extension(std::string const& Path);
+        static String Relative(std::string const& Base,std::string const& Path);
+        static String RelativeCWD(std::string const& Path);
+        static Int ModTime(std::string const& Path);
         
         static List Ls(std::string const& Dir);
         static DirItDelegate DirIt(std::string const& Dir);

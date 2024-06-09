@@ -4,6 +4,7 @@
         "MBUtility",
         "MBSystem",
         "MBUnicode",
+        "MBCC",
         "MBLSP"
     ],
     "ExtraIncludes": 

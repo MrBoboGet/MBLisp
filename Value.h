@@ -1141,6 +1141,8 @@ public:
         //expression to compile
         std::vector<SlotDefinition> SlotDefinitions;
         Ref<FunctionDefinition> SlotInitializers;
+        Ref<Scope> Envir;
+
         //constructor is optionally run after slot initializers, which are always run
         Ref<Value> Constructor;
     };

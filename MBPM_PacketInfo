@@ -2,6 +2,6 @@
 	"PacketName":"MBLisp",
     "PacketType":"C++",
 	"Attributes":[],
-    "SubPackets":["/libs/std","/libs/json","/libs/lsp","/libs/testing"],
-    "Dependancies":["MBUtility","MBSystem","MBUnicode","MBLSP"]
+    "SubPackets":["/libs/std","/libs/json","/libs/lsp","/libs/testing","/libs/parsing"],
+    "Dependancies":["MBUtility","MBCC","MBSystem","MBUnicode","MBLSP"]
 }

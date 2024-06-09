@@ -26,6 +26,10 @@ namespace MBLisp
     {
         return MBUnicode::PathToUTF8(std::filesystem::relative(Path));
     }
+    Int IOModule::ModTime(std::string const& Path)
+    {
+        return std::filesystem::directory_entry(Path).last_write_time().time_since_epoch().count();
+    }
     List IOModule::Ls(std::string const& Dir)
     {
         List ReturnValue;
@@ -107,6 +111,7 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<FileName>("file-name");
         AssociatedEvaluator.AddGeneric<Extension>("extension");
         AssociatedEvaluator.AddGeneric<RelativeCWD>("relative");
+        AssociatedEvaluator.AddGeneric<ModTime>("mod-time");
 
         AssociatedEvaluator.AddGeneric<Ls>("ls");
         AssociatedEvaluator.AddGeneric<Iterator>("iterator");
