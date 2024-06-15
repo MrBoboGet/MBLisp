@@ -1260,9 +1260,16 @@ namespace MBLisp
                 return;
             }
 
-            if(CurrentFrame.SignalFrameIndex != -1 && i == CurrentFrameIndex)
+            //if(CurrentFrame.SignalFrameIndex != -1 && i == CurrentFrameIndex)
+            //{
+            //    continue;   
+            //}
+            //Ensure that exceptions in signal handlers can handle their own exceptions, or signal
+            //above the original signals handler position
+            if(CurrentFrame.SignalFrameIndex != -1 && (i < CurrentFrameIndex && i > CurrentFrame.SignalFrameIndex))
             {
-                continue;   
+                i = CurrentFrame.SignalFrameIndex;
+                continue;
             }
             if (SignalFound) break;
             auto& CandidateFrame = CurrentState.StackFrames[i];
@@ -1534,6 +1541,10 @@ namespace MBLisp
                     return ReturnValue;   
                 }
                 continue;
+            }
+            if(CurrentState.StackFrames.size() > 10000)
+            {
+                throw std::runtime_error("Error in evaluation: amount of stack frames exceeded arbitrary limit of 10 000");
             }
 
             OpCode& CurrentCode = CurrentFrame.ExecutionPosition.GetCurrentCode();
@@ -3077,15 +3088,16 @@ namespace MBLisp
                 IPIndex InstructionToExecute = OpCodes->Size();
                 Value NewTerm = p_GetExecutableTerm(CurrentState,CurrentState.GetCurrentScope() ,p_ReadTerm(CurrentState,URI,TableRef,Reader,ReaderValue));
                 p_SkipWhiteSpace(Reader);
-                if(NewTerm.IsType<List>())
-                {
-                    OpCodes->Append(NewTerm.GetType<List>());
-                }
-                else
-                {
-                    List ListToEncode = {std::move(NewTerm)};
-                    OpCodes->Append(ListToEncode);
-                }
+                OpCodes->Append(NewTerm);
+                //if(NewTerm.IsType<List>())
+                //{
+                //    OpCodes->Append(NewTerm.GetType<List>());
+                //}
+                //else
+                //{
+                //    List ListToEncode = {std::move(NewTerm)};
+                //    OpCodes->Append(ListToEncode);
+                //}
                 p_Eval(CurrentState,OpCodes,InstructionToExecute);
                 assert(BeginStackSize == CurrentState.StackSize());
             }

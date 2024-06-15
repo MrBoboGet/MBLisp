@@ -246,14 +246,16 @@
                 (signal (symbol-location sym (name value)))
             )
         )
-        (setl DEBUG-RANGE (range macro-offset (len ast)))
-        (write debug-file (to-json-string DEBUG-RANGE))
+        #(setl DEBUG-RANGE (range macro-offset (len ast)))
+        #(write debug-file (to-json-string DEBUG-RANGE))
         (doit i (range macro-offset (len ast))
             (insert-elements return-value (extract-macros envir (. ast i) tokens jumps diagnostics))
         )
     )
     return-value
 )
+
+
 (defun handle-form (envir ast tokens jumps diagnostics)
    (catch-signals
     (
@@ -276,12 +278,12 @@
     )
     catch (any_t e)
     (
-      (write debug-file (str e))
+      #(write debug-file (str e))
       false
     )
    )
 )
-(set debug-file (open "DEBUG_LSP.txt" "w"))
+#(set debug-file (open "DEBUG_LSP.txt" "w"))
 
 (set loaded-files (make-dict))
 
@@ -354,7 +356,7 @@
         )
         catch (any_t e)
         (
-          (write debug-file (str e))
+          #(write debug-file (str e))
           false
         )
       )
@@ -375,7 +377,8 @@
         )
         catch (any_t e)
         (
-            (write debug-file (str e))
+            #(write debug-file (str e))
+            null
         )
     )
 )

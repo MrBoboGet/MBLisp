@@ -87,6 +87,7 @@
     (set i 0)
     (while (< i (len slots))
         (set current-list (index slots i))
+        (set (index current-list 1) (expand (index current-list 1)))
         (cond (eq (index current-list 0) 'constructor)
               (append constructors (index current-list 1))
               (append filtered-slots current-list)
