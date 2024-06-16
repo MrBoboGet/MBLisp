@@ -1,0 +1,55 @@
+skip "\s+";
+term idf = "\w+";
+term num = "\d+";
+term dot = "\.";
+term plus = "\+";
+term lpar = "\(";
+term rpar = "\)";
+term comma = ",";
+
+struct Idf
+{
+    tokenPos Position;
+    string Value;
+}
+
+struct Expr
+{
+    
+}
+
+struct Expr_Idf : Expr
+{
+    Idf Identifier;
+}
+ 
+struct Expr_FuncCall : Expr
+{
+    Idf Identifier;
+    List<Expr> Arguments;
+}
+
+struct OperatorPart
+{
+    string Operator;
+    Expr Rhs;
+}
+
+struct Op
+{
+    string Value;
+}
+struct Expr_Operators : Expr
+{
+    Expr Lhs;
+    List<OperatorPart> Parts;
+}
+
+
+Idf = Position=TOKEN.Position Value=idf;
+Expr_Idf = Identifier=Idf;
+Op = Value = dot;
+Expr_FuncCall = Identifier=Idf lpar (Arguments=Expr (comma Arguments=Expr)*)?  rpar ;
+Expr_Operators = (Lhs = Expr_Idf | Lhs = Expr_FuncCall) 
+    Parts=OperatorPart(Operator=Op.Value (Rhs=Expr_Idf | Rhs = Expr_FuncCall))*;
+Expr = this=Expr_Operators;
