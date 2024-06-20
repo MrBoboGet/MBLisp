@@ -474,3 +474,4 @@
     )
     return-value
 )
+(load (plus (parent-path load-filepath) "/macros.lisp") true)

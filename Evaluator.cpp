@@ -1228,9 +1228,9 @@ namespace MBLisp
         }
         catch(ContinueUnwind const&)
         {
-            CurrentState.FrameTarget = -1;
-            CurrentState.UnwindingStack = false;
         }
+        CurrentState.FrameTarget = -1;
+        CurrentState.UnwindingStack = false;
     }
     void Evaluator::AddInternalModule(std::string const& Name,Ref<Scope> ModuleScope)
     {
@@ -2442,6 +2442,16 @@ namespace MBLisp
         }
         return ReturnValue;
     }
+
+    static void InsertAt(List& Target,Int Index,Value Val)
+    {
+        if(Index < 0 || Index > Target.size())
+        {
+            throw std::runtime_error("Cannot insert element at index "+std::to_string(Index)+" in list of size "+std::to_string(Target.size()));
+        }
+        Target.insert(Target.begin()+Index,Val);
+    }
+
     void Evaluator::p_InternPrimitiveSymbols()
     {
         for(auto const& String : {"cond",
@@ -2533,6 +2543,7 @@ namespace MBLisp
         
         //list
         AddMethod<List>("append",Append_List);
+        AddGeneric<InsertAt>("insert-at");
         AddMethod<List>("back",Back_List);
         AddMethod<List,Int>("index",Index_List);
         AddMethod<List>("len",Len_List);

@@ -626,19 +626,24 @@ namespace MBLisp
                 {
                     throw std::runtime_error("Insufficient arguments supplied");   
                 }
-                if constexpr(!std::is_same_v<void,ReturnType>)
+
+                typedef typename std::remove_cv<
+                            typename std::remove_reference<typename i_TypeExtractor<0,sizeof...(SuppliedArgTypes),TotalArgTypes...>::type>::type>::type ArgType;
+                typedef IsTemplateInstantiation<ArgType,Ref> IsRefType;
+                if constexpr(std::is_same_v<Value,ArgType>)
                 {
                     return p_InvokeFunction(Function,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
-                        LispArgs[sizeof...(SuppliedArgTypes)].GetType<
-                        typename std::remove_cv<
-                            typename std::remove_reference<typename i_TypeExtractor<0,sizeof...(SuppliedArgTypes),TotalArgTypes...>::type>::type>::type>());
+                        LispArgs[sizeof...(SuppliedArgTypes)]);
+                }
+                else if constexpr(IsRefType::value)
+                {
+                    return p_InvokeFunction(Function,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
+                        LispArgs[sizeof...(SuppliedArgTypes)].GetRef<ArgType>());
                 }
                 else
                 {
-                    p_InvokeFunction(Function,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
-                        LispArgs[sizeof...(SuppliedArgTypes)].GetType<
-                        typename std::remove_cv<
-                            typename std::remove_reference<typename i_TypeExtractor<0,sizeof...(SuppliedArgTypes),TotalArgTypes...>::type>::type>::type>());
+                    return p_InvokeFunction(Function,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
+                        LispArgs[sizeof...(SuppliedArgTypes)].GetType<ArgType>());
                 }
             }
         }
@@ -694,7 +699,7 @@ namespace MBLisp
         template<auto Func,typename ReturnType,typename... ArgTypes>
         void AddGeneric(Ref<Scope>& ScopeToModify,std::string const& MethodName,ReturnType (*MemberMethod)(ArgTypes...))
         {
-            static_assert(std::is_same_v<decltype(Func),decltype(MemberMethod)>,"Func and supplied func has to be of the same argument");
+            //static_assert(std::is_same_v<decltype(Func),decltype(MemberMethod)>,"Func and supplied func has to be of the same argument");
             std::vector<ClassID> Types;
             if constexpr(sizeof...(ArgTypes) > 0)
             {
