@@ -361,6 +361,9 @@
 (defmacro + (&rest args)
   (foldl args _`(plus ,_ ,_1))
 )
+(defmacro * (&rest args)
+  (foldl args _`(times ,_ ,_1))
+)
 (defmacro ++ (value increase)
     (set temp-sym (gensym))
     `(progn
@@ -378,7 +381,7 @@
     (not (< lhs rhs))
 )
 (defun ge (lhs rhs)
-    (not leq (lhs rhs))
+    (not (leq lhs rhs))
 )
 
 (defun vectorize-comparison (comparison args)

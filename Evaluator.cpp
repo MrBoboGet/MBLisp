@@ -1163,7 +1163,7 @@ namespace MBLisp
                 });
         if(SymbolIt == AssociatedInstance.Slots.end() || SymbolIt->first != IndexSymbol.ID)
         {
-            throw std::runtime_error("Couldn't find symbol when indexing class instance");
+            throw std::runtime_error("Couldn't find symbol '" + Context.GetEvaluator().GetSymbolString(IndexSymbol.ID) + "' when indexing class instance");
         }
         if(Context.IsSetting())
         {
@@ -2451,6 +2451,10 @@ namespace MBLisp
         }
         Target.insert(Target.begin()+Index,Val);
     }
+    static Int Times_Int(Int lhs,Int rhs)
+    {
+        return lhs * rhs;
+    }
 
     void Evaluator::p_InternPrimitiveSymbols()
     {
@@ -2572,7 +2576,6 @@ namespace MBLisp
         AddMethod<Null,Null>("eq",Eq_Null);
         AddMethod<ThreadHandle,ThreadHandle>("eq",Eq_Null);
         AddGeneric<Eq_ThreadHandle>("eq");
-        AddMethod<Int,Int>("minus",Minus_Int);
 
         //streams
         AddMethod<MBUtility::StreamReader>("eof",Stream_EOF);
@@ -2629,6 +2632,8 @@ namespace MBLisp
         AddMethod<Symbol,Symbol>("<",Less_Symbol);
 
         AddGeneric<&Plus_Int>("plus");
+        AddMethod<Int,Int>("minus",Minus_Int);
+        AddGeneric<Times_Int>("times");
         AddGeneric<&Plus_String>("plus");
         AddGeneric<&InsertElements>("insert-elements");
         
@@ -2652,9 +2657,9 @@ namespace MBLisp
 
         m_GlobalScope->SetVariable(p_GetSymbolID("active-threads"),ActiveThreads);
         //Symbols
-        AddMethod<String>("symbol",Symbol_String);
-        AddMethod<Symbol,Int>("symbol",Symbol_SymbolInt);
         AddMethod<Symbol,Int,Symbol>("symbol",Symbol_SymbolInt);
+        AddMethod<Symbol,Int>("symbol",Symbol_SymbolInt);
+        AddMethod<String>("symbol",Symbol_String);
         //stuff
         AddMethod<Macro,Symbol>("set-name",SetName_Macro);
         AddMethod<Lambda,Symbol>("set-name",SetName_Lambda);

@@ -22,12 +22,12 @@
 
 (defun get-top-ops (op-list)
     (setl return-value (list))
-    (setl max-prio 1000) #arbitrary af
+    (setl max-prio -1)
     (setl top-op "")
     (doit i (range 0 (len op-list))
         (setl cur-op :Operator (. op-list i))
         (setl cur-prio (. op-prec cur-op))
-        (if (< cur-prio max-prio)
+        (if (> cur-prio max-prio)
             (setl max-prio cur-prio)
             (setl top-op cur-op)
         )
@@ -51,13 +51,8 @@
     (incr begin 1)
 
     (doit i (range begin end)
-        (if (eq i 0)
-            (append :args return-value  :Lhs operators)
-         else
-            (append :args return-value :Rhs (. :Parts operators i))
-        )
+        (append :Parts return-value (. :Parts operators i))
     )
-
     return-value
 )
 (defun convert-operators (operators)
@@ -66,7 +61,7 @@
         (return (convert-expr :Lhs operators))
     )
     (setl top-ops (get-top-ops :Parts operators))
-    (setl :operator return-value (symbol :Operator :0 :Parts operators))
+    (setl :operator return-value (symbol :Operator (. :Parts operators :0 top-ops)))
     (insert-at top-ops 0 -1)
     (insert-at top-ops (len top-ops) (len :Parts operators))
     (doit i (range 0 (+ (len top-ops) -1))
@@ -80,24 +75,43 @@
 )
 
 (defun convert-idf (idf)
-    (setl result (symbol :Value idf))
+    (setl result (symbol (symbol :Value idf) :Position idf (path-id load-filepath)))
     result
 )
 
 (defmethod convert-expr ((expr Expr_Idf))
     (convert-idf :Identifier expr)
 )
+(defmethod convert-expr ((expr Expr_Num))
+    :Value expr
+)
 
 (defmethod convert-expr ((expr Expr_FuncCall))
-    `(,(convert-idf :Identifier expr) ,@(map _(print (convert-expr _)) :Arguments expr))
+    `(,(convert-idf :Identifier expr) ,@(map _(convert-expr _) :Arguments expr))
 )
 
 (defgeneric convert-nf)
 (defmethod convert-nf ((expr any_t))
     expr
 )
+(defun convert-nf-dot (expr)
+    (setl return-value (list '%>%))
+    (append return-value :0 :args expr)
+    (doit i (range 1 (len :args expr))
+        (setl cur-arg (. :args expr i))
+        (if (eq (type cur-arg) symbol_t)
+            (append return-value `(. ,cur-arg))
+         else
+            (append return-value cur-arg)
+        )
+    )
+    return-value
+)
 (defmethod convert-nf ((expr operator-nf))
     (setl return-value (list))
+    (if (eq :operator expr '.)
+        (return (convert-nf-dot expr))
+    )
     (append return-value :operator expr)
     (doit arg :args expr
         (append return-value (convert-nf arg))
@@ -116,6 +130,5 @@
     (setl current-tokenizer (get-tokenizer))
     (set-stream current-tokenizer stream)
     (set result (ParseExpr_Operators current-tokenizer))
-    (print (to-json-string result))
     (convert-expr result)
 )

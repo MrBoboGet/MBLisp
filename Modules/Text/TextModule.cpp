@@ -49,6 +49,8 @@ namespace MBLisp
     {
         m_Stream = Content;
         m_Tokenizer.SetData(m_Stream->begin(),m_Stream->end());
+        m_Tokenizer.SetParseOffset(m_Stream->Position());
+        m_LastConsumedByteOffset = m_Stream->Position();
     }
     SymbolStore StreamTokenizer::Peek(Int Depth)
     {
@@ -57,12 +59,14 @@ namespace MBLisp
 
         ReturnValue["value"] = Result.Value;
         ReturnValue["type"] = Value(Result.Type);
+        ReturnValue["position"] = Int(Result.ByteOffset);
 
         return ReturnValue;
     }
     void StreamTokenizer::ConsumeToken()
     {
         size_t CurrentByteOffset = m_Tokenizer.Peek().ByteOffset;
+        CurrentByteOffset += m_Tokenizer.Peek().Value.size();
         m_Stream->Consume(m_Tokenizer.GetFront(),CurrentByteOffset-m_LastConsumedByteOffset);
         m_LastConsumedByteOffset = CurrentByteOffset;
         m_Tokenizer.ConsumeToken();

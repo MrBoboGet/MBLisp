@@ -1,8 +1,9 @@
 skip "\s+";
-term idf = "\w+";
 term num = "\d+";
+term idf = "\w+";
 term dot = "\.";
 term plus = "\+";
+term times = "\*";
 term lpar = "\(";
 term rpar = "\)";
 term comma = ",";
@@ -21,6 +22,11 @@ struct Expr
 struct Expr_Idf : Expr
 {
     Idf Identifier;
+}
+struct Expr_Num : Expr
+{
+    int Value;
+    tokenPos Position;
 }
  
 struct Expr_FuncCall : Expr
@@ -46,10 +52,15 @@ struct Expr_Operators : Expr
 }
 
 
+
+
 Idf = Position=TOKEN.Position Value=idf;
 Expr_Idf = Identifier=Idf;
-Op = Value = dot;
+Expr_Num =  Position=TOKEN.Position Value=num;
+Op = Value = dot | Value=plus | Value=times;
 Expr_FuncCall = Identifier=Idf lpar (Arguments=Expr (comma Arguments=Expr)*)?  rpar ;
-Expr_Operators = (Lhs = Expr_Idf | Lhs = Expr_FuncCall) 
-    Parts=OperatorPart(Operator=Op.Value (Rhs=Expr_Idf | Rhs = Expr_FuncCall))*;
+def Expr_Term = Expr;
+Expr_Term = lpar this=Expr rpar | this=Expr_Idf | this = Expr_FuncCall | this=Expr_Num;
+Expr_Operators = Lhs=Expr_Term 
+    Parts=OperatorPart(Operator=Op.Value (Rhs=Expr_Term))*;
 Expr = this=Expr_Operators;
