@@ -14,6 +14,8 @@
     ("-" 5)
     ("." 1)
     ("*" 4)
+    ("=" 20)
+    ("==" 10)
 ))
 
 
@@ -74,9 +76,14 @@
     return-value
 )
 
+
 (defun convert-idf (idf)
     (setl result (symbol (symbol :Value idf) :Position idf (path-id load-filepath)))
     result
+)
+
+(defmethod convert-expr ((expr Expr_Bool))
+    :Value expr
 )
 
 (defmethod convert-expr ((expr Expr_Idf))
@@ -94,6 +101,7 @@
 (defmethod convert-nf ((expr any_t))
     expr
 )
+
 (defun convert-nf-dot (expr)
     (setl return-value (list '%>%))
     (append return-value :0 :args expr)
@@ -107,12 +115,32 @@
     )
     return-value
 )
+(defun convert-nf-eq (expr)
+    (setl return-value (list))
+
+    return-value
+)
+(set special-ops (make-dict 
+    ('. convert-nf-dot)
+))
+(set op-map (make-dict 
+    ('= 'setl)
+    ('== 'eq)
+))
+(set binary-ops (make-dict 
+    ('= true)
+    ('== true)
+))
 (defmethod convert-nf ((expr operator-nf))
     (setl return-value (list))
     (if (eq :operator expr '.)
         (return (convert-nf-dot expr))
     )
-    (append return-value :operator expr)
+    (setl op :operator expr)
+    (setl binary (in op binary-ops))
+    (if (in op op-map) (setl op (. op-map op)))
+    (append return-value op)
+    (if binary (return (foldl :args expr _(progn `(,op ,_1 ,_2)))))
     (doit arg :args expr
         (append return-value (convert-nf arg))
     )
@@ -123,12 +151,57 @@
     (setl nf (convert-operators expr))
     (convert-nf nf)
 )
+(defgeneric vector-apply)
+(defmethod vector-apply (op (lhs list_t) rhs)
+    (setl return-value (list))
+    (doit e lhs
+        (append return-value (op e rhs))
+    )
+    return-value
+)
+(defmethod vector-apply (op lhs (rhs list_t))
+    (setl return-value (list))
+    (doit e rhs
+        (append return-value (op lhs e))
+    )
+    return-value
+)
+(defmethod vector-apply (op (lhs list_t) (rhs list_t))
+    (setl return-value (list))   
+    (if (&& (eq (len lhs) 0) (eq (len rhs) 0)) (return (list)))
+    (setl lhs-i 0)
+    (setl rhs-i 0)
+    (setl max-i (max (len lhs) (len rhs)))
+    (while (not (|| (eq lhs-i max-i) (eq rhs-i max-i)))
+        (if (eq lhs-i (len lhs)) (setl lhs-i 0))
+        (if (eq rhs-i (len rhs)) (setl rhs-i 0))
+        (append return-value (op (. lhs lhs-i) (. rhs rhs-i)))
+        (incr lhs-i 1)
+        (incr rhs-i 1)
+    )
+    return-value
+)
 
-
+(defmacro vectorise (op)
+    `(progn 
+        (defmethod ,op ((lhs list_t) rhs)
+            (,vector-apply ,op lhs rhs)
+        )
+        (defmethod ,op (lhs  (rhs list_t))
+            (,vector-apply ,op lhs rhs)
+        )
+        (defmethod ,op ((lhs list_t)  (rhs list_t))
+            (,vector-apply ,op lhs rhs)
+        )
+     )
+)
+(vectorise plus)
+(vectorise minus)
+(vectorise times)
 
 (defun MBPerl (stream) 
     (setl current-tokenizer (get-tokenizer))
     (set-stream current-tokenizer stream)
-    (set result (ParseExpr_Operators current-tokenizer))
-    (convert-expr result)
+    (set result (ParseStatementList current-tokenizer))
+    `(progn ,@(map _(convert-expr _) :Statements result))
 )

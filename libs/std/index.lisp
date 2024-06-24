@@ -458,6 +458,35 @@
 (add-reader-character *READTABLE* "@" stream-reader)
 
 
+(defgeneric max)
+
+(defmethod max (lhs rhs)
+    (if (< lhs rhs) rhs else lhs)
+)
+(defmethod max ((list list_t))
+    (if (eq (len list) 0) (return null))
+    (setl max-elem :0 list)
+    (doit i (range 1 (len list))
+        (setl current-elem (. list i))
+        (if (< max-elem current-elem) (setl max-elem current-elem))
+    )
+    current-elem
+)
+(defgeneric min)
+
+(defmethod min (lhs rhs)
+    (if (< lhs rhs) lhs else rhs)
+)
+(defmethod min ((list list_t))
+    (if (eq (len list) 0) (return null))
+    (setl min-elem :0 list)
+    (doit i (range 1 (len list))
+        (setl current-elem (. list i))
+        (if (< current-elem min-elem) (setl min-elem current-elem))
+    )
+    current-elem
+)
+
 (defmethod str ((list list_t))
     (set return-value "(")
     (doit i (range 0 (len list))

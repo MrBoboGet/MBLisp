@@ -1,9 +1,21 @@
 skip "\s+";
+term T = "true";
+term F = "false";
+term lcurl = "{";
+term rcurl = "}";
+term for = "for";
+term if = "if";
+term in = "in";
+term while = "while";
+term else = "else";
+term semi = ";";
 term num = "\d+";
 term idf = "\w+";
 term dot = "\.";
 term plus = "\+";
 term times = "\*";
+term eqq = "\==";
+term eq = "\=";
 term lpar = "\(";
 term rpar = "\)";
 term comma = ",";
@@ -28,12 +40,17 @@ struct Expr_Num : Expr
     int Value;
     tokenPos Position;
 }
+struct Expr_Bool : Expr
+{
+    bool Value;
+}
  
 struct Expr_FuncCall : Expr
 {
     Idf Identifier;
     List<Expr> Arguments;
 }
+
 
 struct OperatorPart
 {
@@ -51,16 +68,60 @@ struct Expr_Operators : Expr
     List<OperatorPart> Parts;
 }
 
+struct Statement {}
 
+struct IfContent
+{
+    Idf IfPart;
+    Expr Condition;
+    List<Statement> Body;
+}
+struct Statement_If : Statement
+{
+    IfContent If;
+    List<IfContent> ElseClauses;
+}
+
+struct Statement_While : Statement
+{
+    Idf WhilePart;
+    Expr Condaition;
+    List<Statement> Body;
+}
+struct Statement_For : Statement
+{
+    Idf ForPart;
+    Expr Enumerable;
+    Idf VarName;
+    List<Statement> Body;
+}
+struct Statement_Expr : Statement
+{
+    Expr Expr;
+}
+
+struct StatementList
+{
+    List<Statement> Statements;
+}
 
 
 Idf = Position=TOKEN.Position Value=idf;
 Expr_Idf = Identifier=Idf;
 Expr_Num =  Position=TOKEN.Position Value=num;
-Op = Value = dot | Value=plus | Value=times;
+Expr_Bool =  (Value=true T | Value=false F);
+Op = Value = dot | Value=plus | Value=times | Value=eq | Value=eqq;
 Expr_FuncCall = Identifier=Idf lpar (Arguments=Expr (comma Arguments=Expr)*)?  rpar ;
 def Expr_Term = Expr;
-Expr_Term = lpar this=Expr rpar | this=Expr_Idf | this = Expr_FuncCall | this=Expr_Num;
+Expr_Term = lpar this=Expr rpar | this=Expr_Idf | this = Expr_FuncCall | this=Expr_Num | 
+    this=Expr_Bool;
 Expr_Operators = Lhs=Expr_Term 
     Parts=OperatorPart(Operator=Op.Value (Rhs=Expr_Term))*;
 Expr = this=Expr_Operators;
+Statement_For = ForPart.Position = TOKEN.Position ForPart.Value = for  (VarName=Idf in )? Enumerable=Expr;
+IfContent = IfPart.Position = TOKEN.Position IfPart.Value = if Condition=Expr lcurl Body=Statement* rcurl;
+Statement_If = If = IfContent (else ElseClauses=IfContent)* (else ElseClauses=IfContent(lcurl Body=Statement* rcurl ));
+Statement_While = WhilePart.Position = TOKEN.Position WhilePart.Value = while lcurl Body=Statement*  rcurl;
+Statement_Expr = Expr=Expr semi;
+Statement = this=Statement_For | this = Statement_While | this=Statement_Expr | this=Statement_If;
+StatementList = Statements=Statement*;
