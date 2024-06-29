@@ -1,8 +1,8 @@
 skip "\s+";
 term T = "true";
 term F = "false";
-term lcurl = "{";
-term rcurl = "}";
+term lcurl = "\{";
+term rcurl = "\}";
 term for = "for";
 term if = "if";
 term in = "in";
@@ -14,8 +14,8 @@ term idf = "\w+";
 term dot = "\.";
 term plus = "\+";
 term times = "\*";
-term eqq = "\==";
-term eq = "\=";
+term eqq = "==";
+term eq = "=";
 term lpar = "\(";
 term rpar = "\)";
 term comma = ",";
@@ -118,7 +118,7 @@ Expr_Term = lpar this=Expr rpar | this=Expr_Idf | this = Expr_FuncCall | this=Ex
 Expr_Operators = Lhs=Expr_Term 
     Parts=OperatorPart(Operator=Op.Value (Rhs=Expr_Term))*;
 Expr = this=Expr_Operators;
-Statement_For = ForPart.Position = TOKEN.Position ForPart.Value = for  (VarName=Idf in )? Enumerable=Expr;
+Statement_For = ForPart.Position = TOKEN.Position ForPart.Value = for  (VarName=Idf in )? Enumerable=Expr lcurl rcurl; 
 IfContent = IfPart.Position = TOKEN.Position IfPart.Value = if Condition=Expr lcurl Body=Statement* rcurl;
 Statement_If = If = IfContent (else ElseClauses=IfContent)* (else ElseClauses=IfContent(lcurl Body=Statement* rcurl ));
 Statement_While = WhilePart.Position = TOKEN.Position WhilePart.Value = while lcurl Body=Statement*  rcurl;
