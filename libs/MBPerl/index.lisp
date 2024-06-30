@@ -6,6 +6,7 @@
 
 (defclass operator-nf ()
     (operator 'null)
+    (assignment false)
     (args (list))
 )
 
@@ -16,6 +17,10 @@
     ("*" 4)
     ("=" 20)
     ("==" 10)
+    ("<" 9)
+    ("<=" 9)
+    (">=" 9)
+    (">" 9)
 ))
 
 
@@ -27,15 +32,18 @@
     (setl max-prio -1)
     (setl top-op "")
     (doit i (range 0 (len op-list))
-        (setl cur-op :Operator (. op-list i))
+        (setl cur-op :Value :Operator (. op-list i))
         (setl cur-prio (. op-prec cur-op))
+        (if :Assignment :Operator (. op-list i)
+            (setl cur-prio :"=" op-prec)
+        )
         (if (> cur-prio max-prio)
             (setl max-prio cur-prio)
             (setl top-op cur-op)
         )
     )
     (doit i (range 0 (len op-list))
-        (if (eq :Operator (. op-list i) top-op)
+        (if (eq :Value :Operator (. op-list i) top-op)
             (append return-value i)
         )
     )
@@ -63,14 +71,16 @@
         (return (convert-expr :Lhs operators))
     )
     (setl top-ops (get-top-ops :Parts operators))
-    (setl :operator return-value (symbol :Operator (. :Parts operators :0 top-ops)))
+    (setl top-op (. :Parts operators :0 top-ops))
+    (setl :operator return-value (symbol :Value :Operator top-op))
+    (setl :assignment return-value :Assignment :Operator top-op)
     (insert-at top-ops 0 -1)
     (insert-at top-ops (len top-ops) (len :Parts operators))
     (doit i (range 0 (+ (len top-ops) -1))
         (append :args return-value (convert-expr (split-operators operators (. top-ops i) (. top-ops (+ i 1)))))
     )
 
-    #(set :operator return-value (symbol :Operator :0 :Parts operators))
+    #(set :operator return-value (symbol :Value :Operator :0 :Parts operators))
     #(append :args return-value (convert-expr :Lhs operators))
     #(insert-elements :args return-value (map _(convert-expr :Rhs _) :Parts operators))
     return-value
@@ -94,7 +104,7 @@
 )
 
 (defmethod convert-expr ((expr Expr_FuncCall))
-    `(,(convert-idf :Identifier expr) ,@(map _(convert-expr _) :Arguments expr))
+    `(,(convert-idf :Identifier expr) ,@(map convert-expr :Arguments expr))
 )
 
 (defgeneric convert-nf)
@@ -139,8 +149,12 @@
     (setl op :operator expr)
     (setl binary (in op binary-ops))
     (if (in op op-map) (setl op (. op-map op)))
-    (append return-value op)
+
+    (if :assignment expr 
+        (return (foldl :args expr _(progn `(setl ,_1 , `(,op ,_1   ,_2)))))
+    )
     (if binary (return (foldl :args expr _(progn `(,op ,_1 ,_2)))))
+    (append return-value op)
     (doit arg :args expr
         (append return-value (convert-nf arg))
     )
@@ -201,14 +215,33 @@
 
 (defgeneric convert-statement)
 
+(defgeneric insert-if)
+(defmethod insert-if ((out list_t) (content IfContent))
+    (if :HasCondition content (append out (convert-idf :IfPart content)) 
+            (append out (convert-expr :Condition content)))
+    (setl res `(,@(map convert-statement :Body content)))
+    (insert-elements out res)
+)
 (defmethod convert-statement ((stmt Statement_If))
-    `(progn)
+    (setl res (list))
+    (insert-if res :If stmt)
+    (doit clause :ElseClauses stmt
+        (append res 'else)
+        (insert-if res clause)
+    )
+    res
 )
 (defmethod convert-statement ((stmt Statement_For))
-    `(progn)
+    (setl var-sym (gensym))
+    (if (&& (not (eq :Value :VarName stmt "")) (not (eq :Value :VarName stmt null)))
+        (setl var-sym (convert-idf :VarName stmt))
+    )
+    `(doit ,var-sym ,(convert-expr :Enumerable stmt) ,@(map convert-statement :Body stmt))
 )
+
+
 (defmethod convert-statement ((stmt Statement_While))
-    `(progn)
+    `(while ,(convert-expr :Condition stmt) ,@(map convert-statement :Body stmt)) 
 )
 (defmethod convert-statement ((stmt Statement_Expr))
     (convert-expr :Expr stmt)
@@ -218,5 +251,5 @@
     (setl current-tokenizer (get-tokenizer))
     (set-stream current-tokenizer stream)
     (set result (ParseStatementList current-tokenizer))
-    `(progn ,@(map _(convert-statement _) :Statements result))
+    `(progn ,@(map convert-statement :Statements result))
 )
