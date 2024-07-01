@@ -153,6 +153,80 @@ namespace MBLisp
         MBLSP::Position BytePosition = Index.ByteOffsetToPosition(ByteOffset.SymbolLocation.Position);
         return BytePosition.character;
     }
+    List TextModule::SplitQuoted(String const& Input,String const& QuoteString,String const& EscapeString)
+    {
+        List ReturnValue;
+        if(Input.size() == 0)
+        {
+            ReturnValue.push_back(Value(""));
+            return ReturnValue;
+        }
+        if(EscapeString.size() == 0)
+        {
+            throw std::runtime_error("Invalid escape string: escape string was emtpy");
+        }
+        size_t ParseOffset = 0;
+        while(ParseOffset < Input.size())
+        {
+            size_t NextQuote = Input.find(QuoteString,ParseOffset);
+            size_t InsertOffset = ParseOffset;
+            String NewEntry;
+            while(NextQuote != Input.npos && NextQuote != 0)
+            {
+                bool IsEscaped = false;
+                int EscapeOffset = NextQuote-1;
+                while(EscapeOffset >= 0)
+                {
+                    if(Input[EscapeOffset] != EscapeString[0])
+                    {
+                        break;
+                    }
+                    else
+                    {
+                        IsEscaped = !IsEscaped;
+                    }
+                    EscapeOffset--;
+                }
+                NewEntry.insert(NewEntry.end(),Input.data()+InsertOffset,Input.data()+EscapeOffset+1);
+                InsertOffset = NextQuote;
+                for(int i = 0; i < ((NextQuote-1)-EscapeOffset)/2;i++)
+                {
+                    NewEntry += EscapeString[0];
+                }
+                if(IsEscaped)
+                {
+                    NewEntry += QuoteString;
+                    InsertOffset = NextQuote+QuoteString.size();
+                    NextQuote = Input.find(QuoteString,NextQuote+QuoteString.size());
+                }
+                else
+                {
+                    break;
+                }
+            }
+            if(NextQuote != QuoteString.npos)
+            {
+                NewEntry += Input.substr(InsertOffset,NextQuote-InsertOffset);
+                ReturnValue.push_back(std::move(NewEntry));
+                ParseOffset = NextQuote+QuoteString.size();
+                if(ParseOffset == Input.size())
+                {
+                    ReturnValue.push_back(Value(""));
+                }
+            }
+            else
+            {
+                NewEntry += Input.substr(InsertOffset,Input.size()-InsertOffset);
+                ReturnValue.push_back(std::move(NewEntry));
+                break;
+            }
+        }
+        return ReturnValue;
+    }
+    List TextModule::SplitQuoted_Simple(String const& Input,String const& QuoteString)
+    {
+        return SplitQuoted(Input,QuoteString,"\\");
+    }
     String TextModule::GenerateParser(MBUtility::StreamReader& Content,Int k)
     {
         String ReturnValue;
@@ -175,6 +249,8 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<GetLine>(ReturnValue,"get-line");
         AssociatedEvaluator.AddGeneric<GetCol>(ReturnValue,"get-col");
         AssociatedEvaluator.AddGeneric<JSONEscape>(ReturnValue,"json-escape");
+        AssociatedEvaluator.AddGeneric<SplitQuoted_Simple>(ReturnValue,"split-quoted");
+        AssociatedEvaluator.AddGeneric<SplitQuoted>(ReturnValue,"split-quoted");
 
         //StreamTokenizer
         

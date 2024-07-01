@@ -107,6 +107,26 @@
     `(,(convert-idf :Identifier expr) ,@(map convert-expr :Arguments expr))
 )
 
+
+(defclass regex ()
+    (op "")
+    (modifiers "")
+    (parts (list))
+)
+(defmethod apply ((str string_t) (reg regex))
+    "temporary"
+)
+(defmethod convert-expr ((expr Expr_Regex))
+    (setl res (regex))
+    (setl parts (split-quoted :Content expr "/" "\\"))
+    (setl :op res :0 parts)
+    (setl :modifiers res (. parts (+ (len parts) -1)))
+    (doit i (range 1 (+ (len parts) -1))
+        (append :parts res (. parts i))
+    )
+    res
+)
+
 (defgeneric convert-nf)
 (defmethod convert-nf ((expr any_t))
     expr

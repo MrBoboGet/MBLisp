@@ -61,7 +61,7 @@
 (defmacro defgeneric (name)
   `(progn (set ,name (generic)) (set-name ,name (quote ,name)))
 )
-(defmacro defmethod (methodname overrides &rest body)
+(defmacro defmethod (methodname overrides &rest body &envir envir)
   (set type-overrides (list))
   (set argument-symbols (list))
   (set i 0)
@@ -79,7 +79,14 @@
     )
     (incr i 1)
   )
-  `(addmethod ,methodname (list ,@type-overrides) (set-name (lambda (,@argument-symbols) ,@body) (quote ,methodname)))
+  (setl method-def 
+      `(addmethod 
+          ,methodname (list ,@type-overrides) 
+          (set-name (lambda (,@argument-symbols) ,@body) (quote ,methodname))))
+  (cond (in methodname envir)
+      method-def
+      `(progn (defgeneric ,methodname) ,method-def)
+  )
 )
 (defmacro defclass (classname parents &rest slots)
     (set filtered-slots (list)) 

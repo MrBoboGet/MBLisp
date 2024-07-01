@@ -40,6 +40,9 @@ namespace MBLisp
         static Int GetLine(MBLSP::LineIndex const& Index, Symbol ByteOffset);
         static Int GetCol(MBLSP::LineIndex const& Index, Symbol ByteOffset);
 
+        static List SplitQuoted(String const& Input,String const& QuoteString,String const& EscapeString);
+        static List SplitQuoted_Simple(String const& Input,String const& QuoteString);
+
         static String GenerateParser(MBUtility::StreamReader& Content,Int k);
     public:
         virtual Ref<Scope> GetModuleScope(Evaluator& AssociatedEvaluator);
