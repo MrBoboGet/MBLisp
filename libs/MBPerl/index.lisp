@@ -21,6 +21,7 @@
     ("<=" 9)
     (">=" 9)
     (">" 9)
+    ("=~" 8)
 ))
 
 
@@ -77,12 +78,20 @@
     (insert-at top-ops 0 -1)
     (insert-at top-ops (len top-ops) (len :Parts operators))
     (doit i (range 0 (+ (len top-ops) -1))
-        (append :args return-value (convert-expr (split-operators operators (. top-ops i) (. top-ops (+ i 1)))))
+        (setl begin (. top-ops i))
+        (setl end (. top-ops (+ i 1)))
+        #incredibly complicated if-statement, supporting these kind of 
+        #behaviour that differs depending on the context it appears in is a bit difficult
+        (if (&& (eq (+ end (* begin -1)) 1) 
+                (eq :operator return-value '=~) 
+                (not (eq begin -1)) 
+                (is (type :Rhs (. :Parts operators begin)) Expr_Regex))
+                 (append :args return-value (convert-regex :Rhs (. :Parts operators begin)))
+         else
+            (append :args return-value 
+                (convert-expr (split-operators operators begin end)))
+        )
     )
-
-    #(set :operator return-value (symbol :Value :Operator :0 :Parts operators))
-    #(append :args return-value (convert-expr :Lhs operators))
-    #(insert-elements :args return-value (map _(convert-expr :Rhs _) :Parts operators))
     return-value
 )
 
@@ -114,13 +123,18 @@
     (modifiers "")
     (parts (list))
 )
+(defmethod assign ((lhs string_t) (rhs string_t))
+    (clear lhs)
+    (append lhs rhs)
+    lhs
+)
 (defmethod apply ((input string_t) (reg RegexExpr))
     (if (|| (eq :op reg "") (eq :op reg "m"))
         (matching :regex reg input)
      else if (eq :op reg "s")
-        (substitute :regex reg input :0 :parts reg)
+        (assign input (substitute :regex reg input :0 :parts reg))
      else if (eq :op reg "d")
-        (substitute :regex reg input "")
+        (assign input (substitute :regex reg input ""))
      else if (eq :op reg "e")
         (match :regex reg input "")
     )
@@ -131,7 +145,7 @@
     (setl :op res :0 parts)
     (setl :regex res (regex :1 parts))
     (setl :modifiers res (. parts (+ (len parts) -1)))
-    (doit i (range 1 (+ (len parts) -1))
+    (doit i (range 2 (+ (len parts) -1))
         (append :parts res (. parts i))
     )
     res
@@ -189,6 +203,9 @@
     (setl binary (in op binary-ops))
     (if (in op op-map) (setl op (. op-map op)))
 
+    (if (eq :operator expr '=~)
+        (return (foldl :args expr _(progn `(apply ,_1   ,_2))))
+    )
     (if :assignment expr 
         (return (foldl :args expr _(progn `(setl ,_1 , `(,op ,_1   ,_2)))))
     )
@@ -199,7 +216,9 @@
     )
     return-value
 )
-
+(defmethod convert-expr ((expr Expr_String))
+    (substr :Content expr 1 (+ (len :Content expr ) -2))
+)
 (defmethod convert-expr ((expr Expr_Operators))
     (setl nf (convert-operators expr))
     (convert-nf nf)

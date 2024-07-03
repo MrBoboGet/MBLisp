@@ -2455,6 +2455,10 @@ namespace MBLisp
     {
         return lhs * rhs;
     }
+    void Clear_String(String& Str)
+    {
+        Str.clear();
+    }
 
     void Evaluator::p_InternPrimitiveSymbols()
     {
@@ -2610,6 +2614,7 @@ namespace MBLisp
         AddMethod<String>("len",Len_String);
         AddMethod<Symbol,Scope>("in",In_Environment);
         AddMethod<Scope>("clear",Clear_Environment);
+        AddGeneric<Clear_String>("clear");
         AddMethod<Symbol>("str",Str_Symbol);
         AddMethod<bool>("str",Str_Bool);
         AddMethod<Null>("str",Str_Null);
