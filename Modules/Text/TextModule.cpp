@@ -227,6 +227,33 @@ namespace MBLisp
     {
         return SplitQuoted(Input,QuoteString,"\\");
     }
+    std::regex TextModule::Regex(std::string const& regex)
+    {
+        std::regex ReturnValue = std::regex(regex,std::regex_constants::ECMAScript);
+        return ReturnValue;
+    }
+    bool TextModule::Matching(std::regex const& Regex,String const& Text)
+    {
+        bool ReturnValue = std::regex_match(Text.begin(),Text.end(),Regex);
+        return ReturnValue;
+    }
+    String TextModule::Match(std::regex const& Regex,String const& Text)
+    {
+        String ReturnValue;
+        std::smatch Matches;
+        bool Result = std::regex_search(Text.begin(),Text.end(),Matches,Regex);
+        if(Result)
+        {
+            ReturnValue = Matches.str();
+        }
+        return ReturnValue;
+    }
+    String TextModule::Substitute(std::regex const& Regex,String const& OriginalString,String const& ReplacementString)
+    {
+        String const& TargetString = OriginalString;
+        String Result = std::regex_replace(TargetString,Regex,ReplacementString);
+        return Result;
+    }
     String TextModule::GenerateParser(MBUtility::StreamReader& Content,Int k)
     {
         String ReturnValue;
@@ -251,6 +278,13 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<JSONEscape>(ReturnValue,"json-escape");
         AssociatedEvaluator.AddGeneric<SplitQuoted_Simple>(ReturnValue,"split-quoted");
         AssociatedEvaluator.AddGeneric<SplitQuoted>(ReturnValue,"split-quoted");
+
+        //regex stuff
+        AssociatedEvaluator.AddGeneric<Regex>(ReturnValue,"regex");
+        AssociatedEvaluator.AddGeneric<Matching>(ReturnValue,"matching");
+        AssociatedEvaluator.AddGeneric<Match>(ReturnValue,"match");
+        AssociatedEvaluator.AddGeneric<Substitute>(ReturnValue,"substitute");
+        //
 
         //StreamTokenizer
         

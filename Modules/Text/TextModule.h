@@ -43,6 +43,13 @@ namespace MBLisp
         static List SplitQuoted(String const& Input,String const& QuoteString,String const& EscapeString);
         static List SplitQuoted_Simple(String const& Input,String const& QuoteString);
 
+        //
+        static std::regex Regex(std::string const&);
+        static bool Matching(std::regex const& Regex,String const& Text);
+        static String Match(std::regex const& Regex,String const& Text);
+        static String Substitute(std::regex const& Regex,String const& OriginalString,String const& ReplacementString);
+        //
+        
         static String GenerateParser(MBUtility::StreamReader& Content,Int k);
     public:
         virtual Ref<Scope> GetModuleScope(Evaluator& AssociatedEvaluator);
