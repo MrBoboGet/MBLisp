@@ -29,6 +29,10 @@ namespace MBLisp
             {
                 NewCode.ID = Sym.ID;
             }
+            //if(!Sym.SymbolLocation.IsEmpty())
+            //{
+            //    m_OpcodeLocationInfo[ListToAppend.size()] = LocationInfo(Sym.SymbolLocation,;
+            //}
             ListToAppend.push_back(NewCode);
         }
         else

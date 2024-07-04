@@ -42,7 +42,7 @@ namespace MBLisp
         {
             return std::tie(Position,URI) == std::tie(Rhs.Position,Rhs.URI);   
         }
-        bool IsEmpty()
+        bool IsEmpty() const
         {
             return Position == -1 && URI == -1;   
         }

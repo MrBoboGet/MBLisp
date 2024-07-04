@@ -408,7 +408,7 @@
 
 (defun handle-configurationDone (arg)
     (set new-envir (new-environment))
-    (set (. process-state 'id) (thread _(progn (eval (load launch-path) new-envir) (finished))))
+    (set (. process-state 'id) (thread _(progn (ignore-signals (eval (load launch-path) new-envir)) (finished))))
     (write debug-file "launching UwU")
     (write debug-file  "\n")
     (flush debug-file)

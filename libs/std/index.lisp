@@ -323,6 +323,9 @@
 (defmacro catch-all (&rest body)
     `(try (,@body) catch (any_t e) (true))
 )
+(defmacro ignore-signals (&rest body)
+    `(signal-handlers (progn ,@body) (any_t e) null)
+)
 
 
 (defmacro let (bindings &rest body)

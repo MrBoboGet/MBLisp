@@ -2459,6 +2459,16 @@ namespace MBLisp
     {
         Str.clear();
     }
+    void SetLoc_List(List& List,Symbol Sym)
+    {
+        List.SetLocation(Sym.SymbolLocation);
+    }
+    Symbol GetLoc_List(List& List)
+    {
+        Symbol ReturnValue;
+        ReturnValue.SymbolLocation = List.GetLocation();
+        return ReturnValue;
+    }
 
     void Evaluator::p_InternPrimitiveSymbols()
     {
@@ -2558,6 +2568,8 @@ namespace MBLisp
         AddMethod<List>("sort",Sort);
         AddGeneric<Pop_List>("pop");
         AddGeneric<Reverse_List>("reverse");
+        AddGeneric<SetLoc_List>("set-loc");
+        AddGeneric<GetLoc_List>("get-loc");
         //class
         AddMethod<ClassInstance,Symbol>("index",Index_ClassInstance);
         AddGeneric<Slots_ClassInstance>("slots");

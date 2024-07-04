@@ -100,6 +100,10 @@
     (setl result (symbol (symbol :Value idf) :Position idf (path-id load-filepath)))
     result
 )
+(defun convert-location (pos)
+    (setl result (symbol (symbol "") pos (path-id load-filepath)))
+    result
+)
 
 (defmethod convert-expr ((expr Expr_Bool))
     :Value expr
@@ -113,7 +117,10 @@
 )
 
 (defmethod convert-expr ((expr Expr_FuncCall))
-    `(,(convert-idf :Identifier expr) ,@(map convert-expr :Arguments expr))
+    (setl func-name (convert-idf :Identifier expr))
+    (setl res `(,func-name ,@(map convert-expr :Arguments expr)))
+    (set-loc res func-name)
+    res
 )
 
 
@@ -194,6 +201,16 @@
     ('== true)
 ))
 (set $_ (dynamic ""))
+
+(defmethod get-location ((expr list_t))
+    (get-loc expr)
+)
+(defmethod get-location ((expr symbol_t))
+    expr
+)
+(defmethod get-location ((expr any_t))
+    (symbol "")
+)
 (defmethod convert-nf ((expr operator-nf))
     (setl return-value (list))
     (if (eq :operator expr '.)
@@ -217,11 +234,17 @@
     return-value
 )
 (defmethod convert-expr ((expr Expr_String))
-    (substr :Content expr 1 (+ (len :Content expr ) -2))
+   (setl res `(progn ,(substr :Content expr 1 (+ (len :Content expr ) -2))))
+   (set-loc res (convert-location :Begin expr))
+   res
 )
 (defmethod convert-expr ((expr Expr_Operators))
     (setl nf (convert-operators expr))
-    (convert-nf nf)
+    (setl res (convert-nf nf))
+    (if (is (type nf) operator-nf)
+        (set-loc res (get-location :0 :args nf))
+    )
+    res
 )
 (defgeneric vector-apply)
 (defmethod vector-apply (op (lhs list_t) rhs)
@@ -282,31 +305,42 @@
 )
 (defmethod convert-statement ((stmt Statement_If))
     (setl res (list))
+    (setl if-sym (convert-idf :IfPart :If stmt))
     (insert-if res :If stmt)
     (doit clause :ElseClauses stmt
         (append res 'else)
         (insert-if res clause)
     )
+    (set-loc res if-sym)
     res
 )
 (defmethod convert-statement ((stmt Statement_For))
     (setl var-sym (gensym))
     (setl empty-var true)
+    (setl for-sym (convert-idf :ForPart stmt))
+    (signal (semantic-token (convert-idf :ForPart stmt) "macro"))
     (if (&& (not (eq :Value :VarName stmt "")) (not (eq :Value :VarName stmt null)))
         (setl var-sym (convert-idf :VarName stmt))
         (setl empty-var false)
     )
+    (setl res null)
     (if (not empty-var)
-        `(doit ,var-sym ,(convert-expr :Enumerable stmt) ,@(map convert-statement :Body stmt))
+        (setl res `(doit ,var-sym ,(convert-expr :Enumerable stmt) ,@(map convert-statement :Body stmt)))
      else
-        `(doit ,var-sym ,(convert-expr :Enumerable stmt) 
-            (let (($_ ,var-sym)) ,@(map convert-statement :Body stmt)))
+        (setl res `(doit ,var-sym ,(convert-expr :Enumerable stmt) 
+            (let (($_ ,var-sym)) ,@(map convert-statement :Body stmt))))
     )
+    (set-loc res for-sym)
+    res
 )
 
 
 (defmethod convert-statement ((stmt Statement_While))
-    `(while ,(convert-expr :Condition stmt) ,@(map convert-statement :Body stmt)) 
+    (setl while-sym (convert-idf :WhilePart stmt))
+    (signal (semantic-token  while-sym "macro"))
+    (setl res `(while ,(convert-expr :Condition stmt) ,@(map convert-statement :Body stmt)) )
+    (set-loc res while-sym)
+    res
 )
 (defmethod convert-statement ((stmt Statement_Expr))
     (convert-expr :Expr stmt)
@@ -315,6 +349,6 @@
 (defun MBPerl (stream) 
     (setl current-tokenizer (get-tokenizer))
     (set-stream current-tokenizer stream)
-    (set result (ParseStatementList current-tokenizer))
+    (setl result (ParseStatementList current-tokenizer))
     `(progn ,@(map convert-statement :Statements result))
 )
