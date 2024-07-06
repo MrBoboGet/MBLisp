@@ -14,6 +14,7 @@
     ("+" 5)
     ("-" 5)
     ("." 1)
+    ("[" 2)
     ("*" 4)
     ("=" 20)
     ("==" 10)
@@ -77,6 +78,9 @@
     (setl :assignment return-value :Assignment :Operator top-op)
     (insert-at top-ops 0 -1)
     (insert-at top-ops (len top-ops) (len :Parts operators))
+    #extra args always implies left associative operator whose extra arguments should be apended
+    #to the individual parts
+    (setl binary (> (len :ExtraArgs :Operator top-op) 0))
     (doit i (range 0 (+ (len top-ops) -1))
         (setl begin (. top-ops i))
         (setl end (. top-ops (+ i 1)))
@@ -88,8 +92,21 @@
                 (is (type :Rhs (. :Parts operators begin)) Expr_Regex))
                  (append :args return-value (convert-regex :Rhs (. :Parts operators begin)))
          else
-            (append :args return-value 
-                (convert-expr (split-operators operators begin end)))
+            (if (|| (not binary) (eq begin -1))
+                (append :args return-value 
+                    (convert-expr (split-operators operators begin end)))
+             else
+                (setl new-ret (operator-nf))
+                (set :operator new-ret :operator return-value)
+                (set :assignment new-ret :assignment return-value)
+                (insert-elements :args return-value (map convert-expr :ExtraArgs :Operator (. :Parts operators begin)))
+                (setl new-lhs (convert-nf return-value))
+                (if (eq (+ i 2) (len top-ops))
+                    (return new-lhs)
+                )
+                (append :args new-ret new-lhs)
+                (setl return-value new-lhs)
+            )
         )
     )
     return-value
@@ -195,6 +212,7 @@
 (set op-map (make-dict 
     ('= 'setl)
     ('== 'eq)
+    ((symbol "[") '.)
 ))
 (set binary-ops (make-dict 
     ('= true)
