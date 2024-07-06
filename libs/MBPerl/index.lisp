@@ -264,6 +264,17 @@
     )
     res
 )
+(defmethod convert-expr ((expr Expr_List))
+    (setl res `(list ,@(map convert-expr :Values expr)))
+    (set-loc res (convert-location :Begin expr))
+    res
+)
+(defmethod convert-expr ((expr Expr_Dict))
+    (setl res 
+        `(make-dict ,@(map _(progn `(,(convert-expr :Key _) ,(convert-expr :Value _)))  :Values expr)))
+    (set-loc res (convert-location :Begin expr))
+    res
+)
 (defgeneric vector-apply)
 (defmethod vector-apply (op (lhs list_t) rhs)
     (setl return-value (list))
@@ -308,6 +319,7 @@
         )
      )
 )
+
 (vectorise plus)
 (vectorise minus)
 (vectorise times)
@@ -360,6 +372,25 @@
     (set-loc res while-sym)
     res
 )
+(defmethod convert-statement ((stmt Statement_Return))
+    (setl return-sym (convert-idf :ReturnPart stmt))
+    (setl res `(,return-sym  ,(convert-expr :Value stmt)))
+    (set-loc res return-sym)
+    res
+)
+(defmethod empty ((idf Idf))
+    (|| (eq :Value idf null) (eq :Value idf ""))
+)
+    
+(defmethod convert-statement ((stmt Statement_Func))
+    (setl func-sym (convert-idf :FuncPart stmt))
+    (setl res `(defmethod ,(convert-idf :Name stmt) 
+        ,(map _(if (not (empty :Type _)) (list (convert-idf :Name _) (convert-idf :Type _) ) else 
+            (convert-idf :Name _)) :Args stmt) ,@(map convert-statement :Content stmt)))
+    (set-loc res func-sym)
+    res
+)
+    
 (defmethod convert-statement ((stmt Statement_Expr))
     (convert-expr :Expr stmt)
 )

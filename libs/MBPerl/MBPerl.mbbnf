@@ -1,13 +1,16 @@
 skip "\s+";
 term T = "true";
 term F = "false";
+term func = "func";
+term return = "return";
+term colon = ":";
 term lcurl = "\{";
 term rcurl = "\}";
 term lsquare = "\[";
 term rsquare = "\]";
 term for = "for";
 term if = "if";
-term in = "in";
+term in = "in\s";
 term while = "while";
 term else = "else";
 term semi = ";";
@@ -53,6 +56,21 @@ struct Expr_Bool : Expr
 {
     bool Value;
 }
+struct Expr_List : Expr
+{
+    tokenPos Begin;
+    List<Expr> Values;
+}
+struct DictEntry
+{
+    Expr Key;
+    Expr Value;
+}
+struct Expr_Dict : Expr
+{
+    tokenPos Begin;
+    List<DictEntry> Values;
+}
  
 struct Expr_FuncCall : Expr
 {
@@ -93,6 +111,11 @@ struct Statement_If : Statement
     IfContent If;
     List<IfContent> ElseClauses;
 }
+struct Statement_Return : Statement
+{
+    Idf ReturnPart;
+    Expr Value;
+}
 
 struct Statement_While : Statement
 {
@@ -110,6 +133,18 @@ struct Statement_For : Statement
 struct Statement_Expr : Statement
 {
     Expr Expr;
+}
+struct Argument  
+{
+    Idf Type;
+    Idf Name;
+}
+struct Statement_Func : Statement
+{
+    Idf FuncPart;
+    Idf Name;
+    List<Argument> Args;
+    List<Statement> Content;
 }
 
 struct StatementList
@@ -141,20 +176,26 @@ PostOp = Value=lsquare (ExtraArgs=Expr (comma ExtraArgs=Expr)*)?  rsquare;
 Expr_FuncCall = Identifier=Idf lpar (Arguments=Expr (comma Arguments=Expr)*)?  rpar ;
 Expr_Regex = Begin = TOKEN.Position Content = regex;
 Expr_String = Begin = TOKEN.Position Content = str;
-
+DictEntry = Key=Expr colon Value=Expr;
+Expr_List = Begin=TOKEN.Position lsquare (Values=Expr (comma Values=Expr)*)? rsquare;
+Expr_Dict = Begin=TOKEN.Position lcurl (Values=DictEntry (comma Values=DictEntry)*)? rcurl;
 def Expr_Term = Expr;
 Expr_Term = lpar this=Expr rpar | this=Expr_Idf | this = Expr_FuncCall | this=Expr_Num | 
-    this=Expr_Bool | this=Expr_Regex | this=Expr_String;
+    this=Expr_Bool | this=Expr_Regex | this=Expr_String | this=Expr_List | this=Expr_Dict;
 Expr_Operators = Lhs=Expr_Term 
     Parts=OperatorPart(Operator=Op (Rhs=Expr_Term) | Operator=PostOp)*;
 Expr = this=Expr_Operators;
 Statement_For = ForPart.Position = TOKEN.Position ForPart.Value = for  (VarName=Idf in )? Enumerable=Expr lcurl Body=Statement* rcurl; 
 IfContent = IfPart.Position = TOKEN.Position IfPart.Value = if Condition=Expr lcurl Body=Statement* rcurl;
-
 Statement_If = If = IfContent (else ElseClauses=IfContent)* 
     (else ElseClauses=IfContent(lcurl HasCondition=false Body=Statement* rcurl ))?;
 Statement_While = WhilePart.Position = TOKEN.Position WhilePart.Value = while 
         Condition=Expr lcurl Body=Statement*  rcurl;
 Statement_Expr = Expr=Expr semi;
-Statement = this=Statement_For | this = Statement_While | this=Statement_Expr | this=Statement_If;
+Statement_Return = ReturnPart.Position = TOKEN.Position ReturnPart.Value=return Value=Expr semi;
+Argument = Type=Idf Name=Idf | Name=Idf;
+Statement_Func = FuncPart.Position = TOKEN.Position FuncPart.Value = func Name=Idf 
+    lpar (Args=Argument (comma Args=Argument)*)? rpar lcurl Content=Statement* rcurl;
+Statement = this=Statement_For | this = Statement_While | this=Statement_Expr | this=Statement_If
+| this=Statement_Return | this=Statement_Func;
 StatementList = Statements=Statement*;
