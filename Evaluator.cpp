@@ -1478,7 +1478,8 @@ namespace MBLisp
         else
         {
             //throw std::runtime_error("Cannot invoke object");   
-            p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,"Cannot invoke object"),true);
+            std::string ErrorString = "Cannot invoke object of type " + p_TypeString(ObjectToCall);
+            p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,ErrorString),true);
         }
     }
     

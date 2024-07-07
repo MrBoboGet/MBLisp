@@ -203,6 +203,8 @@
                     ('eval-lsp true)
 ))
 
+    
+
 (defun should-execute-form (form)
   (if (not (eq (type form) list_t))
     (return false)
@@ -216,13 +218,34 @@
   )
   false
 )
-
+(defun eval-selected (form envir)
+     (if (should-execute-form form)
+       (catch-all (eval form envir))
+      else if (is-trivial-set-form form)
+       (set-var envir (index form 1) null)
+       else if (&& (is-defmethod form) (not (in :1 form envir)))
+       (setl new-generic (generic))
+       (set-name new-generic :1 form)
+       (set-var envir :1 form new-generic)
+     )
+     (if (&& (eq (type form) list_t) (> (len form) 0) (eq :0 form 'progn))
+        (doit i (range 1 (len form))
+            (eval-selected ;i form envir)
+        )
+     )
+)
 (defun is-trivial-set-form (new-term)
     (&& (eq (type new-term) list_t) 
         (not (< (len new-term) 2)) 
         (|| (eq (index new-term 0) 'set) (eq (index new-term 0) 'setl) )
         (eq (type (index new-term 1)) symbol_t)
     )
+)
+(defun is-defmethod (new-term)
+    (&& (eq (type new-term) list_t) 
+        (> (len new-term) 1) 
+        (eq (type :0 new-term) symbol_t)
+        (eq :0 new-term 'defmethod))
 )
 
 (set delayed-map (make-dict ('defun true) ('defmacro true) ('defmethod true) ('defclass true)))
@@ -283,7 +306,7 @@
     )
    )
 )
-#(set debug-file (open "DEBUG_LSP.txt" "w"))
+(set debug-file (open "DEBUG_LSP.txt" "w"))
 
 (set loaded-files (make-dict))
 
@@ -333,11 +356,7 @@
               (while (not (eof file-stream))
                      (setl new-term (eval `(read-term ,file-stream) new-envir))
                      (skip-whitespace file-stream)
-                     (if (should-execute-form new-term)
-                       (catch-all (eval new-term new-envir))
-                      else if (is-trivial-set-form new-term)
-                       (set-var new-envir (index new-term 1) null)
-                     )
+                     (eval-selected new-term new-envir)
                      (if (&& (type-eq new-term list_t) (< 0 (len new-term)) (type-eq (. new-term 0) symbol_t) (in (. new-term 0) delayed-map))
                             (append delayed-forms new-term)
                       else

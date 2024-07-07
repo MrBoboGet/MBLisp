@@ -83,6 +83,7 @@
       `(addmethod 
           ,methodname (list ,@type-overrides) 
           (set-name (lambda (,@argument-symbols) ,@body) (quote ,methodname))))
+  (return `(progn (cond (in (quote ,methodname) (environment)) null (defgeneric ,methodname)) ,method-def))
   (cond (in methodname envir)
       method-def
       `(progn (defgeneric ,methodname) ,method-def)
