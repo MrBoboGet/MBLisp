@@ -1459,7 +1459,16 @@ namespace MBLisp
             if(Callable == nullptr)
             {
                 //throw std::runtime_error("No method associated with the argument list for generic \""+GenericToInvoke.Name+"\"");   
-                p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,"No method associated with the argument list for generic \""+GetSymbolString(GenericToInvoke.Name.ID)+"\""),true);
+                std::string ArgumentList;
+                for(size_t i = 0; i < Arguments.size();i++)
+                {
+                    if(i != 0)
+                    {
+                        ArgumentList += ',';   
+                    }
+                    ArgumentList += p_TypeString(Arguments[i]);
+                }
+                p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,"No method associated with the argument list " + ArgumentList + " for generic \""+GetSymbolString(GenericToInvoke.Name.ID)+"\""),true);
                 return;
             }
             p_Invoke(*Callable,Arguments,CurrentState,Setting,IsTrapHandler);
@@ -2038,6 +2047,27 @@ namespace MBLisp
         }
         return ReturnValue;
     }
+    std::string Evaluator::p_TypeString(Value const& ValueToInspect)
+    {
+        std::string ReturnValue = "?";
+        if(ValueToInspect.IsType<ClassInstance>())
+        {
+            auto const& Instance = ValueToInspect.GetType<ClassInstance>();
+            if(Instance.AssociatedClass != nullptr)
+            {
+                ReturnValue = GetSymbolString(Instance.AssociatedClass->Name.ID);
+            }
+        }
+        else if(ValueToInspect.IsType<ClassDefinition>())
+        {
+            ReturnValue = GetSymbolString(m_BuiltinTypeDefinitions[Value::GetTypeTypeID<ClassDefinition>()].GetType<ClassDefinition>().Name.ID);
+        }
+        else if(ValueToInspect.IsBuiltin())
+        {
+            ReturnValue = GetSymbolString(m_BuiltinTypeDefinitions[ValueToInspect.GetTypeID()].GetType<ClassDefinition>().Name.ID);
+        }
+        return ReturnValue;
+    }
     Value Evaluator::p_GetDynamicValue(Scope& AssociatedScope,ExecutionState& CurrentState,std::string const& VariableName)
     {
         Value ReturnValue;
@@ -2463,6 +2493,21 @@ namespace MBLisp
     {
         List.SetLocation(Sym.SymbolLocation);
     }
+    static List Copy_List(List const& Target)
+    {
+        List ReturnValue = Target;
+        return ReturnValue;
+    }
+    static String Copy_Str(String const& Target)
+    {
+        String ReturnValue = Target;
+        return ReturnValue;
+    }
+    static Value Copy_Any(Value const& Target)
+    {
+        Value ReturnValue = Target;
+        return ReturnValue;
+    }
     Symbol GetLoc_List(List& List)
     {
         Symbol ReturnValue;
@@ -2688,6 +2733,10 @@ namespace MBLisp
         AddMethod<GenericFunction>("name",Name_Generic);
         AddMethod<ClassDefinition>("name",Name_ClassDefinition);
         AddMethod<GenericFunction>("applicable",Applicable);
+
+        AddGeneric<Copy_List>("copy");
+        AddGeneric<Copy_Str>("copy");
+        AddGeneric<Copy_Any>("copy");
 
         AddMethod<Symbol>("is-special",IsSpecial_Symbol);
         AddMethod<Symbol>("position",Position_Symbol);

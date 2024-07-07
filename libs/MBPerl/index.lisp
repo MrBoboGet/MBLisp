@@ -194,7 +194,7 @@
     (doit i (range 1 (len :args expr))
         (setl cur-arg (. :args expr i))
         (if (eq (type cur-arg) symbol_t)
-            (append return-value `(. ,cur-arg))
+            (append return-value `(. (quote ,cur-arg)))
          else
             (append return-value cur-arg)
         )
@@ -242,7 +242,7 @@
         (return (foldl :args expr _(progn `(apply ,_1   ,_2))))
     )
     (if :assignment expr 
-        (return (foldl :args expr _(progn `(setl ,_1 , `(,op ,_1   ,_2)))))
+        (return (foldl :args expr _(progn `(setl ,(copy _1) , `(,op ,_1   ,_2)))))
     )
     (if binary (return (foldl :args expr _(progn `(,op ,_1 ,_2)))))
     (append return-value op)
@@ -381,13 +381,28 @@
 (defmethod empty ((idf Idf))
     (|| (eq :Value idf null) (eq :Value idf ""))
 )
-    
+   
+(defmethod convert-argument ((arg Argument))
+    (if (not (empty :Type arg)) (list (convert-idf :Name arg) (convert-idf :Type arg) ) else 
+                (convert-idf :Name arg))
+)
 (defmethod convert-statement ((stmt Statement_Func))
     (setl func-sym (convert-idf :FuncPart stmt))
     (setl res `(defmethod ,(convert-idf :Name stmt) 
-        ,(map _(if (not (empty :Type _)) (list (convert-idf :Name _) (convert-idf :Type _) ) else 
-            (convert-idf :Name _)) :Args stmt) ,@(map convert-statement :Content stmt)))
+        ,(map convert-argument :Args stmt) ,@(map convert-statement :Content stmt)))
     (set-loc res func-sym)
+    res
+)
+
+(defmethod convert-variable ((var MemberVariable))
+    (list (convert-idf :Name var) (convert-expr :Value var))
+)
+(defmethod convert-method ((var MemberFunc))
+    `(,(convert-idf :Name var) ,(map convert-argument :Args var) ,@(map convert-statement :Body var))
+)
+
+(defmethod convert-statement ((stmt Statement_Class))
+    (setl res  `(defclass ,(convert-idf :Name stmt) ,(map convert-idf :Parents stmt) ,@(map convert-variable :Variables stmt) ,@(map convert-method :Methods stmt)))
     res
 )
     

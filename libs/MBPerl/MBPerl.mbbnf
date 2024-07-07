@@ -1,6 +1,7 @@
 skip "\s+";
 term T = "true";
 term F = "false";
+term class = "class";
 term func = "func";
 term return = "return";
 term colon = ":";
@@ -146,6 +147,25 @@ struct Statement_Func : Statement
     List<Argument> Args;
     List<Statement> Content;
 }
+struct MemberVariable
+{
+    Idf Name;
+    Expr Value;
+}
+struct MemberFunc
+{
+    Idf Name;
+    List<Argument> Args;
+    List<Statement> Body;
+}
+struct Statement_Class : Statement
+{
+    Idf ClassPart;
+    Idf Name;
+    List<Idf> Parents;
+    List<MemberVariable> Variables;
+    List<MemberFunc> Methods;
+}
 
 struct StatementList
 {
@@ -196,6 +216,10 @@ Statement_Return = ReturnPart.Position = TOKEN.Position ReturnPart.Value=return 
 Argument = Type=Idf Name=Idf | Name=Idf;
 Statement_Func = FuncPart.Position = TOKEN.Position FuncPart.Value = func Name=Idf 
     lpar (Args=Argument (comma Args=Argument)*)? rpar lcurl Content=Statement* rcurl;
+Statement_Class = ClassPart.Position=TOKEN.Position ClassPart.Value = class Name=Idf 
+    (colon Parents=Idf (comma Parents=Idf)*)? lcurl 
+    (Variables=MemberVariable(Name=Idf eq Value=Expr semi) | Methods=MemberFunc(Name=Idf lpar (Args=Argument (comma Args=Argument)*)?  rpar 
+    lcurl Body=Statement* rcurl))*   rcurl ;
 Statement = this=Statement_For | this = Statement_While | this=Statement_Expr | this=Statement_If
-| this=Statement_Return | this=Statement_Func;
+| this=Statement_Return | this=Statement_Func | this=Statement_Class;
 StatementList = Statements=Statement*;

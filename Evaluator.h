@@ -423,8 +423,11 @@ namespace MBLisp
         template<typename T>
         void p_RegisterBuiltinClass(std::string const& Name)
         {
-            m_GlobalScope->SetVariable(p_GetSymbolID(Name),ClassDefinition(Value::GetTypeTypeID<T>()));
-            m_BuiltinTypeDefinitions[Value::GetTypeTypeID<T>()] = m_GlobalScope->FindVariable(p_GetSymbolID(Name));
+            auto SymID = p_GetSymbolID(Name);
+            auto ClassDef = ClassDefinition(Value::GetTypeTypeID<T>());
+            ClassDef.Name.ID = SymID;
+            m_GlobalScope->SetVariable(SymID,std::move(ClassDef));
+            m_BuiltinTypeDefinitions[Value::GetTypeTypeID<T>()] = m_GlobalScope->FindVariable(SymID);
         }
         template<typename Original,typename New>
         void p_RegisterBuiltinClass()
@@ -437,6 +440,7 @@ namespace MBLisp
         class ContinueUnwind{};
         
         bool p_ValueIsType(ClassID TypeValue,Value const& ValueToInspect);
+        std::string p_TypeString(Value const& ValueToInspect);
         Value p_GetDynamicValue(Scope& AssociatedScope,ExecutionState& CurrentState,std::string const& VariableName);
 
         void p_Invoke(Value& ObjectToCall,FuncArgVector& Arguments,ExecutionState& CurrentState,bool Setting = false,bool IsTrapHandler = false);
