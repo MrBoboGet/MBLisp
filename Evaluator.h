@@ -492,7 +492,7 @@ namespace MBLisp
             else if constexpr(IsRefType::value)
             {
                 //Types.push_back(0);
-                p_AddType<IsRefType::type>(Types);
+                p_AddType<typename IsRefType::type>(Types);
             }
             else
             {
@@ -574,7 +574,7 @@ namespace MBLisp
                 if constexpr(IsRefType::value)
                 {
                     return p_InvokeMemberMethod(InvokingObject,MemberMethod,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
-                        LispArgs[sizeof...(SuppliedArgTypes)+1].GetRef<IsRefType::type>());
+                        LispArgs[sizeof...(SuppliedArgTypes)+1].GetRef<typename IsRefType::type>());
                 }
                 else
                 {

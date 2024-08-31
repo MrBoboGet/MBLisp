@@ -223,7 +223,7 @@ namespace MBLisp
             //point where  it enters this function, and schedukling that thread would mean that this value was set to true 
             //here
             ThreadInfo->WakedUp = false;
-            ThreadInfo->ExecutionState = State;
+            ThreadInfo->State = State;
             while(!ThreadInfo->WakedUp)
             {
                 ThreadInfo->WaitConditional.wait(Lock);
@@ -366,8 +366,8 @@ namespace MBLisp
         {
             throw std::runtime_error("Invalid thread ID when calling GetState");
         }
-        assert(ThreadIt->second->ExecutionState  != nullptr);
-        return ThreadIt->second->ExecutionState;
+        assert(ThreadIt->second->State  != nullptr);
+        return ThreadIt->second->State;
     }
     void ThreadingState::Sleep(ThreadID ID,float Duration)
     {
