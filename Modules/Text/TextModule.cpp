@@ -227,6 +227,17 @@ namespace MBLisp
     {
         return SplitQuoted(Input,QuoteString,"\\");
     }
+    bool TextModule::IsWhitespace(String const& Input)
+    {
+        bool ReturnValue = false;
+        size_t ParseOffset = 0;
+        MBParsing::SkipWhitespace(Input.data(),Input.size(),ParseOffset,&ParseOffset);
+        if(ParseOffset == Input.size())
+        {
+            return true;
+        }
+        return ReturnValue;
+    }
     std::regex TextModule::Regex(std::string const& regex)
     {
         std::regex ReturnValue = std::regex(regex,std::regex_constants::ECMAScript);
@@ -278,6 +289,7 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<JSONEscape>(ReturnValue,"json-escape");
         AssociatedEvaluator.AddGeneric<SplitQuoted_Simple>(ReturnValue,"split-quoted");
         AssociatedEvaluator.AddGeneric<SplitQuoted>(ReturnValue,"split-quoted");
+        AssociatedEvaluator.AddGeneric<IsWhitespace>(ReturnValue,"is-whitespace");
 
         //regex stuff
         AssociatedEvaluator.AddGeneric<Regex>(ReturnValue,"regex");

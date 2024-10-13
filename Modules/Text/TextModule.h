@@ -42,6 +42,7 @@ namespace MBLisp
 
         static List SplitQuoted(String const& Input,String const& QuoteString,String const& EscapeString);
         static List SplitQuoted_Simple(String const& Input,String const& QuoteString);
+        static bool IsWhitespace(String const& Input);
 
         //
         static std::regex Regex(std::string const&);
