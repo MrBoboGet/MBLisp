@@ -523,6 +523,17 @@ public:
             m_Deleter(m_Data);   
         }
 
+        template<typename T>
+        bool IsType() const
+        {
+            ClassID ID = GetClassID<T>();
+            auto It = std::lower_bound(m_Types.begin(),m_Types.end(),ID,[](std::pair<ClassID,void*> const& lhs,ClassID rhs)
+                    {
+                        return lhs.first < rhs;
+                    });
+            return It != m_Types.end();
+        }
+
         template<typename T,typename...  PolyTypes,typename... ArgTypes>
         //Kinda hacky...
         PolymorphicContainer(TypeList<T> Type,TypeList<PolyTypes...> Poly,ArgTypes&&... Args)
@@ -977,6 +988,14 @@ public:
         template<typename T>
         bool IsType() const
         {
+            if constexpr(!std::is_same_v<T,PolymorphicContainer>)
+            {
+                if(IsType<PolymorphicContainer>())
+                {
+                    RefBase const& StoredRef = m_Data.GetType<RefBase>();
+                    return StoredRef.GetType<PolymorphicContainer>().IsType<T>();
+                }
+            }
             return m_Data.GetTypeID() == GetTypeTypeID<T>();
         }
         template<typename T>

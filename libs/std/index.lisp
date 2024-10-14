@@ -125,7 +125,7 @@
         (set (index envir constructor-sym) (generic))
     )
     (cond (eq constructor-sym 'empty)
-        `(progn (set ,classname (class (list ,@parents)  (quote ,slots))) ,@methods (set-name ,classname (quote ,classname)))
+        `(progn (set ,classname (class (list ,@parents)  (quote ,filtered-slots))) ,@methods (set-name ,classname (quote ,classname)))
         `(progn (defgeneric ,constructor-sym) (set ,classname (class (list ,@parents)  (quote ,filtered-slots) ,constructor-sym)) ,@methods (set-name ,classname (quote ,classname)))
     )
 )
