@@ -188,12 +188,10 @@ namespace MBLisp
 
 
 
-    
-
 
     //TODO kinda hacky, should be temporary, but much more convenient when
     //iterating and prototyping
-    class Evaluator
+    class Evaluator : public std::enable_shared_from_this<Evaluator>
     {
 
         struct StackTrace
@@ -420,6 +418,8 @@ namespace MBLisp
         std::unordered_map<std::string,SymbolID> m_InternedSymbols;
         std::unordered_map<SymbolID,std::string> m_SymbolToString;
         std::unordered_map<ClassID,Value> m_BuiltinTypeDefinitions;
+
+        ExecutionState& p_GetThreadExecutionState();
 
         template<typename T>
         void p_RegisterBuiltinClass(std::string const& Name)
@@ -741,7 +741,19 @@ namespace MBLisp
 
         static SymbolID p_PathURI(Evaluator& AssociatedEvaluator,std::string const& Path);
         static SymbolID p_PathURI(Evaluator& AssociatedEvaluator,std::filesystem::path const& Path);
+
+
+        Value Eval(ExecutionState& CurrentState,Value Callable,FuncArgVector Arguments);
+        void Unwind(ExecutionState& CurrentState,int TargetIndex);
+        Evaluator();
     public:
+        Evaluator(Evaluator&&) = delete;
+        Evaluator(Evaluator const&) = delete;
+        Evaluator& operator==(Evaluator const&) = delete;
+
+        static std::shared_ptr<Evaluator> CreateEvaluator();
+
+        //Adding methods
         template<auto  Func>
         void AddGeneric(std::string const& MethodName)
         {
@@ -752,7 +764,6 @@ namespace MBLisp
         {
             AddGeneric<Func>(ScopeToModify,FunctionName,Func);
         }
-
         template<auto  Func>
         void AddObjectMethod(std::string const& MethodName)
         {
@@ -763,8 +774,6 @@ namespace MBLisp
         {
             AddObjectMethod<Func>(ScopeToModify,MethodName,Func);
         }
-
-
         template<typename T>
         void AddFunctionObject(Ref<Scope>& ScopeToModify,std::string const& MethodName,T Object)
         {
@@ -775,18 +784,6 @@ namespace MBLisp
         {
             AddFunctionObject(m_GlobalScope,MethodName,std::move(Object));
         }
-
-
-        Evaluator();
-
-        Evaluator(Evaluator&&) = delete;
-        Evaluator(Evaluator const&) = delete;
-        Evaluator& operator==(Evaluator const&) = delete;
-
-        Ref<Scope> CreateDefaultScope();
-        //is this sussy or not...
-        DebugState&  GetDebugState();
-
         template<typename... ArgTypes>
         void AddMethod(Ref<Scope> ScopeToModify,std::string const& MethodName,Value Callable)
         {
@@ -806,12 +803,6 @@ namespace MBLisp
         {
             AddMethod<ArgTypes...>(m_GlobalScope,MethodName,std::move(Callable));
         }
-
-        //template<typename ClassType,typename... ArgTypes>
-        //void AddMemberMethod(Ref<Scope> ScopeToModify,std::string const& MethodName,Value (ClassType::*MemberMethod)(ArgTypes...))
-        //{
-
-        //}
         template<typename ClassType,Value (ClassType::*MemberMethod)()>
         void AddMemberMethod(Ref<Scope> ScopeToModify,std::string const& MethodName)
         {
@@ -822,34 +813,28 @@ namespace MBLisp
         {
             AddMethod<ClassType>(m_GlobalScope,MethodName,p_MemberConverter<ClassType,MemberMethod>);
         }
+        //
 
-        class TestClass
-        {
-            String m_InteralString =  "UwU";
-            public:
-            String TestTest(String Test1,Int Test2)
-            {
-                return Test1+std::to_string(Test2)+" "+m_InteralString;
-            }
-        };
-        static String GenericTest(Int Hello,String World)
-        {
-            return "Hello world! "+std::to_string(Hello)+World;   
-        }
 
+        //observers
+        Ref<Scope> CreateDefaultScope();
         SymbolID GenerateSymbol();
-
         SymbolID GetSymbolID(std::string const& SymbolString);
         std::string GetSymbolString(SymbolID SymbolToConvert);
+        //is this sussy or not...
+        DebugState&  GetDebugState();
+        //
 
+
+        //Setup
         void LoadStd();
-        void Eval(std::filesystem::path const& SourceFile);
         void Repl();
-        Value Eval(ExecutionState& CurrentState,Value Callable,FuncArgVector Arguments);
-        Value Eval(Ref<Scope> AssociatedScope,Value Callable,FuncArgVector Arguments);
-        Value Eval(Value Callable,FuncArgVector Arguments);
-        void Unwind(ExecutionState& CurrentState,int TargetIndex);
-
         void AddInternalModule(std::string const& Name,Ref<Scope> ModuleScope);
+        //
+        
+        //Executors
+        void Eval(std::filesystem::path const& SourceFile);
+        Value Eval(Ref<Scope> AssociatedScope,Value Callable,FuncArgVector Arguments);
+        //
     };
 }

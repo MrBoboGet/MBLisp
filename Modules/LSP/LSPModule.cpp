@@ -238,23 +238,17 @@ namespace MBLisp
         auto HandlersCopy = m_OnOpenHandlers;
         //run handlers
         bool ExceptionCaught = false;
-        int InitialStackCount = m_ExecutionState->StackSize();
         try
         {
             for(auto const& Handler : HandlersCopy)
             {
-                m_Evaluator->Eval(*m_ExecutionState,Handler,{m_This,p_CanonURI(URI),Content});
+                m_Evaluator->Eval(m_Scope,Handler,{m_This,p_CanonURI(URI),Content});
             }
         }
         catch(...)
         {
-            ExceptionCaught = true;
-            m_Evaluator->Unwind(*m_ExecutionState,InitialStackCount);
-            //here the stack should be unwound...
-            //TODO add Unwind function to Evaluation state,
-            //that takes care of unwinding this stuff
+
         }
-        assert(InitialStackCount == m_ExecutionState->StackSize());
         MBLSP::PublishDiagnostics_Notification Notification;
         Notification.params.diagnostics = std::move(Document.Diagnostics);
         Notification.params.uri = URI;
@@ -265,8 +259,8 @@ namespace MBLisp
     {
         Value ReturnValue;
         LSPHandler& Handler = Arguments[0].GetType<LSPHandler>();
-        Handler.m_Evaluator = &Context.GetEvaluator();
-        Handler.m_ExecutionState = &Context.GetState();
+        Handler.m_Evaluator = Context.GetEvaluator().shared_from_this();
+        Handler.m_Scope = Context.GetState().GetScopeRef();
         Handler.m_This  = Arguments[0];
 
         MBUtility::StreamReader& Input = Context.GetVariable("*standard-input*").GetType<MBUtility::StreamReader>();

@@ -1197,22 +1197,47 @@ namespace MBLisp
         p_Invoke(Callable,Arguments,CurrentState);
         return p_Eval(CurrentState,CurrentState.StackFrames.size()-1);
     }
-    Value Evaluator::Eval(Value Callable,FuncArgVector Arguments)
+    //Value Evaluator::Eval(Value Callable,FuncArgVector Arguments)
+    //{
+    //    ExecutionState State;
+    //    State.StackFrames.push_back(StackFrame());
+    //    State.StackFrames.back().StackScope = m_GlobalScope;
+    //    return Eval(State,std::move(Callable),std::move(Arguments));
+    //}
+    std::shared_ptr<Evaluator> Evaluator::CreateEvaluator()
     {
-        ExecutionState State;
-        State.StackFrames.push_back(StackFrame());
-        State.StackFrames.back().StackScope = m_GlobalScope;
-        return Eval(State,std::move(Callable),std::move(Arguments));
+        return std::shared_ptr<Evaluator>(new Evaluator());
     }
     Value Evaluator::Eval(Ref<Scope> AssociatedScope,Value Callable,FuncArgVector Arguments)
     {
-        ExecutionState NewState;   
-        NewState.StackFrames.push_back(StackFrame());
-        NewState.StackFrames.back().StackScope = std::move(AssociatedScope);
-        NewState.CurrentCallContext.m_AssociatedEvaluator = this;
-        NewState.CurrentCallContext.m_CurrentState = &NewState;
-        p_Invoke(Callable,Arguments,NewState);
-        return p_Eval(NewState,NewState.StackFrames.size()-1);
+        ExecutionState& CurrentState = p_GetThreadExecutionState();   
+        auto InitialStackSize = CurrentState.StackSize();
+        CurrentState.StackFrames.push_back(StackFrame());
+        CurrentState.StackFrames.back().StackScope = std::move(AssociatedScope);
+        CurrentState.CurrentCallContext.m_AssociatedEvaluator = this;
+        CurrentState.CurrentCallContext.m_CurrentState = &CurrentState;
+
+        try
+        {
+            p_Invoke(Callable,Arguments,CurrentState);
+            auto ReturnValue = p_Eval(CurrentState,InitialStackSize);
+            assert(InitialStackSize  == CurrentState.StackFrames.size());
+            return ReturnValue;
+        }
+        catch(...)
+        {
+            try
+            {
+                Unwind(CurrentState,InitialStackSize);
+                assert(InitialStackSize == CurrentState.StackFrames.size());
+            }
+            catch(...)
+            {
+                assert(false);
+            }
+            throw;
+        }
+        return Value();
     }
     void Evaluator::Unwind(ExecutionState& CurrentState,int TargetIndex)
     {
@@ -2765,10 +2790,6 @@ namespace MBLisp
         m_GlobalScope->SetVariable(p_GetSymbolID("*READTABLE*"),ConstructDynamicVariable(Value::MakeExternal(ReadTable())));
     }
 
-    Value Evaluator::TestTest BUILTIN_ARGLIST
-    {
-        return Value::EmplaceExternal<TestClass>();
-    }
     Value Evaluator::Write_OutStream BUILTIN_ARGLIST
     {
         Value ReturnValue;
@@ -3228,14 +3249,48 @@ namespace MBLisp
             throw std::runtime_error("Failed loading standard library: file not present on default location "+MBUnicode::PathToUTF8(StdFile));
         }
     }
+
+    //Why is this needed again...
+    thread_local std::unique_ptr<ExecutionState> i_ThreadExecutionState;
+    ExecutionState& Evaluator::p_GetThreadExecutionState()
+    {
+        if(i_ThreadExecutionState == nullptr)
+        {
+            auto NewScope = CreateDefaultScope();
+            i_ThreadExecutionState = std::make_unique<ExecutionState>();
+            i_ThreadExecutionState->StackFrames.push_back(StackFrame());
+            i_ThreadExecutionState->StackFrames.back().StackScope = NewScope;
+            i_ThreadExecutionState->CurrentCallContext.m_AssociatedEvaluator = this;
+            i_ThreadExecutionState->CurrentCallContext.m_CurrentState = &*i_ThreadExecutionState;
+        }
+        return *i_ThreadExecutionState;
+    }
     void Evaluator::Eval(std::filesystem::path const& SourcePath)
     {
+        ExecutionState& CurrentState = p_GetThreadExecutionState();
+        auto InitialStackCount = CurrentState.StackFrames.size();
         Ref<Scope> CurrentScope = CreateDefaultScope();
-        ExecutionState CurrentState;
-        CurrentState.StackFrames.push_back(StackFrame());
-        CurrentState.StackFrames.back().StackScope = CurrentScope;
-        //set load path
-        p_LoadFile(CurrentState,SourcePath);
+        try
+        {
+            CurrentState.StackFrames.push_back(StackFrame());
+            CurrentState.StackFrames.back().StackScope = CurrentScope;
+            p_LoadFile(CurrentState,SourcePath);
+            assert(InitialStackCount + 1 == CurrentState.StackFrames.size());
+            CurrentState.StackFrames.pop_back();
+        }
+        catch(...)
+        {
+            try
+            {
+                Unwind(CurrentState,InitialStackCount);
+                assert(InitialStackCount == CurrentState.StackFrames.size());
+            }
+            catch(...)
+            {
+                assert(false);
+            }
+            throw;
+        }
     }
     void Evaluator::Repl()
     {

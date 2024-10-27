@@ -86,8 +86,8 @@ namespace MBLisp
         std::unordered_map<std::string,DocumentInfo> m_OpenedDocuments;
         std::unordered_map<std::string,Value> m_RequestHandlers; 
         std::vector<Value> m_OnOpenHandlers;
-        Evaluator* m_Evaluator = nullptr;
-        ExecutionState* m_ExecutionState = nullptr;
+        std::shared_ptr<Evaluator> m_Evaluator = nullptr;
+        Ref<Scope> m_Scope;
         MBLSP::LSP_ServerHandler* m_LSPServer = nullptr;
         Value m_This;
         DocumentInfo p_CreateDocumentInfo(std::string const& Content);
@@ -135,12 +135,11 @@ namespace MBLisp
     class LSPModule : public Module
     {
         Ref<Scope> m_ModuleScope = MakeRef<Scope>();
-        Evaluator* m_Evaluator = nullptr;
-
+        std::shared_ptr<Evaluator> m_Evaluator;
     public:
         Ref<Scope> GetModuleScope(Evaluator& AssociatedEvaluator) override
         {
-            m_Evaluator = &AssociatedEvaluator;
+            auto m_Evaluator = AssociatedEvaluator.shared_from_this();
             m_ModuleScope->SetVariable(m_Evaluator->GetSymbolID("create-lsp-server"),LSPHandler::CreateLSPHandler);
             m_Evaluator->AddMethod<LSPHandler,Any>(m_ModuleScope,"add-generic-request-handler",LSPHandler::AddGenericRequestHandler);
             m_Evaluator->AddMethod<LSPHandler,Any>(m_ModuleScope,"add-on-open-handler",LSPHandler::AddOnOpenHandler);
