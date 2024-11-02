@@ -306,6 +306,21 @@ namespace MBLisp
         {
             std::cout<<"null";
         }
+        else if(ValueToPrint.IsType<ClassInstance>())
+        {
+            auto const& Value = ValueToPrint.GetType<ClassInstance>();
+            std::cout<<"[type="<<AssociatedEvaluator.GetSymbolString(Value.AssociatedClass->Name.ID)<<"]{";
+            for(int i = 0; i < Value.Slots.size(); i++)
+            {
+                if(i > 0)
+                {
+                    std::cout<<",";   
+                }
+                std::cout<<AssociatedEvaluator.GetSymbolString(Value.Slots[i].first)<<": ";
+                Print(AssociatedEvaluator,Value.Slots[i].second);
+            }
+            std::cout<<"}";
+        }
         else if(ValueToPrint.IsType<bool>())
         {
             std::cout<<bool(ValueToPrint.GetType<bool>());
@@ -2494,6 +2509,10 @@ namespace MBLisp
         }
         return *Result;
     }
+    Value Evaluator::GetValue(std::string const& Name)
+    {
+        return GetValue(*m_GlobalScope,Name);
+    }
     bool Evaluator::p_SymbolIsPrimitive(SymbolID IDToCompare)
     {
         return IDToCompare < m_PrimitiveSymbolMax;
@@ -3290,7 +3309,7 @@ namespace MBLisp
         }
         return *i_ThreadExecutionState;
     }
-    void Evaluator::Eval(std::filesystem::path const& SourcePath)
+    Ref<Scope> Evaluator::Eval(std::filesystem::path const& SourcePath)
     {
         ExecutionState& CurrentState = p_GetThreadExecutionState();
         auto InitialStackCount = CurrentState.StackFrames.size();
@@ -3316,6 +3335,7 @@ namespace MBLisp
             }
             throw;
         }
+        return CurrentScope;
     }
     void Evaluator::Repl()
     {

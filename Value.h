@@ -556,7 +556,7 @@ public:
                     {
                         return lhs.first < rhs;
                     });
-            return It != m_Types.end();
+            return It != m_Types.end() && It->first == ID;
         }
 
         template<typename T,typename...  PolyTypes,typename... ArgTypes>
@@ -564,7 +564,7 @@ public:
         PolymorphicContainer(TypeList<T> Type,TypeList<PolyTypes...> Poly,ArgTypes&&... Args)
         {
             T* NewData = new T(std::forward<ArgTypes>(Args)...);
-            p_AddTypes<T,PolyTypes...>(NewData);
+            p_AddTypes<T,T,PolyTypes...>(NewData);
             std::sort(m_Types.begin(),m_Types.end(), [](std::pair<ClassID,void*> const& lhs,std::pair<ClassID,void*> const& rhs)
                     {
                         return lhs.first < rhs.first;

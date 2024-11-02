@@ -492,7 +492,7 @@ namespace MBLisp
             }
             else if constexpr(std::is_same_v<Type,Evaluator>)
             {
-                Types.push_back(0);
+                //Dont add anything 
             }
             else if constexpr(IsRefType::value)
             {
@@ -614,6 +614,8 @@ namespace MBLisp
             typename... SuppliedArgTypes>
         static ReturnType p_InvokeFunction(
                 ReturnType (*Function)(TotalArgTypes...),
+                CallContext& Context,
+                int Offset,
                 FuncArgVector& LispArgs,
                 SuppliedArgTypes&&... Args)
         {
@@ -631,7 +633,7 @@ namespace MBLisp
             else
             {
                 //+1 beccause the first argument  is always the type of the invoking object
-                if(sizeof...(SuppliedArgTypes) >= LispArgs.size())
+                if(Offset >= LispArgs.size())
                 {
                     throw std::runtime_error("Insufficient arguments supplied");   
                 }
@@ -641,18 +643,23 @@ namespace MBLisp
                 typedef IsTemplateInstantiation<ArgType,Ref> IsRefType;
                 if constexpr(std::is_same_v<Value,ArgType>)
                 {
-                    return p_InvokeFunction(Function,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
-                        LispArgs[sizeof...(SuppliedArgTypes)]);
+                    return p_InvokeFunction(Function,Context,Offset+1,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
+                        LispArgs[Offset]);
+                }
+                else if constexpr(std::is_same_v<Evaluator,ArgType>)
+                {
+                    return p_InvokeFunction(Function,Context,Offset,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
+                        Context.GetEvaluator());
                 }
                 else if constexpr(IsRefType::value)
                 {
-                    return p_InvokeFunction(Function,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
-                        LispArgs[sizeof...(SuppliedArgTypes)].GetRef<ArgType>());
+                    return p_InvokeFunction(Function,Context,Offset+1,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
+                        LispArgs[Offset].GetRef<ArgType>());
                 }
                 else
                 {
-                    return p_InvokeFunction(Function,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
-                        LispArgs[sizeof...(SuppliedArgTypes)].GetType<ArgType>());
+                    return p_InvokeFunction(Function,Context,Offset+1,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
+                        LispArgs[Offset].GetType<ArgType>());
                 }
             }
         }
@@ -662,22 +669,22 @@ namespace MBLisp
         {
             if constexpr(std::is_same_v<ReturnType,void>)
             {
-                p_InvokeFunction(Func,Arguments);
+                p_InvokeFunction(Func,Context,0,Arguments);
                 return Value();
             }
             else if constexpr(std::is_same_v<ReturnType,Value> || Value::IsBuiltin<ReturnType>() || IsTemplateInstantiation<ReturnType,Ref>::value)
             {
-                return p_InvokeFunction(Func,Arguments);   
+                return p_InvokeFunction(Func,Context,0,Arguments);   
             }
             else
             {
                 if constexpr(!std::is_same_v<ReturnType,void>)
                 {
-                    return Value::EmplaceExternal<ReturnType>(p_InvokeFunction(Func,Arguments));
+                    return Value::EmplaceExternal<ReturnType>(p_InvokeFunction(Func,Context,0,Arguments));
                 }
                 else
                 {
-                    p_InvokeFunction(Func,Arguments);
+                    p_InvokeFunction(Func,Context,0,Arguments);
                     return Value();
                 }
             }
@@ -826,6 +833,7 @@ namespace MBLisp
         SymbolID GetSymbolID(std::string const& SymbolString);
         std::string GetSymbolString(SymbolID SymbolToConvert);
         Value GetValue(Scope& ScopeToInspect,std::string const& Name);
+        Value GetValue(std::string const& Name);
         //is this sussy or not...
         DebugState&  GetDebugState();
         Ref<Scope> GetModuleScope(std::string const& ModuleName);
@@ -840,7 +848,7 @@ namespace MBLisp
         //
         
         //Executors
-        void Eval(std::filesystem::path const& SourceFile);
+        Ref<Scope> Eval(std::filesystem::path const& SourceFile);
         Value Eval(Ref<Scope> AssociatedScope,Value Callable,FuncArgVector Arguments);
         //
     };

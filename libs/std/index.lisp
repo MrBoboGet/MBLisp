@@ -108,13 +108,13 @@
                   (cond (eq method-name 'constructor) (cond (eq constructor-sym 'empty) (progn (setl constructor-sym (gensym)) (set method-name constructor-sym)) (setl method-name constructor-sym)) null)
                   (append new-method method-name)
                   (append new-method (index current-list 1))
-                  (insert-at (index new-method 2) 0 'this)
+                  (insert-at (index new-method 2) 0 (list \this classname) )
                   (setl j 2)
                   (while (< j (len current-list))
                      (append new-method (index current-list j))
                      (incr j 1)
                   )
-                  (append new-method 'this)
+                  (cond (eq method-name constructor-sym) (append new-method 'this) null)
                   (append methods new-method)
               )
         )
@@ -507,7 +507,7 @@
         (setl current-elem (. list i))
         (if (< max-elem current-elem) (setl max-elem current-elem))
     )
-    current-elem
+    max-elem
 )
 (defgeneric min)
 
