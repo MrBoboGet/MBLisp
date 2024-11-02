@@ -155,9 +155,18 @@ public:
     class Scope;
     template<>
     inline void RefDestructor<Scope>(Scope& ScopeToDelete);
-    
+   
+
+
     template<typename T>
-    class RefContent_Specialised : public RefContent
+    class RefContent_Specialised_Base : public RefContent
+    {
+    public:
+        T* ContentRef = nullptr;
+    };
+
+    template<typename T>
+    class RefContent_Specialised : public RefContent_Specialised_Base<T>
     {
     public:
         T Content;
@@ -165,22 +174,38 @@ public:
         RefContent_Specialised(Args&&... Arguments)
             : Content(std::forward<Args>(Arguments)...)
         {
-               
+            RefContent_Specialised_Base<T>::ContentRef = &Content;
         }
         virtual ~RefContent_Specialised()
         {
             RefDestructor(Content);
         }
     };
+    template<typename T,typename V>
+    class RefContent_Specialised_Ptr : public RefContent_Specialised_Base<T>
+    {
+    public:
+        V Ref;
+        RefContent_Specialised_Ptr(T* Ptr,V OwningRef)
+            : Ref(std::move(OwningRef))
+        {
+            RefContent_Specialised_Base<T>::ContentRef = Ptr;
+        }
+        virtual ~RefContent_Specialised_Ptr()
+        {
+
+        }
+    };
+
     template<typename T>
     T& RefContent::GetContent()
     {
-        return static_cast<RefContent_Specialised<T>&>(*this).Content;
+        return *static_cast<RefContent_Specialised_Base<T>&>(*this).ContentRef;
     }
     template<typename T>
     T const& RefContent::GetContent() const
     {
-        return static_cast<RefContent_Specialised<T> const&>(*this).Content;
+        return *static_cast<RefContent_Specialised_Base<T> const&>(*this).Content;
     }
     class RefBase
     {
@@ -1006,6 +1031,12 @@ public:
             {
                 throw std::runtime_error("Error getting reference to type in value: type of \""+std::string(typeid(T).name())+"\" not stored");
             }
+            if(IsType<PolymorphicContainer>())
+            {
+                RefContent* NewContent = new RefContent_Specialised_Ptr<T,Value>(&GetType<T>(),*this);
+                NewContent->StoredClass = Value::GetTypeTypeID<T>();
+                return Ref<T>(NewContent);
+            }
             return Ref<T>(m_Data.GetType<RefBase>());
         } 
         template<typename T>
@@ -1016,8 +1047,30 @@ public:
             {
                 throw std::runtime_error("Error getting reference to type in value: type of \""+std::string(typeid(T).name())+"\" not stored");
             }
+            if(IsType<PolymorphicContainer>())
+            {
+                RefContent* NewContent = new RefContent_Specialised_Ptr<T,Value>(&GetType<T>(),*this);
+                NewContent->StoredClass = Value::GetTypeTypeID<T>();
+                return Ref<T>(NewContent);
+            }
             return Ref<T>(m_Data.GetType<RefBase>());
         } 
+
+        template<typename T>
+        std::shared_ptr<T> GetSharedPtr() 
+        {
+            if(!IsType<T>())
+            {
+                throw std::runtime_error("Invalid type dereference when creating shared_ptr for Value");
+            }
+            else if(IsValueType<T>())
+            {
+                throw std::runtime_error("Cannot create shared_ptr from value with a value type");
+            }
+            T* Ptr = &GetType<T>();
+            return std::shared_ptr<T>(Ptr,[RefOwner=*this](T* ){});
+        }
+
         template<typename T>
         T& GetType()
         {

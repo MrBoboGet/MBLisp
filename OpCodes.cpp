@@ -4,6 +4,8 @@
 
 
 #include "Value.h"
+
+#include <iostream>
 namespace MBLisp
 {
     OpCodeList::OpCodeList()
@@ -230,6 +232,7 @@ namespace MBLisp
                     {
                         if(!ListToConvert[1].IsType<Symbol>())
                         {
+                            std::cout<<ListToConvert[1].GetTypeID()<<std::endl;
                             throw std::runtime_error("set special form requires either a symbol or function-call as the first argument");
                         }
                         auto const& Sym = ListToConvert[1].GetType<Symbol>();

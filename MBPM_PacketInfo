@@ -3,5 +3,5 @@
     "PacketType":"C++",
 	"Attributes":[],
     "SubPackets":["/libs/std","/libs/json","/libs/lsp","/libs/testing","/libs/parsing","/libs/MBPerl"],
-    "Dependancies":["MBUtility","MBCC","MBSystem","MBUnicode","MBLSP"]
+    "Dependancies":["MBUtility","MBCC","MBSystem","MBUnicode","MBLSP","MBTUI"]
 }

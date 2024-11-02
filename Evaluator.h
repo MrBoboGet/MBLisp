@@ -490,6 +490,10 @@ namespace MBLisp
             {
                 Types.push_back(0);
             }
+            else if constexpr(std::is_same_v<Type,Evaluator>)
+            {
+                Types.push_back(0);
+            }
             else if constexpr(IsRefType::value)
             {
                 //Types.push_back(0);
@@ -821,8 +825,10 @@ namespace MBLisp
         SymbolID GenerateSymbol();
         SymbolID GetSymbolID(std::string const& SymbolString);
         std::string GetSymbolString(SymbolID SymbolToConvert);
+        Value GetValue(Scope& ScopeToInspect,std::string const& Name);
         //is this sussy or not...
         DebugState&  GetDebugState();
+        Ref<Scope> GetModuleScope(std::string const& ModuleName);
         //
 
 
@@ -830,6 +836,7 @@ namespace MBLisp
         void LoadStd();
         void Repl();
         void AddInternalModule(std::string const& Name,Ref<Scope> ModuleScope);
+
         //
         
         //Executors

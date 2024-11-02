@@ -27,6 +27,9 @@
 #include "Modules/LSP/LSPModule.h"
 #include "Modules/Text/TextModule.h"
 #include "Modules/IO/IO.h"
+#include "Modules/CLI/CLI.h"
+
+#include "Numerics.h"
 namespace MBLisp
 {
 
@@ -371,8 +374,7 @@ namespace MBLisp
         {
             std::vector<ClassID> TempClasses;
             std::swap(NewClasses,TempClasses);
-            std::merge(TempClasses.begin(),TempClasses.end(),Class->Types.begin(),Class->Types.end(),std::inserter(TempClasses,TempClasses.begin()));
-            std::swap(NewClasses,TempClasses);
+            std::merge(TempClasses.begin(),TempClasses.end(),Class->Types.begin(),Class->Types.end(),std::inserter(NewClasses,NewClasses.begin()));
 
             std::vector<SlotDefinition> TempSlots;
             std::swap(NewSlots,TempSlots);
@@ -1256,6 +1258,23 @@ namespace MBLisp
         }
         CurrentState.FrameTarget = -1;
         CurrentState.UnwindingStack = false;
+    }
+    Ref<Scope> Evaluator::GetModuleScope(std::string const& ModuleName)
+    {
+        Ref<Scope> ReturnValue;
+        if(auto It = m_BuiltinModules.find(ModuleName); It != m_BuiltinModules.end())
+        {
+            if(auto ScopeIt = m_LoadedModules.find(ModuleName); ScopeIt == m_LoadedModules.end())
+            {
+                m_LoadedModules[ModuleName] = It->second->GetModuleScope(*this);
+            }
+            ReturnValue = m_LoadedModules[ModuleName];
+        }
+        else
+        {
+            throw std::runtime_error("no internal module with name \""+ModuleName+"\"");   
+        }
+        return ReturnValue;
     }
     void Evaluator::AddInternalModule(std::string const& Name,Ref<Scope> ModuleScope)
     {
@@ -2465,6 +2484,16 @@ namespace MBLisp
     {
         return p_GetSymbolID(SymbolString);
     }
+    Value Evaluator::GetValue(Scope& ScopeToInspect,std::string const& Name)
+    {
+        auto ID = GetSymbolID(Name);
+        auto Result = ScopeToInspect.TryGet(ID);
+        if(Result == nullptr)
+        {
+            throw std::runtime_error("Error finding variable '"+Name+"' in environment");
+        }
+        return *Result;
+    }
     bool Evaluator::p_SymbolIsPrimitive(SymbolID IDToCompare)
     {
         return IDToCompare < m_PrimitiveSymbolMax;
@@ -2782,12 +2811,17 @@ namespace MBLisp
         AddMethod<ReadTable,String>("remove-character-expander",RemoveCharacterExpander);
 
 
+        AddNumericFunctions(*this);
+
+
         m_GlobalScope->SetVariable(p_GetSymbolID("is-repl"),false);
         m_GlobalScope->SetVariable(p_GetSymbolID("*standard-input*"),ConstructDynamicVariable(Value::MakeExternal(MBUtility::StreamReader(std::make_unique<MBLSP::TerminalInput>()))));
         m_GlobalScope->SetVariable(p_GetSymbolID("*standard-output*"),ConstructDynamicVariable(Value::EmplacePolymorphic<MBUtility::TerminalOutput,MBUtility::MBOctetOutputStream>()));
         m_GlobalScope->SetVariable(p_GetSymbolID("load-filepath"), ConstructDynamicVariable(std::string("")));
         m_GlobalScope->SetVariable(p_GetSymbolID("load-envir"), ConstructDynamicVariable(Scope()));
         m_GlobalScope->SetVariable(p_GetSymbolID("*READTABLE*"),ConstructDynamicVariable(Value::MakeExternal(ReadTable())));
+
+
     }
 
     Value Evaluator::Write_OutStream BUILTIN_ARGLIST
@@ -3004,24 +3038,14 @@ namespace MBLisp
     }
     Value Evaluator::GetInternalModule BUILTIN_ARGLIST
     {
-        Value ReturnValue;
+        Ref<Scope> ReturnValue;
         if(Arguments.size() != 1 || !Arguments[0].IsType<String>())
         {
             throw std::runtime_error("get-internal-module requires exactly 1 argument of type string");
         }
         String& AssociatedString = Arguments[0].GetType<String>();
-        if(auto It = Context.GetEvaluator().m_BuiltinModules.find(AssociatedString); It != Context.GetEvaluator().m_BuiltinModules.end())
-        {
-            if(auto ScopeIt = Context.GetEvaluator().m_LoadedModules.find(AssociatedString); ScopeIt == Context.GetEvaluator().m_LoadedModules.end())
-            {
-                Context.GetEvaluator().m_LoadedModules[AssociatedString] = It->second->GetModuleScope(Context.GetEvaluator());
-            }
-            ReturnValue = Value(Context.GetEvaluator().m_LoadedModules[AssociatedString]);
-        }
-        else
-        {
-            throw std::runtime_error("no internal module with name \""+AssociatedString+"\"");   
-        }
+
+        ReturnValue = Context.GetEvaluator().GetModuleScope(AssociatedString);
         return ReturnValue;
     }
     Value Evaluator::InternalModules BUILTIN_ARGLIST
@@ -3057,6 +3081,7 @@ namespace MBLisp
         m_BuiltinModules["debug"] = std::make_unique<DebugModule>();
         m_BuiltinModules["text"] = std::make_unique<TextModule>();
         m_BuiltinModules["io"] = std::make_unique<IOModule>();
+        m_BuiltinModules["cli"] = std::make_unique<CLIModule>();
     }
     Value Evaluator::Load BUILTIN_ARGLIST
     {

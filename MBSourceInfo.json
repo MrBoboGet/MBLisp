@@ -4,6 +4,7 @@
         "MBUtility",
         "MBSystem",
         "MBUnicode",
+        "MBTUI",
         "MBCC",
         "MBLSP"
     ],
@@ -22,13 +23,15 @@
             [
                 "/Evaluator.cpp",
                 "/Value.cpp",
+                "/Numerics.cpp",
                 "/OpCodes.cpp",
                 "/MBLisp_CLIMain.cpp",
                 "/Threading.cpp",
                 "/DebugInternals.cpp",
                 "/Modules/LSP/LSPModule.cpp",
                 "/Modules/IO/IO.cpp",
-                "/Modules/Text/TextModule.cpp"
+                "/Modules/Text/TextModule.cpp",
+                "/Modules/CLI/CLI.cpp"
             ],
             "TargetType": "Executable"
         },
@@ -39,12 +42,14 @@
             [
                 "/Evaluator.cpp",
                 "/Value.cpp",
+                "/Numerics.cpp",
                 "/OpCodes.cpp",
                 "/Threading.cpp",
                 "/DebugInternals.cpp",
                 "/Modules/LSP/LSPModule.cpp",
                 "/Modules/IO/IO.cpp",
-                "/Modules/Text/TextModule.cpp"
+                "/Modules/Text/TextModule.cpp",
+                "/Modules/CLI/CLI.cpp"
             ],
             "TargetType": "Library"
         }
