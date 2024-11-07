@@ -1234,6 +1234,8 @@ public:
         std::vector<std::vector<ClassID>> m_CallablesOverrides;
         std::vector<std::vector<std::pair<ClassID,size_t>>> m_Specifications;
 
+        bool m_EmptyInitialised = false;
+        Value m_EmptyCallable;
 
         //TODO improve, inefficient
         bool p_TypesAreSatisifed(std::vector<ClassID> const& Overrides,Value const* Begin, Value const* End);

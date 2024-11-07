@@ -1,6 +1,5 @@
 #include "../../Module.h"
 #include <MBCLI/Window.h>
-#include <MBTUI/Stacker.h>
 namespace MBLisp
 {
 
@@ -119,6 +118,12 @@ namespace MBLisp
         static Int p_HeightDims(MBCLI::Dimensions Dims);
 
         static MBCLI::Dimensions p_PreferedDims(MBCLI::Window& Window,MBCLI::Dimensions SuggestedDims);
+
+
+        static Value p_Terminal();
+        static MBCLI::ConsoleInput p_GetInput(MBCLI::MBTerminal& Terminal);
+        static void p_WriteWindowBuiltin(MBCLI::MBTerminal& Terminal,MBCLI::Window& Window);
+        static void p_WriteWindow(Evaluator& CurrentEvaluator,MBCLI::MBTerminal& Terminal,Value Window);
 
 
         static Value p_Stacker(Evaluator& Evaluator,Dict& Attributes,List& Children);

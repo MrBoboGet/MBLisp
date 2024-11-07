@@ -1299,6 +1299,15 @@ namespace MBLisp
         }
         m_BuiltinModules[Name] = std::make_unique<ScopeModule>(ModuleScope);
     }
+    void Evaluator::SetArgv(std::vector<std::string> const& Argv)
+    {
+        List NewValue;
+        for(auto const& Arg : Argv)
+        {
+            NewValue.push_back(Arg);
+        }
+        m_GlobalScope->SetVariable(p_GetSymbolID("argv"),std::move(NewValue));
+    }
     void Evaluator::p_EmitSignal(ExecutionState& CurrentState,Value SignalValue,bool ForceUnwind)
     {
         //the signal form returns a value in the current frame, which
@@ -1702,7 +1711,22 @@ namespace MBLisp
                 {
                     LiteralToPush = Value(LiteralToPush.GetType<String>());
                 }
-                 CurrentFrame.ArgumentStack.push_back(LiteralToPush);
+                else if(LiteralToPush.IsType<DynamicVariable>())
+                {
+                    DynamicVariable& AssociatedVariable = LiteralToPush.GetType<DynamicVariable>();
+                    Value NewValue;
+                    if(auto It = CurrentState.DynamicBindings.find(AssociatedVariable.ID); It != CurrentState.DynamicBindings.end()
+                            && It->second.size() != 0)
+                    {
+                        NewValue = It->second.back();
+                    }
+                    else
+                    {
+                        NewValue = AssociatedVariable.DefaultValue;
+                    }
+                    LiteralToPush = NewValue;
+                }
+                CurrentFrame.ArgumentStack.push_back(LiteralToPush);
             }
             else if(CurrentCode.IsType<OpCode_Goto>())
             {
@@ -2839,7 +2863,7 @@ namespace MBLisp
         m_GlobalScope->SetVariable(p_GetSymbolID("load-filepath"), ConstructDynamicVariable(std::string("")));
         m_GlobalScope->SetVariable(p_GetSymbolID("load-envir"), ConstructDynamicVariable(Scope()));
         m_GlobalScope->SetVariable(p_GetSymbolID("*READTABLE*"),ConstructDynamicVariable(Value::MakeExternal(ReadTable())));
-
+        m_GlobalScope->SetVariable(p_GetSymbolID("argv"),List());
 
     }
 

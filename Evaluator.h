@@ -844,7 +844,7 @@ namespace MBLisp
         void LoadStd();
         void Repl();
         void AddInternalModule(std::string const& Name,Ref<Scope> ModuleScope);
-
+        void SetArgv(std::vector<std::string> const& Argv);
         //
         
         //Executors

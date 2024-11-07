@@ -543,4 +543,7 @@
     )
     return-value
 )
+(defmacro get-dynamic (sym)
+    `(index (environment) (quote ,sym))
+)
 (load (plus (parent-path load-filepath) "/macros.lisp") true)

@@ -212,6 +212,12 @@ namespace MBLisp
     //}
     void GenericFunction::AddMethod(std::vector<ClassID> OverridenTypes,Value Callable)
     {
+        if(OverridenTypes.size() == 0)
+        {
+            m_EmptyCallable = Callable;   
+            m_EmptyInitialised = true;
+            return;
+        }
         size_t NewIndex = m_Callables.size(); 
         m_Callables.push_back(Callable);
         for(int i = 0; i < OverridenTypes.size();i++)
@@ -280,6 +286,14 @@ namespace MBLisp
     Value* GenericFunction::GetMethod(Value* Begin,Value* End)
     {
         Value* ReturnValue = nullptr;
+        if(End-Begin == 0)
+        {
+            if(!m_EmptyInitialised)
+            {
+                return nullptr;
+            }
+            return &m_EmptyCallable;
+        }
         if(m_Specifications.size() == 0)
         {
             return ReturnValue;   

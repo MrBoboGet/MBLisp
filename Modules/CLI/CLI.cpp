@@ -1,6 +1,9 @@
 #include "CLI.h"
 #include "../../Evaluator.h"
 
+#include <MBTUI/MBTUI.h>
+#include <MBTUI/Stacker.h>
+
 namespace MBLisp
 {
     LispWindow::LispWindow(std::shared_ptr<Evaluator> Evaluator,Value Val)
@@ -141,16 +144,31 @@ namespace MBLisp
         }
         return ReturnValue;
     }
+    Value CLIModule::p_Repl(Evaluator& Evaluator,Dict& Attributes,List& Children)
+    {
+        auto ReturnValue = Value::EmplacePolymorphic<MBTUI::REPL,MBCLI::Window>();
+        return ReturnValue;
+    }
     MBCLI::Dimensions CLIModule::p_PreferedDims(MBCLI::Window& Window,MBCLI::Dimensions SuggestedDims)
     {
         return Window.PreferedDimensions(SuggestedDims);
     }
-    Value CLIModule::p_Repl(Evaluator& Evaluator,Dict& Attributes,List& Children)
+    void CLIModule::p_WriteWindowBuiltin(MBCLI::MBTerminal& Terminal,MBCLI::Window& Window)
     {
-        Value ReturnValue;
-
-
-        return ReturnValue;
+        Terminal.WriteWindow(Window);
+    }
+    void CLIModule::p_WriteWindow(Evaluator& CurrentEvaluator,MBCLI::MBTerminal& Terminal,Value Window)
+    {
+        LispWindow WindowAdapter(CurrentEvaluator.shared_from_this(),Window);
+        Terminal.WriteWindow(WindowAdapter);
+    }
+    Value CLIModule::p_Terminal()
+    {
+        return Value::EmplaceExternal<MBCLI::MBTerminal>();
+    }
+    MBCLI::ConsoleInput CLIModule::p_GetInput(MBCLI::MBTerminal& Terminal)
+    {
+        return Terminal.ReadNextInput();
     }
     MBCLI::CursorInfo CLIModule::CursorInfoPos(Int X,Int Y)
     {
@@ -203,6 +221,13 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<p_HeightDims>(ReturnValue,"height");
 
         AssociatedEvaluator.AddGeneric<p_Stacker>(ReturnValue,"stacker");
+        AssociatedEvaluator.AddGeneric<p_Repl>(ReturnValue,"repl");
+
+        AssociatedEvaluator.AddGeneric<p_Terminal>(ReturnValue,"terminal");
+        AssociatedEvaluator.AddGeneric<p_GetInput>(ReturnValue,"get-input");
+        AssociatedEvaluator.AddGeneric<p_WriteWindow>(ReturnValue,"write-window");
+        AssociatedEvaluator.AddGeneric<p_WriteWindowBuiltin>(ReturnValue,"write-window");
+
         return ReturnValue;
     }
 }

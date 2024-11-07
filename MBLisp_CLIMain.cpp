@@ -13,6 +13,12 @@ int main(int argc,const char** argv)
             Evaluator->Repl();
         }
         std::string FileContent = argv[1];
+        std::vector<std::string> LispArgv;
+        for(int i = 2; i < argc; i++)
+        {
+            LispArgv.push_back(argv[i]);   
+        }
+        Evaluator->SetArgv(LispArgv);
         Evaluator->LoadStd();
         Evaluator->Eval(FileContent);
     }
