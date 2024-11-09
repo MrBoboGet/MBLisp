@@ -148,9 +148,27 @@ namespace MBLisp
         }
         return ReturnValue;
     }
+    void CLIModule::p_AddChildStacker(MBTUI::Stacker& Stacker,Ref<MBCLI::Window> Child)
+    {
+        Stacker.AddElement(MBUtility::SmartPtr<MBCLI::Window>(Child.GetSharedPtr()));
+    }
+    void CLIModule::p_AddValueChildStacker(Evaluator& Eval,MBTUI::Stacker& Stacker,Value Child)
+    {
+        Stacker.AddElement(std::unique_ptr<MBCLI::Window>(std::make_unique<LispWindow>(Eval.shared_from_this(),Child)));
+    }
     Value CLIModule::p_Repl(Evaluator& Evaluator,Dict& Attributes,List& Children)
     {
         auto ReturnValue = Value::EmplacePolymorphic<MBTUI::REPL,MBCLI::Window>();
+        auto EnterFuncIt = Attributes.find(String("onenter"));
+        if(EnterFuncIt != Attributes.end())
+        {
+            MBUtility::MOFunction<void(std::string const&)> EnterFunc = 
+                [Evaluator=Evaluator.shared_from_this(),Func = EnterFuncIt->second](std::string const& Line)
+                {
+                    Evaluator->Eval(Func,{Line});
+                };
+            ReturnValue.GetType<MBTUI::REPL>().SetOnEnterFunc(std::move(EnterFunc));
+        }
         return ReturnValue;
     }
     MBCLI::Dimensions CLIModule::p_PreferedDims(MBCLI::Window& Window,MBCLI::Dimensions SuggestedDims)
@@ -240,6 +258,8 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<p_HeightDims>(ReturnValue,"height");
 
         AssociatedEvaluator.AddGeneric<p_Stacker>(ReturnValue,"stacker");
+        AssociatedEvaluator.AddGeneric<p_AddValueChildStacker>(ReturnValue,"add-child");
+        AssociatedEvaluator.AddGeneric<p_AddChildStacker>(ReturnValue,"add-child");
         AssociatedEvaluator.AddGeneric<p_Repl>(ReturnValue,"repl");
 
         AssociatedEvaluator.AddGeneric<p_Terminal>(ReturnValue,"terminal");

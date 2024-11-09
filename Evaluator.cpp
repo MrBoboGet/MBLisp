@@ -1225,6 +1225,11 @@ namespace MBLisp
     {
         return std::shared_ptr<Evaluator>(new Evaluator());
     }
+    Value Evaluator::Eval(Value Callable,FuncArgVector Arguments)
+    {
+        Ref<Scope> AssociatedScope = CreateDefaultScope();
+        return Eval(std::move(AssociatedScope),std::move(Callable),std::move(Arguments));
+    }
     Value Evaluator::Eval(Ref<Scope> AssociatedScope,Value Callable,FuncArgVector Arguments)
     {
         ExecutionState& CurrentState = p_GetThreadExecutionState();   

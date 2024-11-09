@@ -654,7 +654,7 @@ namespace MBLisp
                 else if constexpr(IsRefType::value)
                 {
                     return p_InvokeFunction(Function,Context,Offset+1,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
-                        LispArgs[Offset].GetRef<ArgType>());
+                        LispArgs[Offset].GetRef<typename IsRefType::type>());
                 }
                 else
                 {
@@ -850,6 +850,7 @@ namespace MBLisp
         //Executors
         Ref<Scope> Eval(std::filesystem::path const& SourceFile);
         Value Eval(Ref<Scope> AssociatedScope,Value Callable,FuncArgVector Arguments);
+        Value Eval(Value Callable,FuncArgVector Arguments);
         //
     };
 }

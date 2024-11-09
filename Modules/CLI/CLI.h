@@ -1,5 +1,6 @@
 #include "../../Module.h"
 #include <MBCLI/Window.h>
+#include <MBTUI/Stacker.h>
 namespace MBLisp
 {
 
@@ -131,7 +132,13 @@ namespace MBLisp
 
 
         static Value p_Stacker(Evaluator& Evaluator,Dict& Attributes,List& Children);
+        static void p_AddChildStacker(MBTUI::Stacker& Stacker,Ref<MBCLI::Window> Child);
+        static void p_AddValueChildStacker(Evaluator& Eval,MBTUI::Stacker& Stacker,Value Child);
+
+
+
         static Value p_Repl(Evaluator& Evaluator,Dict& Attributes,List& Children);
+
     public:
         virtual MBLisp::Ref<MBLisp::Scope> GetModuleScope(MBLisp::Evaluator& AssociatedEvaluator);
     };

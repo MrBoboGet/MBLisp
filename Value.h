@@ -357,6 +357,11 @@ public:
         Ref()
         {
         }
+        std::shared_ptr<T> GetSharedPtr() 
+        {
+            T* Ptr = &*(*this);
+            return std::shared_ptr<T>(Ptr,[RefOwner=*this](T* ){});
+        }
         //template<typename... Args>
         //Ref(Args&&... Arguments)
         //{
