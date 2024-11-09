@@ -109,6 +109,7 @@ namespace MBLisp
         static Temporary<MBCLI::BufferView> p_SubView(Temporary<MBCLI::BufferView>& View,Int RowOffset,Int ColumnOffset);
         static Temporary<MBCLI::BufferView> p_SubViewHeightWidth(Temporary<MBCLI::BufferView>& View,Int RowOffset,Int ColumnOffset,Int Width,Int Height);
         static void p_Clear(Temporary<MBCLI::BufferView>& View);
+        static void p_ClearTerm(MBCLI::MBTerminal& Term);
 
         static Int p_Width(Temporary<MBCLI::BufferView>& View);
         static Int p_Height(Temporary<MBCLI::BufferView>& View);
@@ -124,6 +125,9 @@ namespace MBLisp
         static MBCLI::ConsoleInput p_GetInput(MBCLI::MBTerminal& Terminal);
         static void p_WriteWindowBuiltin(MBCLI::MBTerminal& Terminal,MBCLI::Window& Window);
         static void p_WriteWindow(Evaluator& CurrentEvaluator,MBCLI::MBTerminal& Terminal,Value Window);
+        static MBCLI::Dimensions p_TermDims(MBCLI::MBTerminal& Terminal);
+        static Int p_HeightTerm(MBCLI::MBTerminal& Terminal);
+        static Int p_WidthTerm(MBCLI::MBTerminal& Terminal);
 
 
         static Value p_Stacker(Evaluator& Evaluator,Dict& Attributes,List& Children);

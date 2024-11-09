@@ -29,6 +29,18 @@ namespace MBLisp
         }
         Value Literal;
     };
+    struct OpCode_PushLambda
+    {
+        OpCode_PushLambda()
+        {
+                
+        }
+        OpCode_PushLambda(Lambda LiteralToUse)
+        {
+            Literal = LiteralToUse;
+        }
+        Lambda Literal;
+    };
     struct OpCode_Set
     {
         int_least32_t LocalSetIndex = -1;
@@ -187,7 +199,8 @@ namespace MBLisp
             //let stuff
             OpCode_PushBindings,
             OpCode_PopBindings,
-            OpCode_Eval
+            OpCode_Eval,
+            OpCode_PushLambda
                 > m_Data;
     public:
         OpCode() = default;

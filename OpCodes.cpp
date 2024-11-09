@@ -215,7 +215,7 @@ namespace MBLisp
                     NewLambda.Definition->Instructions = MakeRef<OpCodeList>(ListToConvert,2,*NewLambda.Definition,CurrentState);
                     std::sort(NewLambda.Definition->LocalVars.begin(),NewLambda.Definition->LocalVars.end());
 
-                    OpCode_PushLiteral NewCode;
+                    OpCode_PushLambda NewCode;
                     NewCode.Literal = std::move(NewLambda);
                     ListToAppend.push_back(std::move(NewCode));
                 }

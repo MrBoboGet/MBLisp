@@ -95,6 +95,10 @@ namespace MBLisp
     {
         View.Get().Clear();
     }
+    void CLIModule::p_ClearTerm(MBCLI::MBTerminal& Term)
+    {
+        Term.Clear();
+    }
     Temporary<MBCLI::BufferView> CLIModule::p_SubView(Temporary<MBCLI::BufferView>& View,Int RowOffset,Int ColumnOffset)
     {
         return View.CreateRelated(View.Get().SubView(RowOffset,ColumnOffset));
@@ -162,6 +166,21 @@ namespace MBLisp
         LispWindow WindowAdapter(CurrentEvaluator.shared_from_this(),Window);
         Terminal.WriteWindow(WindowAdapter);
     }
+    MBCLI::Dimensions CLIModule::p_TermDims(MBCLI::MBTerminal& Terminal)
+    {
+        auto Info = Terminal.GetTerminalInfo();
+        return MBCLI::Dimensions(Info.Width,Info.Height);
+    }
+    Int CLIModule::p_HeightTerm(MBCLI::MBTerminal& Terminal)
+    {
+        auto Info = Terminal.GetTerminalInfo();
+        return Info.Height;
+    }
+    Int CLIModule::p_WidthTerm(MBCLI::MBTerminal& Terminal)
+    {
+        auto Info = Terminal.GetTerminalInfo();
+        return Info.Width;
+    }
     Value CLIModule::p_Terminal()
     {
         return Value::EmplaceExternal<MBCLI::MBTerminal>();
@@ -227,6 +246,12 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<p_GetInput>(ReturnValue,"get-input");
         AssociatedEvaluator.AddGeneric<p_WriteWindow>(ReturnValue,"write-window");
         AssociatedEvaluator.AddGeneric<p_WriteWindowBuiltin>(ReturnValue,"write-window");
+        AssociatedEvaluator.AddGeneric<p_TermDims>(ReturnValue,"dims");
+        AssociatedEvaluator.AddGeneric<p_HeightTerm>(ReturnValue,"height");
+        AssociatedEvaluator.AddGeneric<p_WidthTerm>(ReturnValue,"width");
+
+        AssociatedEvaluator.AddGeneric<p_Clear>("clear");
+        AssociatedEvaluator.AddGeneric<p_ClearTerm>("clear");
 
         return ReturnValue;
     }

@@ -238,6 +238,16 @@ namespace MBLisp
         }
         return ReturnValue;
     }
+    String TextModule::Trim(String const& Input)
+    {
+        String ReturnValue;
+        size_t Offset = 0;
+        MBParsing::SkipWhitespace(Input.data(),Input.size(),Offset,&Offset);
+        size_t EndOffset = Input.find_last_not_of("\n\t \r");
+        EndOffset = EndOffset == Input.npos ? Input.size() : EndOffset+1;
+        ReturnValue.append(Input.data()+Offset,Input.data()+EndOffset);
+        return ReturnValue;
+    }
     std::regex TextModule::Regex(std::string const& regex)
     {
         std::regex ReturnValue = std::regex(regex,std::regex_constants::ECMAScript);
@@ -306,6 +316,8 @@ namespace MBLisp
         AssociatedEvaluator.AddObjectMethod<&StreamTokenizer::SetStream>(ReturnValue,"set-stream");
         AssociatedEvaluator.AddObjectMethod<&StreamTokenizer::Peek>(ReturnValue,"peek");
         AssociatedEvaluator.AddObjectMethod<&StreamTokenizer::ConsumeToken>(ReturnValue,"consume-token");
+
+        AssociatedEvaluator.AddGeneric<Trim>(ReturnValue,"trim");
         
         constexpr bool IsRef = IsTemplateInstantiation<Ref<MBUtility::StreamReader>,Ref>::value;
         return ReturnValue;

@@ -1700,14 +1700,7 @@ namespace MBLisp
                 OpCode_PushLiteral& PushCode = CurrentCode.GetType<OpCode_PushLiteral>();
                 //copy the literal
                 Value LiteralToPush = PushCode.Literal;
-                if(LiteralToPush.IsType<Lambda>())
-                {
-                    Ref<Lambda> NewLambda = MakeRef<Lambda>(LiteralToPush.GetType<Lambda>());
-                    NewLambda->AssociatedScope = CurrentFrame.StackScope;
-                    LiteralToPush = Value(NewLambda);
-                    CurrentFrame.ScopeRetrieved = true;
-                }
-                else if(LiteralToPush.IsType<String>())
+                if(LiteralToPush.IsType<String>())
                 {
                     LiteralToPush = Value(LiteralToPush.GetType<String>());
                 }
@@ -1727,6 +1720,14 @@ namespace MBLisp
                     LiteralToPush = NewValue;
                 }
                 CurrentFrame.ArgumentStack.push_back(LiteralToPush);
+            }
+            else if(CurrentCode.IsType<OpCode_PushLambda>())
+            {
+                OpCode_PushLambda& PushCode = CurrentCode.GetType<OpCode_PushLambda>();
+                Ref<Lambda> NewLambda = MakeRef<Lambda>(PushCode.Literal);
+                NewLambda->AssociatedScope = CurrentFrame.StackScope;
+                CurrentFrame.ScopeRetrieved = true;
+                CurrentFrame.ArgumentStack.push_back(NewLambda);
             }
             else if(CurrentCode.IsType<OpCode_Goto>())
             {
