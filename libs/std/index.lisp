@@ -349,10 +349,17 @@
 )
 
 
+(defmacro get-dynamic (sym)
+    `(index (environment) (quote ,sym))
+)
 (defmacro let (bindings &rest body)
     (set triplets (list))
     (doit pair bindings
-        (append triplets `( (environment) (quote ,(index pair 0)) ,(index pair 1)))
+        (if (eq (type (index pair 0)) symbol_t)
+            (append triplets `( (get-dynamic ,(index pair 0)) ,(index pair 1)))
+          else
+            (append triplets `( ,(index pair 0) ,(index pair 1)))
+        )
     )
     `(bind-dynamic ( ,@ triplets )  (progn ,@body))
 )
@@ -542,8 +549,5 @@
         (if (not (eq (. lhs i) (. rhs i))) (return false))
     )
     return-value
-)
-(defmacro get-dynamic (sym)
-    `(index (environment) (quote ,sym))
 )
 (load (plus (parent-path load-filepath) "/macros.lisp") true)

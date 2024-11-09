@@ -2003,48 +2003,34 @@ namespace MBLisp
                 OpCode_PushBindings const& PushBindings = CurrentCode.GetType<OpCode_PushBindings>();
                 assert(CurrentFrame.ArgumentStack.size() >= PushBindings.BindCount);
                 std::vector<Value> Arguments;
-                Arguments.insert(Arguments.end(),std::make_move_iterator(CurrentFrame.ArgumentStack.end()-PushBindings.BindCount*3),
+                Arguments.insert(Arguments.end(),std::make_move_iterator(CurrentFrame.ArgumentStack.end()-PushBindings.BindCount*2),
                     std::make_move_iterator(CurrentFrame.ArgumentStack.end()));
-                CurrentFrame.ArgumentStack.resize(CurrentFrame.ArgumentStack.size()-PushBindings.BindCount*3);
+                CurrentFrame.ArgumentStack.resize(CurrentFrame.ArgumentStack.size()-PushBindings.BindCount*2);
                 std::vector<DynamicVarID> ModifiedBindings;
                 std::vector<Value> NewValues;
+                bool ValidBindings = true;
                 for(int i = 0; i < PushBindings.BindCount;i++)
                 {
-                    if(!Arguments[i*3].IsType<Scope>())
+                    if(!Arguments[i*2].IsType<DynamicVariable>())
                     {
                         //throw std::runtime_error("first part of binding triplet has to be a scope");
-                        p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,"first part of binding triplet has to be a scope"),true);
-                        continue;
+                        p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,
+                                    "first part of binding pair has to be a dynamic variable"),true);
+                        ValidBindings = false;
+                        break;
                     }   
-                    Scope& ScopeToModify = Arguments[i*3].GetType<Scope>();
-                    if(!Arguments[i*3+1].IsType<Symbol>())
-                    {
-                        //throw std::runtime_error("second part of binding triplet has to be a symbol");
-                        p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,"second part of binding triplet has to be a symbol"),true);
-                        continue;
-                    }   
-                    SymbolID IDToModify = Arguments[i*3+1].GetType<Symbol>().ID;
-                    Value* VariableToInspect = ScopeToModify.TryGet(IDToModify);
-                    if(VariableToInspect == nullptr)
-                    {
-                        //throw std::runtime_error("couldn't find dynamic variable  in scope");
-                        p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,"couldn't find dynamic variable in scope"),true);
-                        continue;
-                    }
-                    if(!VariableToInspect->IsType<DynamicVariable>())
-                    {
-                        //throw std::runtime_error("variable was not a dynamic variable");
-                        p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,"variable was not a dynamic variable"),true);
-                        continue;
-                    }
-                    ModifiedBindings.push_back(VariableToInspect->GetType<DynamicVariable>().ID);
-                    NewValues.push_back(std::move(Arguments[i*3+2]));
+                    DynamicVariable& VariableToModify = Arguments[i*2].GetType<DynamicVariable>();
+                    ModifiedBindings.push_back(VariableToModify.ID);
+                    NewValues.push_back(std::move(Arguments[i*2+1]));
                 }
-                for(int i = 0; i < ModifiedBindings.size();i++)
+                if(ValidBindings)
                 {
-                    CurrentState.DynamicBindings[ModifiedBindings[i]].push_back(std::move(NewValues[i]));
+                    for(int i = 0; i < ModifiedBindings.size();i++)
+                    {
+                        CurrentState.DynamicBindings[ModifiedBindings[i]].push_back(std::move(NewValues[i]));
+                    }
+                    CurrentState.BindingStack.push_back(std::move(ModifiedBindings));
                 }
-                CurrentState.BindingStack.push_back(std::move(ModifiedBindings));
             }
             else if(CurrentCode.IsType<OpCode_PopBindings>())
             {
@@ -2699,6 +2685,7 @@ namespace MBLisp
         p_RegisterBuiltinClass<ThreadHandle>("thread_t");
         p_RegisterBuiltinClass<Scope>("envir_t");
         p_RegisterBuiltinClass<LispStackFrame>("stackframe_t");
+        p_RegisterBuiltinClass<DynamicVariable>("dynamic_t");
         p_RegisterBuiltinClass<Function,FunctionObject>();
         p_RegisterBuiltinClass<MBUtility::StreamReader>("in-stream_t");
         

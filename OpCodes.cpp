@@ -448,17 +448,17 @@ namespace MBLisp
                 {
                     if(ListToConvert.size() != 3)
                     {
-                        throw std::runtime_error("bind-dynamic requires exactly 2 arguments: list of binding triplets, form to execute in new binding");
+                        throw std::runtime_error("bind-dynamic requires exactly 2 arguments: list of binding pairs, form to execute in new binding");
                     }
                     if(!ListToConvert[1].IsType<List>())
                     {
-                        throw std::runtime_error("second argument to bind-dynamic has to be a list of binding triplets");
+                        throw std::runtime_error("second argument to bind-dynamic has to be a list of binding pairs");
                     }
                     for(auto const& Triplet : ListToConvert[1].GetType<List>())
                     {
-                        if(!Triplet.IsType<List>() || Triplet.GetType<List>().size() != 3)
+                        if(!Triplet.IsType<List>() || Triplet.GetType<List>().size() != 2)
                         {
-                            throw std::runtime_error("second argument to bind-dynamic has to be a list of binding triplets");   
+                            throw std::runtime_error("second argument to bind-dynamic has to be a list of binding pairs");   
                         }
                         for(auto const& TripletValue : Triplet.GetType<List>())
                         {
