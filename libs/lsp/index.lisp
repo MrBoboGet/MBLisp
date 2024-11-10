@@ -280,6 +280,7 @@
 
 
 (defun handle-form (envir ast tokens jumps diagnostics)
+   (setl extra-ast-forms (list))
    (catch-signals
     (
       (insert-elements tokens (extract-macros envir ast tokens jumps diagnostics))
@@ -289,6 +290,9 @@
       )
       (insert-elements tokens (default-extractor envir ast))
       (insert-elements diagnostics (get-diagnostics envir ast))
+      (doit form extra-ast-forms
+        (insert-elements tokens (default-extractor envir form))
+      )
     )
     catch (symbol-location loc)
     (
@@ -297,6 +301,11 @@
     catch (semantic-token new-token)
     (
        (append tokens (slot new-token content))
+       "ligma"
+    )
+    catch (extra-ast new-ast)
+    (
+       (append extra-ast-forms :ast new-ast)
        "ligma"
     )
     catch (any_t e)
@@ -350,6 +359,7 @@
   (setl delayed-forms (list))
   (setl diagnostics (list))
   (set-current-scope new-envir)
+  (setl extra-ast-values (list))
   (let ((load-filepath uri))
       (catch-signals
         (
@@ -363,6 +373,9 @@
                             (handle-form new-envir new-term semantic-tokens jump-symbols diagnostics)
                      )
               )
+              (doit ast extra-ast-values
+                  (insert-elements semantic-tokens (default-extractor new-envir ast))
+              )
         )    
         catch (symbol-location loc)
         (
@@ -371,6 +384,11 @@
         catch (semantic-token new-token)
         (
            (append semantic-tokens (slot new-token content))
+           "ligma"
+        )
+        catch (extra-ast new-token)
+        (
+           (append extra-ast-values :ast new-token)
            "ligma"
         )
         catch (any_t e)

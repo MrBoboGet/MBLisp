@@ -4,6 +4,14 @@
         (set (slot this symbols) (list source dest)) 
     )
 )
+
+(defclass extra-ast ()
+    (ast null)
+    (constructor (value)
+        (set :ast this value)
+    )
+)
+
 (defclass semantic-token ()
     (content null)
     (constructor (token token-type) 

@@ -410,7 +410,6 @@
         ,temp-sym
      )
 )
-(load (plus (parent-path load-filepath) "/import.lisp") true)
 
 (defun leq (lhs rhs)
     (|| (< lhs rhs) (eq lhs rhs))
@@ -488,17 +487,34 @@
 )
 (add-reader-character *READTABLE* "#" comment-reader)
 
+(set current-stream (dynamic null))
 (defun stream-reader (stream &envir envir)
     (setl return-value null)
     (setl sym (read-symbol stream))
     (if (in sym envir)
         (setl reader (index envir sym))
-        (setl return-value (reader stream))
+        (let ((current-stream stream))
+            (setl return-value (reader stream))
+        )
      else
         (error "stream-reader needs a symbol taking a callable as the first argument")
     )
     return-value
 )
+
+(defmethod make-sym ((lhs string_t))
+    (if (not (eq current-stream null))
+        (return (symbol (symbol lhs) (minus (position current-stream) (len lhs)) (path-id load-filepath)))
+    )
+    (symbol lhs)
+)
+(defmethod make-sym ((lhs symbol_t))
+    (if (not (eq current-stream null))
+        (return (symbol lhs (position current-stream) (path-id load-filepath)))
+    )
+    lhs
+)
+
 (add-reader-character *READTABLE* "@" stream-reader)
 
 
@@ -550,4 +566,6 @@
     )
     return-value
 )
+
+(load (plus (parent-path load-filepath) "/import.lisp") true)
 (load (plus (parent-path load-filepath) "/macros.lisp") true)
