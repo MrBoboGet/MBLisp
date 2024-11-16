@@ -6,7 +6,8 @@
         "MBUnicode",
         "MBTUI",
         "MBCC",
-        "MBLSP"
+        "MBLSP",
+        "MrBoboDatabase"
     ],
     "ExtraIncludes": 
     [
@@ -31,7 +32,8 @@
                 "/Modules/LSP/LSPModule.cpp",
                 "/Modules/IO/IO.cpp",
                 "/Modules/Text/TextModule.cpp",
-                "/Modules/CLI/CLI.cpp"
+                "/Modules/CLI/CLI.cpp",
+                "/Modules/DB/DB.cpp"
             ],
             "TargetType": "Executable"
         },
@@ -49,7 +51,8 @@
                 "/Modules/LSP/LSPModule.cpp",
                 "/Modules/IO/IO.cpp",
                 "/Modules/Text/TextModule.cpp",
-                "/Modules/CLI/CLI.cpp"
+                "/Modules/CLI/CLI.cpp",
+                "/Modules/DB/DB.cpp"
             ],
             "TargetType": "Library"
         }

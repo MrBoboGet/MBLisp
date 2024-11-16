@@ -28,6 +28,7 @@
 #include "Modules/Text/TextModule.h"
 #include "Modules/IO/IO.h"
 #include "Modules/CLI/CLI.h"
+#include "Modules/DB/DB.h"
 
 #include "Numerics.h"
 namespace MBLisp
@@ -3118,6 +3119,7 @@ namespace MBLisp
         m_BuiltinModules["text"] = std::make_unique<TextModule>();
         m_BuiltinModules["io"] = std::make_unique<IOModule>();
         m_BuiltinModules["cli"] = std::make_unique<CLIModule>();
+        m_BuiltinModules["db"] = std::make_unique<DBModule>();
     }
     Value Evaluator::Load BUILTIN_ARGLIST
     {

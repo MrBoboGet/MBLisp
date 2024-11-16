@@ -1,3 +1,4 @@
+#pragma  once
 #include "../../Module.h"
 #include <MBCLI/Window.h>
 #include <MBTUI/Stacker.h>
