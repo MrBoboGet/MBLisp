@@ -74,6 +74,7 @@ namespace MBLisp
     };
     class LispWindow : public MBCLI::Window
     {
+    protected:
         MBLisp::Value m_Value;
         std::shared_ptr<MBLisp::Evaluator> m_Evaluator;
         MBLisp::Ref<MBLisp::Scope> m_ModuleScope;

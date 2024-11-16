@@ -1182,10 +1182,19 @@ public:
             return *this;
         }
     };
+
     template<typename T,typename... Args>
     Ref<T> MakeRef(Args&&... Arguments)
     {
         RefContent* NewContent =  new RefContent_Specialised<T>(std::forward<Args>(Arguments)...);
+        NewContent->StoredClass = Value::GetTypeTypeID<T>();
+        return Ref<T>(NewContent);
+    }
+
+    template<typename T>
+    Ref<T> FromShared(std::shared_ptr<T> Ptr)
+    {
+        RefContent* NewContent = new RefContent_Specialised_Ptr<T,Value>(Ptr.get(),Ptr);
         NewContent->StoredClass = Value::GetTypeTypeID<T>();
         return Ref<T>(NewContent);
     }

@@ -1301,9 +1301,17 @@ namespace MBLisp
     {
         if(m_BuiltinModules.find(Name) != m_BuiltinModules.end())
         {
-            throw std::runtime_error("Mopdule with name \""+Name+"\" already defined");
+            throw std::runtime_error("Module with name \""+Name+"\" already defined");
         }
         m_BuiltinModules[Name] = std::make_unique<ScopeModule>(ModuleScope);
+    }
+    void Evaluator::AddInternalModule(std::string const& Name,std::unique_ptr<Module> Module)
+    {
+        if(m_BuiltinModules.find(Name) != m_BuiltinModules.end())
+        {
+            throw std::runtime_error("Module with name \""+Name+"\" already defined");
+        }
+        m_BuiltinModules[Name] = std::move(Module);
     }
     void Evaluator::SetArgv(std::vector<std::string> const& Argv)
     {
