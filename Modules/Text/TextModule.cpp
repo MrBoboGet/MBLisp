@@ -288,6 +288,29 @@ namespace MBLisp
         Parser.WriteParser(Info.Grammar,Info.LOOK,OutStream);
         return ReturnValue;
     }
+
+
+    //FUNCS
+
+    //
+
+    static String Read_Regex(MBUtility::StreamReader& Stream,std::regex& Regex)
+    {
+        String ReturnValue;
+        auto Begin = Stream.begin();
+        auto End = Stream.end();
+        std::match_results<decltype(Begin)> Match;
+        std::regex_search(Begin,End,Match,Regex,std::regex_constants::match_continuous);
+        if(Match.size() > 0)
+        {
+            ReturnValue = Match[0].str();
+            size_t SkipCount = ReturnValue.size();
+            Begin.Increment(SkipCount);
+            Stream.Consume(Begin,SkipCount);
+        }
+        return ReturnValue;
+    }
+    
     Ref<Scope> TextModule::GetModuleScope(Evaluator& AssociatedEvaluator) 
     {
         Ref<Scope> ReturnValue = MakeRef<Scope>();
@@ -316,6 +339,7 @@ namespace MBLisp
         AssociatedEvaluator.AddObjectMethod<&StreamTokenizer::SetStream>(ReturnValue,"set-stream");
         AssociatedEvaluator.AddObjectMethod<&StreamTokenizer::Peek>(ReturnValue,"peek");
         AssociatedEvaluator.AddObjectMethod<&StreamTokenizer::ConsumeToken>(ReturnValue,"consume-token");
+        AssociatedEvaluator.AddGeneric<Read_Regex>(ReturnValue,"read-regex");
 
         AssociatedEvaluator.AddGeneric<Trim>(ReturnValue,"trim");
         
