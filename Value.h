@@ -18,6 +18,14 @@
 #include <algorithm>
 namespace MBLisp
 {
+    template<typename T,template <typename> class R>
+    struct IsTemplateInstantiation : std::false_type { };
+    template<typename T,template <typename> class R>
+    struct IsTemplateInstantiation<R<T>,R> : std::true_type { 
+        typedef T type;
+    };
+
+
     typedef int_least64_t Int;
     typedef double Float;
     typedef uint_least32_t SymbolID;
@@ -1194,7 +1202,7 @@ public:
     template<typename T>
     Ref<T> FromShared(std::shared_ptr<T> Ptr)
     {
-        RefContent* NewContent = new RefContent_Specialised_Ptr<T,Value>(Ptr.get(),Ptr);
+        RefContent* NewContent = new RefContent_Specialised_Ptr<T,std::shared_ptr<T>>(Ptr.get(),Ptr);
         NewContent->StoredClass = Value::GetTypeTypeID<T>();
         return Ref<T>(NewContent);
     }

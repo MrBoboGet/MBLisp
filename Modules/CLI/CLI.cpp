@@ -228,6 +228,20 @@ namespace MBLisp
     void CLIModule::SetChildren(MBLisp::Value,MBLisp::Ref<MBLisp::List> Children)
     {
     }
+    static void SetChildren_Stacker(Evaluator& Eval,MBTUI::Stacker& Stacker,MBLisp::List Children)
+    {
+        for(auto& Child : Children)
+        {
+            if(Child.IsType<MBCLI::Window>())
+            {
+                Stacker.AddElement(MBUtility::SmartPtr<MBCLI::Window>(Child.GetSharedPtr<MBCLI::Window>()));
+            }
+            else
+            {
+                Stacker.AddElement(std::unique_ptr<MBCLI::Window>(std::make_unique<LispWindow>(Eval.shared_from_this(),Child)));
+            }
+        }
+    }
     MBLisp::Ref<MBLisp::Scope> CLIModule::GetModuleScope(MBLisp::Evaluator& AssociatedEvaluator)
     {
         auto ReturnValue = MBLisp::MakeRef<MBLisp::Scope>();
@@ -260,6 +274,7 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<p_Stacker>(ReturnValue,"stacker");
         AssociatedEvaluator.AddGeneric<p_AddValueChildStacker>(ReturnValue,"add-child");
         AssociatedEvaluator.AddGeneric<p_AddChildStacker>(ReturnValue,"add-child");
+        AssociatedEvaluator.AddObjectMethod<&MBTUI::Stacker::ClearChildren>(ReturnValue,"clear");
         AssociatedEvaluator.AddGeneric<p_Repl>(ReturnValue,"repl");
 
         AssociatedEvaluator.AddGeneric<p_Terminal>(ReturnValue,"terminal");
