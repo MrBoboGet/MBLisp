@@ -1466,7 +1466,8 @@ namespace MBLisp
             if(Arguments.size() < AssociatedLambda.Definition->Arguments.size())
             {
                 //throw std::runtime_error("To few arguments for function call with function \""+AssociatedLambda.Name+"\"");
-                p_EmitSignal(CurrentState, Value::EmplaceExternal<StackTrace>( CurrentState,"To few arguments for function call with function \""+GetSymbolString(AssociatedLambda.Name.ID)+"\""),true);
+                std::string ErrorString = "To few arguments for function call with function \""+GetSymbolString(AssociatedLambda.Name.ID)+"\"";
+                p_EmitSignal(CurrentState, Value::EmplaceExternal<StackTrace>( CurrentState,std::move(ErrorString)),true);
                 return;
             }
             if(AssociatedLambda.Definition->RestParameter == 0)
@@ -1474,7 +1475,8 @@ namespace MBLisp
                 if(Arguments.size() > AssociatedLambda.Definition->Arguments.size())
                 {
                     //throw std::runtime_error("To many arguments for function call \""+AssociatedLambda.Name+"\"");
-                    p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,"To many arguments for function call \""+GetSymbolString(AssociatedLambda.Name.ID)+"\""),true);
+                    std::string ErrorString = "To many arguments for function call \""+GetSymbolString(AssociatedLambda.Name.ID)+"\"";
+                    p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,std::move(ErrorString)),true);
                     return;
                 }
             }
@@ -1550,7 +1552,8 @@ namespace MBLisp
                     }
                     ArgumentList += p_TypeString(Arguments[i]);
                 }
-                p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,"No method associated with the argument list " + ArgumentList + " for generic \""+GetSymbolString(GenericToInvoke.Name.ID)+"\""),true);
+                std::string ErrorString = "No method associated with the argument list " + ArgumentList + " for generic \""+GetSymbolString(GenericToInvoke.Name.ID)+"\"";
+                p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,std::move(ErrorString)),true);
                 return;
             }
             p_Invoke(*Callable,Arguments,CurrentState,Setting,IsTrapHandler);
@@ -1687,7 +1690,8 @@ namespace MBLisp
 
                 if(VarPointer == nullptr)
                 {
-                    p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,"Error finding variable with name \""+GetSymbolString(PushCode.ID)+"\""),true);
+                    std::string ErrorString = "Error finding variable with name \""+GetSymbolString(PushCode.ID)+"\"";
+                    p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,std::move(ErrorString)),true);
                     continue;
                 }
                 //assert(!VarPointer->IsType<List>() || VarPointer->GetRef<List>() != nullptr);

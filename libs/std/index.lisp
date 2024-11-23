@@ -494,7 +494,7 @@
     (if (in sym envir)
         (setl reader (index envir sym))
         (let ((current-stream stream))
-            (setl return-value (reader stream))
+            (setl return-value (reader current-stream))
         )
      else
         (error "stream-reader needs a symbol taking a callable as the first argument")

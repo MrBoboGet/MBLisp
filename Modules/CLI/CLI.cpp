@@ -37,7 +37,7 @@ namespace MBLisp
     }
     void LispWindow::SetFocus(bool IsFocused)
     {
-        auto Result = m_Evaluator->Eval(m_ModuleScope,m_Evaluator->GetValue(*m_ModuleScope,"is-focused") ,{m_Value});
+        auto Result = m_Evaluator->Eval(m_ModuleScope,m_Evaluator->GetValue(*m_ModuleScope,"set-focus") ,{m_Value});
     }
     MBCLI::CursorInfo LispWindow::GetCursorInfo()
     {

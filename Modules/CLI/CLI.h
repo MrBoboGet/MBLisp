@@ -81,6 +81,15 @@ namespace MBLisp
     public:
         LispWindow(std::shared_ptr<Evaluator> Evaluator,Value Val);
 
+        Evaluator& GetEvaluator()
+        {
+            return *m_Evaluator;
+        }
+        Value& GetUnderylingValue()
+        {
+            return m_Value;   
+        }
+
         virtual bool Updated();
         virtual void HandleInput(MBCLI::ConsoleInput const& Input);
         virtual MBCLI::Dimensions PreferedDimensions(MBCLI::Dimensions SuggestedDimensions);
