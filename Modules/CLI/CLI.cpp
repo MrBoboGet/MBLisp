@@ -135,6 +135,29 @@ namespace MBLisp
     {
         auto ReturnValue = Value::EmplacePolymorphic<MBTUI::Stacker,MBCLI::Window>();
         auto& Stacker = ReturnValue.GetType<MBTUI::Stacker>();
+       
+        if(auto OverflowIt = Attributes.find(String("overflow")); OverflowIt != Attributes.end())
+        {
+            if(OverflowIt->second.IsType<bool>())
+            {
+                Stacker.EnableOverflow(OverflowIt->second.GetType<bool>());
+            }
+        }
+        if(auto DirectionIt = Attributes.find(String("direction")); DirectionIt != Attributes.end())
+        {
+            if(DirectionIt->second.IsType<String>())
+            {
+                if(DirectionIt->second.GetType<String>() == "right")
+                {
+                    Stacker.SetFlowDirection(false);
+                }
+            }
+            else if(DirectionIt->second.IsType<Null>())
+            {
+                int hej = 123123;
+            }
+        }
+
         for(auto& Child : Children)
         {
             if(Child.IsType<MBCLI::Window>())
@@ -287,6 +310,10 @@ namespace MBLisp
 
         AssociatedEvaluator.AddGeneric<p_Clear>("clear");
         AssociatedEvaluator.AddGeneric<p_ClearTerm>("clear");
+
+
+
+        //AssociatedEvaluator.AddObjectMethod<&MBTUI::Stacker::EnableOverlow>(ReturnValue,"enable-overflow");
 
         return ReturnValue;
     }
