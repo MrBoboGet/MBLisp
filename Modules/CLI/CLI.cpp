@@ -143,6 +143,13 @@ namespace MBLisp
                 Stacker.EnableOverflow(OverflowIt->second.GetType<bool>());
             }
         }
+        if(auto OverflowIt = Attributes.find(String("overflowreversed")); OverflowIt != Attributes.end())
+        {
+            if(OverflowIt->second.IsType<bool>())
+            {
+                Stacker.SetOverflowDirection(OverflowIt->second.GetType<bool>());
+            }
+        }
         if(auto DirectionIt = Attributes.find(String("direction")); DirectionIt != Attributes.end())
         {
             if(DirectionIt->second.IsType<String>())
