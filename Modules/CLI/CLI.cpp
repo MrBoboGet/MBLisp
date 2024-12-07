@@ -135,6 +135,8 @@ namespace MBLisp
     {
         auto ReturnValue = Value::EmplacePolymorphic<MBTUI::Stacker,MBCLI::Window>();
         auto& Stacker = ReturnValue.GetType<MBTUI::Stacker>();
+
+
        
         if(auto OverflowIt = Attributes.find(String("overflow")); OverflowIt != Attributes.end())
         {
@@ -143,11 +145,25 @@ namespace MBLisp
                 Stacker.EnableOverflow(OverflowIt->second.GetType<bool>());
             }
         }
+        if(auto ReversedIt = Attributes.find(String("reversed")); ReversedIt != Attributes.end())
+        {
+            if(ReversedIt->second.IsType<bool>())
+            {
+                Stacker.SetReversed(ReversedIt->second.GetType<bool>());
+            }
+        }
         if(auto OverflowIt = Attributes.find(String("overflowreversed")); OverflowIt != Attributes.end())
         {
             if(OverflowIt->second.IsType<bool>())
             {
                 Stacker.SetOverflowDirection(OverflowIt->second.GetType<bool>());
+            }
+        }
+        if(auto BorderIt = Attributes.find(String("border")); BorderIt != Attributes.end())
+        {
+            if(BorderIt->second.IsType<bool>())
+            {
+                Stacker.SetBorder(BorderIt->second.GetType<bool>());
             }
         }
         if(auto DirectionIt = Attributes.find(String("direction")); DirectionIt != Attributes.end())
