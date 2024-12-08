@@ -37,7 +37,7 @@ namespace MBLisp
     }
     void LispWindow::SetFocus(bool IsFocused)
     {
-        auto Result = m_Evaluator->Eval(m_ModuleScope,m_Evaluator->GetValue(*m_ModuleScope,"set-focus") ,{m_Value});
+        auto Result = m_Evaluator->Eval(m_ModuleScope,m_Evaluator->GetValue(*m_ModuleScope,"set-focus") ,{m_Value,IsFocused});
     }
     MBCLI::CursorInfo LispWindow::GetCursorInfo()
     {
@@ -131,55 +131,78 @@ namespace MBLisp
     {
         return Dims.Height;
     }
+
+
+    static void SetAtr_Stacker(MBTUI::Stacker& Stacker,String const& Attribute,Value const& Value)
+    {
+        if(Attribute == "overflow")
+        {
+            if(Value.IsType<bool>())
+            {
+                Stacker.EnableOverflow(Value.GetType<bool>());
+            }
+        }
+        else if(Attribute == "reversed")
+        {
+            if(Value.IsType<bool>())
+            {
+                Stacker.SetReversed(Value.GetType<bool>());
+            }
+        }
+        else if(Attribute == "overflowreversed")
+        {
+            if(Value.IsType<bool>())
+            {
+                Stacker.SetOverflowDirection(Value.GetType<bool>());
+            }
+        }
+        else if(Attribute == "border")
+        {
+            if(Value.IsType<bool>())
+            {
+                Stacker.SetBorder(Value.GetType<bool>());
+            }
+        }
+        else if(Attribute == "direction")
+        {
+            if(Value.IsType<String>())
+            {
+                if(Value.GetType<String>() == "right")
+                {
+                    Stacker.SetFlowDirection(false);
+                }
+            }
+        }
+        else if(Attribute == "bordercolor")
+        {
+            if(Value.IsType<String>())
+            {
+                if(Value.GetType<String>() == "green")
+                {
+                    Stacker.SetBorderColor(MBCLI::ANSITerminalColor::BrightGreen);
+                }
+                else if(Value.GetType<String>() == "white")
+                {
+                    Stacker.SetBorderColor(MBCLI::ANSITerminalColor::BrightWhite);
+                }
+            }
+        }
+    }
+
     Value CLIModule::p_Stacker(Evaluator& Evaluator,Dict& Attributes,List& Children)
     {
         auto ReturnValue = Value::EmplacePolymorphic<MBTUI::Stacker,MBCLI::Window>();
         auto& Stacker = ReturnValue.GetType<MBTUI::Stacker>();
 
 
+        for(auto const& Attribute : Attributes)
+        {
+            if(Attribute.first.IsType<String>())
+            {
+                SetAtr_Stacker(Stacker,Attribute.first.GetType<String>(),Attribute.second);
+            }
+        }
        
-        if(auto OverflowIt = Attributes.find(String("overflow")); OverflowIt != Attributes.end())
-        {
-            if(OverflowIt->second.IsType<bool>())
-            {
-                Stacker.EnableOverflow(OverflowIt->second.GetType<bool>());
-            }
-        }
-        if(auto ReversedIt = Attributes.find(String("reversed")); ReversedIt != Attributes.end())
-        {
-            if(ReversedIt->second.IsType<bool>())
-            {
-                Stacker.SetReversed(ReversedIt->second.GetType<bool>());
-            }
-        }
-        if(auto OverflowIt = Attributes.find(String("overflowreversed")); OverflowIt != Attributes.end())
-        {
-            if(OverflowIt->second.IsType<bool>())
-            {
-                Stacker.SetOverflowDirection(OverflowIt->second.GetType<bool>());
-            }
-        }
-        if(auto BorderIt = Attributes.find(String("border")); BorderIt != Attributes.end())
-        {
-            if(BorderIt->second.IsType<bool>())
-            {
-                Stacker.SetBorder(BorderIt->second.GetType<bool>());
-            }
-        }
-        if(auto DirectionIt = Attributes.find(String("direction")); DirectionIt != Attributes.end())
-        {
-            if(DirectionIt->second.IsType<String>())
-            {
-                if(DirectionIt->second.GetType<String>() == "right")
-                {
-                    Stacker.SetFlowDirection(false);
-                }
-            }
-            else if(DirectionIt->second.IsType<Null>())
-            {
-                int hej = 123123;
-            }
-        }
 
         for(auto& Child : Children)
         {
@@ -288,6 +311,29 @@ namespace MBLisp
             }
         }
     }
+
+
+
+    static void DrawBorder(Temporary<MBCLI::BufferView> TempView)
+    {
+        auto& View = TempView.Get();
+        MBCLI::DrawBorder(View,0,0,View.GetDimensions().Width,View.GetDimensions().Height);
+    }
+    static void DrawBorder_Offset(Temporary<MBCLI::BufferView> TempView)
+    {
+        auto& View = TempView.Get();
+        MBCLI::DrawBorder(View,0,0,View.GetDimensions().Width,View.GetDimensions().Height);
+    }
+
+    static bool Input_Eq(MBCLI::ConsoleInput const& Input,String const& Key)
+    {
+        return Input.CharacterInput == Key;
+    }
+    static bool Input_Eq_2(String const& Key,MBCLI::ConsoleInput const& Input)
+    {
+        return Input.CharacterInput == Key;
+    }
+
     MBLisp::Ref<MBLisp::Scope> CLIModule::GetModuleScope(MBLisp::Evaluator& AssociatedEvaluator)
     {
         auto ReturnValue = MBLisp::MakeRef<MBLisp::Scope>();
@@ -318,6 +364,7 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<p_HeightDims>(ReturnValue,"height");
 
         AssociatedEvaluator.AddGeneric<p_Stacker>(ReturnValue,"stacker");
+        AssociatedEvaluator.AddGeneric<SetAtr_Stacker>(ReturnValue,"set-atr");
         AssociatedEvaluator.AddGeneric<p_AddValueChildStacker>(ReturnValue,"add-child");
         AssociatedEvaluator.AddGeneric<p_AddChildStacker>(ReturnValue,"add-child");
         AssociatedEvaluator.AddObjectMethod<&MBTUI::Stacker::ClearChildren>(ReturnValue,"clear");
@@ -334,7 +381,8 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<p_Clear>("clear");
         AssociatedEvaluator.AddGeneric<p_ClearTerm>("clear");
 
-
+        AssociatedEvaluator.AddGeneric<Input_Eq>("eq");
+        AssociatedEvaluator.AddGeneric<Input_Eq_2>("eq");
 
         //AssociatedEvaluator.AddObjectMethod<&MBTUI::Stacker::EnableOverlow>(ReturnValue,"enable-overflow");
 
