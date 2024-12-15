@@ -90,7 +90,6 @@ namespace MBLisp
             return m_Value;   
         }
 
-        virtual bool Updated();
         virtual void HandleInput(MBCLI::ConsoleInput const& Input);
         virtual MBCLI::Dimensions PreferedDimensions(MBCLI::Dimensions SuggestedDimensions);
         virtual void SetFocus(bool IsFocused);

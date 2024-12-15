@@ -4,6 +4,7 @@
 #include <MBTUI/MBTUI.h>
 #include <MBTUI/Stacker.h>
 
+#include <iostream>
 namespace MBLisp
 {
     LispWindow::LispWindow(std::shared_ptr<Evaluator> Evaluator,Value Val)
@@ -11,15 +12,10 @@ namespace MBLisp
         m_Evaluator = Evaluator;
         m_ModuleScope = Evaluator->GetModuleScope("cli");
         m_Value = Val;
-    }
-    bool LispWindow::Updated()
-    {
-        auto Result = m_Evaluator->Eval(m_ModuleScope,m_Evaluator->GetValue(*m_ModuleScope,"updated") ,{m_Value});
-        if(!Result.IsType<bool>())
-        {
-            throw std::runtime_error("Invalid Lisp window: Update does not return boolean");
-        }
-        return Result.GetType<bool>();
+
+        auto NewParent = Value::EmplaceExternal<MBCLI::Window::ParentInfo>().GetRef<MBCLI::Window::ParentInfo>();
+        NewParent->Parent = GetParentInfo();
+        m_Evaluator->Eval(m_ModuleScope,m_Evaluator->GetValue(*m_ModuleScope,"set-parent-info"),{m_Value,NewParent});
     }
     void LispWindow::HandleInput(MBCLI::ConsoleInput const& Input)
     {
@@ -334,6 +330,36 @@ namespace MBLisp
         return Input.CharacterInput == Key;
     }
 
+
+    static void SetParentInfo(Value const& Value,MBCLI::Window::ParentInfo& Parent)
+    {
+        std::cout<<"Bruh"<<std::endl;
+    }
+    static void SetParentInfo_UpdatedInfo(MBCLI::Window::ParentInfo& Value,Ref<MBCLI::Window::ParentInfo> Parent)
+    {
+        Value.Parent = Parent.GetSharedPtr();
+    }
+    static void SetUpdated(MBCLI::Window::ParentInfo& Parent,bool Updated)
+    {
+        if(Updated)
+        {
+            Parent.Update();
+        }
+        else
+        {
+            Parent.Updated = false;
+        }
+    }
+
+    static Value NewUpdatedInfo()
+    {
+        return Value::EmplaceExternal<MBCLI::Window::ParentInfo>();
+    }
+    static bool Updated(MBCLI::Window::ParentInfo& Parent)
+    {
+        return Parent.Updated;
+    }
+
     MBLisp::Ref<MBLisp::Scope> CLIModule::GetModuleScope(MBLisp::Evaluator& AssociatedEvaluator)
     {
         auto ReturnValue = MBLisp::MakeRef<MBLisp::Scope>();
@@ -345,6 +371,13 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<p_PreferedDims>(ReturnValue,"prefered-dims");
         AssociatedEvaluator.AddGeneric<p_Dims>(ReturnValue,"dims");
         AssociatedEvaluator.AddGeneric<p_DimsCreate>(ReturnValue,"dims");
+
+
+        AssociatedEvaluator.AddGeneric<SetParentInfo>(ReturnValue,"set-parent-info");
+        AssociatedEvaluator.AddGeneric<SetParentInfo_UpdatedInfo>(ReturnValue,"set-parent-info");
+        AssociatedEvaluator.AddGeneric<NewUpdatedInfo>(ReturnValue,"new-updated-info");
+        AssociatedEvaluator.AddGeneric<SetUpdated>(ReturnValue,"set-updated");
+        AssociatedEvaluator.AddGeneric<Updated>(ReturnValue,"updated");
 
 
         AssociatedEvaluator.AddGeneric<CursorInfoPosHidden>(ReturnValue,"cursor-info");
