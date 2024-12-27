@@ -13,9 +13,9 @@ namespace MBLisp
         m_ModuleScope = Evaluator->GetModuleScope("cli");
         m_Value = Val;
 
-        auto NewParent = Value::EmplaceExternal<MBCLI::Window::ParentInfo>().GetRef<MBCLI::Window::ParentInfo>();
-        NewParent->Parent = GetParentInfo();
-        m_Evaluator->Eval(m_ModuleScope,m_Evaluator->GetValue(*m_ModuleScope,"set-parent-info"),{m_Value,NewParent});
+        //auto NewParent = Value::EmplaceExternal<std::shared_ptr<MBCLI::Window::ParentInfo>>(std::make_shared<MBCLI::Window::ParentInfo>()).GetRef<std::shared_ptr<MBCLI::Window::ParentInfo>>();
+        //(*NewParent)->Parent = GetParentInfo();
+        m_Evaluator->Eval(m_ModuleScope,m_Evaluator->GetValue(*m_ModuleScope,"set-parent-info"),{m_Value, Value::EmplaceExternal<std::shared_ptr<MBCLI::Window::ParentInfo>>(GetParentInfo())  });
     }
     void LispWindow::HandleInput(MBCLI::ConsoleInput const& Input)
     {
@@ -49,6 +49,7 @@ namespace MBLisp
         TemporaryLock Lock(View);
         auto LockRef = MBLisp::Value::EmplaceExternal<Temporary<MBCLI::BufferView>>(Lock.GetTemporary());
         m_Evaluator->Eval(m_ModuleScope,m_Evaluator->GetValue("write") ,{m_Value,LockRef,Redraw});
+        SetUpdated(false);
     }
 
     bool CLIModule::p_WindowUpdated(MBCLI::Window& Window)
@@ -331,33 +332,37 @@ namespace MBLisp
     }
 
 
-    static void SetParentInfo(Value const& Value,MBCLI::Window::ParentInfo& Parent)
+    static void SetParentInfo(Value const& Value,std::shared_ptr<MBCLI::Window::ParentInfo> Parent)
     {
-        std::cout<<"Bruh"<<std::endl;
+        int hej = 2;
     }
-    static void SetParentInfo_UpdatedInfo(MBCLI::Window::ParentInfo& Value,Ref<MBCLI::Window::ParentInfo> Parent)
+    static void SetParentInfo_Window(MBCLI::Window& Value,std::shared_ptr<MBCLI::Window::ParentInfo> Parent)
     {
-        Value.Parent = Parent.GetSharedPtr();
+        Value.GetParentInfo()->Parent = Parent;
     }
-    static void SetUpdated(MBCLI::Window::ParentInfo& Parent,bool Updated)
+    static void SetParentInfo_UpdatedInfo(std::shared_ptr<MBCLI::Window::ParentInfo>& Value,std::shared_ptr<MBCLI::Window::ParentInfo> Parent)
+    {
+        Value->Parent = Parent;
+    }
+    static void SetUpdated(std::shared_ptr<MBCLI::Window::ParentInfo> Parent,bool Updated)
     {
         if(Updated)
         {
-            Parent.Update();
+            Parent->Update();
         }
         else
         {
-            Parent.Updated = false;
+            Parent->Updated = false;
         }
     }
 
     static Value NewUpdatedInfo()
     {
-        return Value::EmplaceExternal<MBCLI::Window::ParentInfo>();
+        return Value::EmplaceExternal<std::shared_ptr<MBCLI::Window::ParentInfo>>(std::make_shared<MBCLI::Window::ParentInfo>());
     }
-    static bool Updated(MBCLI::Window::ParentInfo& Parent)
+    static bool Updated(std::shared_ptr<MBCLI::Window::ParentInfo> Parent)
     {
-        return Parent.Updated;
+        return Parent->Updated;
     }
 
     MBLisp::Ref<MBLisp::Scope> CLIModule::GetModuleScope(MBLisp::Evaluator& AssociatedEvaluator)
@@ -375,6 +380,7 @@ namespace MBLisp
 
         AssociatedEvaluator.AddGeneric<SetParentInfo>(ReturnValue,"set-parent-info");
         AssociatedEvaluator.AddGeneric<SetParentInfo_UpdatedInfo>(ReturnValue,"set-parent-info");
+        AssociatedEvaluator.AddGeneric<SetParentInfo_Window>(ReturnValue,"set-parent-info");
         AssociatedEvaluator.AddGeneric<NewUpdatedInfo>(ReturnValue,"new-updated-info");
         AssociatedEvaluator.AddGeneric<SetUpdated>(ReturnValue,"set-updated");
         AssociatedEvaluator.AddGeneric<Updated>(ReturnValue,"updated");
