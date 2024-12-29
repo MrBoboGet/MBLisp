@@ -5,6 +5,7 @@
 #include <MBTUI/Stacker.h>
 
 #include <iostream>
+#include <MBTUI/SizeSpecification.h>
 namespace MBLisp
 {
     LispWindow::LispWindow(std::shared_ptr<Evaluator> Evaluator,Value Val)
@@ -130,6 +131,37 @@ namespace MBLisp
     }
 
 
+
+    //Statics
+
+    MBTUI::SizeSpecification GetSizeSpecification(Dict const& Attributes)
+    {
+        MBTUI::SizeSpecification ReturnValue;
+        if(auto HeightIt = Attributes.find(String("height")); HeightIt != Attributes.end())
+        {
+            if(HeightIt->second.IsType<Int>())
+            {
+                ReturnValue.SetHeight(HeightIt->second.GetType<Int>());
+            }
+            else if(HeightIt->second.IsType<String>())
+            {
+                ReturnValue.SetHeight(HeightIt->second.GetType<String>());
+            }
+        }
+        if(auto WidthIt = Attributes.find(String("width")); WidthIt != Attributes.end())
+        {
+            if(WidthIt->second.IsType<Int>())
+            {
+                ReturnValue.SetHeight(WidthIt->second.GetType<Int>());
+            }
+            else if(WidthIt->second.IsType<String>())
+            {
+                ReturnValue.SetHeight(WidthIt->second.GetType<String>());
+            }
+        }
+        return ReturnValue;
+    }
+
     static void SetAtr_Stacker(MBTUI::Stacker& Stacker,String const& Attribute,Value const& Value)
     {
         if(Attribute == "overflow")
@@ -139,6 +171,36 @@ namespace MBLisp
                 Stacker.EnableOverflow(Value.GetType<bool>());
             }
         }
+        else if(Attribute == "height")
+        {
+            if(Value.IsType<Int>())
+            {
+                auto CurrentSpec = Stacker.GetSizeSpec();
+                CurrentSpec.SetHeight(Value.GetType<Int>());
+                Stacker.SetSizeSpec(CurrentSpec);
+            }
+            else if(Value.IsType<String>())
+            {
+                auto CurrentSpec = Stacker.GetSizeSpec();
+                CurrentSpec.SetHeight(Value.GetType<String>());
+                Stacker.SetSizeSpec(CurrentSpec);
+            }
+        }
+        else if(Attribute == "width")
+        {
+            if(Value.IsType<Int>())
+            {
+                auto CurrentSpec = Stacker.GetSizeSpec();
+                CurrentSpec.SetWidth(Value.GetType<Int>());
+                Stacker.SetSizeSpec(CurrentSpec);
+            }
+            else if(Value.IsType<String>())
+            {
+                auto CurrentSpec = Stacker.GetSizeSpec();
+                CurrentSpec.SetWidth(Value.GetType<String>());
+                Stacker.SetSizeSpec(CurrentSpec);
+            }
+        }
         else if(Attribute == "reversed")
         {
             if(Value.IsType<bool>())
@@ -146,7 +208,7 @@ namespace MBLisp
                 Stacker.SetReversed(Value.GetType<bool>());
             }
         }
-        else if(Attribute == "overflowreversed")
+        else if(Attribute == "overflow-reversed")
         {
             if(Value.IsType<bool>())
             {
@@ -170,7 +232,7 @@ namespace MBLisp
                 }
             }
         }
-        else if(Attribute == "bordercolor")
+        else if(Attribute == "border-color")
         {
             if(Value.IsType<String>())
             {
