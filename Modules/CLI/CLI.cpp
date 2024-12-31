@@ -4,7 +4,6 @@
 #include <MBTUI/MBTUI.h>
 #include <MBTUI/Stacker.h>
 
-#include <iostream>
 #include <MBTUI/SizeSpecification.h>
 namespace MBLisp
 {
@@ -271,19 +270,29 @@ namespace MBLisp
             }
             else
             {
-                Stacker.AddElement(std::unique_ptr<MBCLI::Window>(std::make_unique<LispWindow>(Evaluator.shared_from_this(),Child)));
+                Stacker.AddElement(std::shared_ptr<MBCLI::Window>(std::make_shared<LispWindow>(Evaluator.shared_from_this(),Child)));
             }
         }
         return ReturnValue;
     }
-    void CLIModule::p_AddChildStacker(MBTUI::Stacker& Stacker,Ref<MBCLI::Window> Child)
-    {
-        Stacker.AddElement(MBUtility::SmartPtr<MBCLI::Window>(Child.GetSharedPtr()));
-    }
+
+
+    //void CLIModule::p_AddChildStacker(MBTUI::Stacker& Stacker,Ref<MBCLI::Window> Child)
+    //{
+    //    Stacker.AddElement(MBUtility::SmartPtr<MBCLI::Window>(Child.GetSharedPtr()));
+    //}
     void CLIModule::p_AddValueChildStacker(Evaluator& Eval,MBTUI::Stacker& Stacker,Value Child)
     {
-        Stacker.AddElement(std::unique_ptr<MBCLI::Window>(std::make_unique<LispWindow>(Eval.shared_from_this(),Child)));
+        if(Child.IsType<MBCLI::Window>())
+        {
+            Stacker.AddElement(std::shared_ptr<MBCLI::Window>(std::make_shared<BuiltinWindowAdapter>(std::move(Child))));
+        }
+        else
+        {
+            Stacker.AddElement(std::shared_ptr<MBCLI::Window>(std::make_shared<LispWindow>(Eval.shared_from_this(),std::move(Child))));
+        }
     }
+
     Value CLIModule::p_Repl(Evaluator& Evaluator,Dict& Attributes,List& Children)
     {
         auto ReturnValue = Value::EmplacePolymorphic<MBTUI::REPL,MBCLI::Window>();
@@ -366,7 +375,7 @@ namespace MBLisp
             }
             else
             {
-                Stacker.AddElement(std::unique_ptr<MBCLI::Window>(std::make_unique<LispWindow>(Eval.shared_from_this(),Child)));
+                Stacker.AddElement(std::shared_ptr<MBCLI::Window>(std::make_shared<LispWindow>(Eval.shared_from_this(),Child)));
             }
         }
     }
@@ -383,14 +392,54 @@ namespace MBLisp
         auto& View = TempView.Get();
         MBCLI::DrawBorder(View,0,0,View.GetDimensions().Width,View.GetDimensions().Height);
     }
+    static bool CompareInputString(MBCLI::ConsoleInput const& Input,String const& Key)
+    {
+        if(Input.SpecialInput != MBCLI::SpecialKey::Null)
+        {
+            switch(Input.SpecialInput)
+            {
+                case MBCLI::SpecialKey::Backspace: return Key == "backspace";
+                case MBCLI::SpecialKey::Left: return Key == "left";
+                case MBCLI::SpecialKey::Right: return Key == "right";
+                case MBCLI::SpecialKey::Up: return Key == "up";
+                case MBCLI::SpecialKey::Down: return Key == "down";
+                case MBCLI::SpecialKey::Home: return Key == "home";
+                case MBCLI::SpecialKey::End: return Key == "end";
+                case MBCLI::SpecialKey::Ins: return Key == "ins";
+                case MBCLI::SpecialKey::Esc: return Key == "esc";
+                case MBCLI::SpecialKey::PageUp: return Key == "pageUp";
+                case MBCLI::SpecialKey::PageDown: return Key == "pageDown";
+                case MBCLI::SpecialKey::Del: return Key == "del";
+                case MBCLI::SpecialKey::F1: return Key == "f1";
+                case MBCLI::SpecialKey::F2: return Key == "f2";
+                case MBCLI::SpecialKey::F3: return Key == "f3";
+                case MBCLI::SpecialKey::F4: return Key == "f4";
+                case MBCLI::SpecialKey::F5: return Key == "f5";
+                case MBCLI::SpecialKey::F6: return Key == "f6";
+                case MBCLI::SpecialKey::F7: return Key == "f7";
+                case MBCLI::SpecialKey::F8: return Key == "f8";
+                case MBCLI::SpecialKey::F9: return Key == "f9";
+                case MBCLI::SpecialKey::F10: return Key == "f10";
+                case MBCLI::SpecialKey::F11: return Key == "f11";
+                case MBCLI::SpecialKey::F12: return Key == "f12";
 
+
+                case MBCLI::SpecialKey::Null: return false;
+            };
+        }
+        if(Input.CharacterInput == '\n' || Input.CharacterInput == "\r\n")
+        {
+            return Key == "enter";
+        }
+        return Input.CharacterInput == Key;
+    }
     static bool Input_Eq(MBCLI::ConsoleInput const& Input,String const& Key)
     {
-        return Input.CharacterInput == Key;
+        return CompareInputString(Input,Key);
     }
     static bool Input_Eq_2(String const& Key,MBCLI::ConsoleInput const& Input)
     {
-        return Input.CharacterInput == Key;
+        return CompareInputString(Input,Key);
     }
 
 
@@ -425,6 +474,28 @@ namespace MBLisp
     static bool Updated(std::shared_ptr<MBCLI::Window::ParentInfo> Parent)
     {
         return Parent->Updated;
+    }
+
+    static Value GetSelected(MBTUI::Stacker& Stacker)
+    {
+        if(!Stacker.WindowSelected())
+        {
+            return Value();
+        }
+        auto& SelectedWindow = Stacker.GetSelectedWindow();
+        auto Shared = SelectedWindow.GetShared();
+        //TODO: would rather avoid dynamic_cast if possible...
+        auto Builtin = dynamic_cast<BuiltinWindowAdapter*>(Shared.get());
+        if(Builtin != nullptr)
+        {
+            return Builtin->GetLispValue();
+        }
+        auto Lisp = dynamic_cast<LispWindow*>(Shared.get());
+        if(Lisp != nullptr)
+        {
+            return Lisp->GetUnderylingValue();
+        }
+        return FromShared(Shared);
     }
 
     MBLisp::Ref<MBLisp::Scope> CLIModule::GetModuleScope(MBLisp::Evaluator& AssociatedEvaluator)
@@ -467,7 +538,8 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<p_Stacker>(ReturnValue,"stacker");
         AssociatedEvaluator.AddGeneric<SetAtr_Stacker>(ReturnValue,"set-atr");
         AssociatedEvaluator.AddGeneric<p_AddValueChildStacker>(ReturnValue,"add-child");
-        AssociatedEvaluator.AddGeneric<p_AddChildStacker>(ReturnValue,"add-child");
+        AssociatedEvaluator.AddGeneric<GetSelected>(ReturnValue,"get-selected");
+        //AssociatedEvaluator.AddGeneric<p_AddChildStacker>(ReturnValue,"add-child");
         AssociatedEvaluator.AddObjectMethod<&MBTUI::Stacker::ClearChildren>(ReturnValue,"clear");
         AssociatedEvaluator.AddGeneric<p_Repl>(ReturnValue,"repl");
 

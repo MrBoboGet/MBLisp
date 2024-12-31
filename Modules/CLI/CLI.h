@@ -97,6 +97,47 @@ namespace MBLisp
         //virtual TerminalWindowBuffer GetBuffer() { return TerminalWindowBuffer();};
         virtual void WriteBuffer(MBCLI::BufferView View,bool Redraw);
     };
+    class BuiltinWindowAdapter : public MBCLI::Window
+    {
+    protected:
+        MBCLI::Window* m_Window = nullptr;
+        Value m_AssociatedValue;
+    public:
+        BuiltinWindowAdapter(Value Window)
+        {
+            if(!Window.IsType<MBCLI::Window>())
+            {
+                throw std::runtime_error("BuiltinWindowAdapter can only be initialized with value containing a window");
+            }
+            m_Window = &Window.GetType<MBCLI::Window>();
+            m_AssociatedValue = std::move(Window);
+        }
+        Value GetLispValue() 
+        {
+            return m_AssociatedValue;   
+        }
+        virtual void HandleInput(MBCLI::ConsoleInput const& Input)
+        {
+            m_Window->HandleInput(Input);   
+        }
+        virtual MBCLI::Dimensions PreferedDimensions(MBCLI::Dimensions SuggestedDimensions)
+        {
+            return m_Window->PreferedDimensions(SuggestedDimensions);
+        }
+        virtual void SetFocus(bool IsFocused)
+        {
+            m_Window->SetFocus(IsFocused);   
+        }
+        virtual MBCLI::CursorInfo GetCursorInfo()
+        {
+            return m_Window->GetCursorInfo();
+        }
+        //virtual TerminalWindowBuffer GetBuffer() { return TerminalWindowBuffer();};
+        virtual void WriteBuffer(MBCLI::BufferView View,bool Redraw)
+        {
+            m_Window->WriteBuffer(std::move(View),Redraw);
+        }
+    };
 
     class CLIModule : public MBLisp::Module
     {
@@ -142,7 +183,7 @@ namespace MBLisp
 
 
         static Value p_Stacker(Evaluator& Evaluator,Dict& Attributes,List& Children);
-        static void p_AddChildStacker(MBTUI::Stacker& Stacker,Ref<MBCLI::Window> Child);
+        //static void p_AddChildStacker(MBTUI::Stacker& Stacker,Ref<MBCLI::Window> Child);
         static void p_AddValueChildStacker(Evaluator& Eval,MBTUI::Stacker& Stacker,Value Child);
 
 
