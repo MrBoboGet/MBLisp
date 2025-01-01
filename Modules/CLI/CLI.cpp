@@ -5,6 +5,7 @@
 #include <MBTUI/Stacker.h>
 
 #include <MBTUI/SizeSpecification.h>
+#include <MBTUI/Absolute.h>
 namespace MBLisp
 {
     LispWindow::LispWindow(std::shared_ptr<Evaluator> Evaluator,Value Val)
@@ -498,6 +499,53 @@ namespace MBLisp
         return FromShared(Shared);
     }
 
+    void SetAttribute_Absolute(MBTUI::Absolute& Absolute,String const& Atr,Value const& Val)
+    {
+        if(Atr == "center")
+        {
+            if(Val.IsType<bool>())
+            {
+                Absolute.SetCenter(Val.GetType<bool>());   
+            }
+        }
+        else if(Atr == "visible")
+        {
+            if(Val.IsType<bool>())
+            {
+                Absolute.SetVisible(Val.GetType<bool>());   
+            }
+        }
+    }
+
+    Value CreateAbsolute(Evaluator& Evaluator,Dict& Attributes,List& Children)
+    {
+        auto ReturnValue = Value::EmplacePolymorphic<MBTUI::Absolute,MBCLI::Window>();
+        auto& Stacker = ReturnValue.GetType<MBTUI::Absolute>();
+        for(auto const& Attribute : Attributes)
+        {
+            if(Attribute.first.IsType<String>())
+            {
+                SetAttribute_Absolute(Stacker,Attribute.first.GetType<String>(),Attribute.second);
+            }
+        }
+       
+
+        for(auto& Child : Children)
+        {
+            if(Child.IsType<MBCLI::Window>())
+            {
+                Stacker.SetSubwindow(Child.GetSharedPtr<MBCLI::Window>());
+            }
+            else
+            {
+                Stacker.SetSubwindow(std::shared_ptr<MBCLI::Window>(std::make_shared<LispWindow>(Evaluator.shared_from_this(),Child)));
+            }
+            break;
+        }
+        return ReturnValue;
+    }
+
+
     MBLisp::Ref<MBLisp::Scope> CLIModule::GetModuleScope(MBLisp::Evaluator& AssociatedEvaluator)
     {
         auto ReturnValue = MBLisp::MakeRef<MBLisp::Scope>();
@@ -537,11 +585,15 @@ namespace MBLisp
 
         AssociatedEvaluator.AddGeneric<p_Stacker>(ReturnValue,"stacker");
         AssociatedEvaluator.AddGeneric<SetAtr_Stacker>(ReturnValue,"set-atr");
+        AssociatedEvaluator.AddGeneric<SetAttribute_Absolute>(ReturnValue,"set-atr");
         AssociatedEvaluator.AddGeneric<p_AddValueChildStacker>(ReturnValue,"add-child");
         AssociatedEvaluator.AddGeneric<GetSelected>(ReturnValue,"get-selected");
         //AssociatedEvaluator.AddGeneric<p_AddChildStacker>(ReturnValue,"add-child");
         AssociatedEvaluator.AddObjectMethod<&MBTUI::Stacker::ClearChildren>(ReturnValue,"clear");
         AssociatedEvaluator.AddGeneric<p_Repl>(ReturnValue,"repl");
+
+
+        AssociatedEvaluator.AddGeneric<CreateAbsolute>(ReturnValue,"absolute");
 
         AssociatedEvaluator.AddGeneric<p_Terminal>(ReturnValue,"terminal");
         AssociatedEvaluator.AddGeneric<p_GetInput>(ReturnValue,"get-input");
