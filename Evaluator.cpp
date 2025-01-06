@@ -40,7 +40,7 @@ namespace MBLisp
         for(int i = 0; i < CurrentState.StackFrames.size();i++)
         {
             auto const& CurrentFrame = CurrentState.StackFrames[i];
-            if(CurrentFrame.ExecutionPosition.OpCodeCount() == 0)
+            if(CurrentFrame.ExecutionPosition.OpCodeCount() == 0 || CurrentFrame.ExecutionPosition.GetIP() == 0)
             {
                 continue;   
             }

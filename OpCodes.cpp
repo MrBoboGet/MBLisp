@@ -73,6 +73,7 @@ namespace MBLisp
         IPIndex CurrentPosition = ListToAppend.size();
         if(ListToConvert[0].IsType<Symbol>())
         {
+            auto const& CurrentSym = ListToConvert[0].GetType<Symbol>();
             SymbolID CurrentSymbol = ListToConvert[0].GetType<Symbol>().ID;
             if(CurrentSymbol < SymbolID(PrimitiveForms::LAST))
             {

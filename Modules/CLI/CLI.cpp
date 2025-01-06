@@ -6,8 +6,36 @@
 
 #include <MBTUI/SizeSpecification.h>
 #include <MBTUI/Absolute.h>
+#include <MBTUI/Text.h>
 namespace MBLisp
 {
+    static MBCLI::TerminalColor ParseColor(std::string_view Content)
+    {
+        MBCLI::TerminalColor ReturnValue = MBCLI::ANSITerminalColor::BrightWhite;
+        if(Content == "red")
+        {
+            ReturnValue = MBCLI::ANSITerminalColor::BrightRed;
+        }
+        else if(Content == "green")
+        {
+            ReturnValue = MBCLI::ANSITerminalColor::BrightGreen;
+        }
+        else if(Content == "yellow")
+        {
+            ReturnValue = MBCLI::ANSITerminalColor::BrightYellow;
+        }
+
+        return ReturnValue;
+    }
+
+
+
+
+
+
+
+
+
     LispWindow::LispWindow(std::shared_ptr<Evaluator> Evaluator,Value Val)
     {
         m_Evaluator = Evaluator;
@@ -247,6 +275,21 @@ namespace MBLisp
             }
         }
     }
+    static void SetChildren_Stacker(Evaluator& Eval,MBTUI::Stacker& Stacker,MBLisp::List& Children)
+    {
+        Stacker.ClearChildren();
+        for(auto& Child : Children)
+        {
+            if(Child.IsType<MBCLI::Window>())
+            {
+                Stacker.AddElement(Child.GetSharedPtr<MBCLI::Window>());
+            }
+            else
+            {
+                Stacker.AddElement(std::shared_ptr<MBCLI::Window>(std::make_shared<LispWindow>(Eval.shared_from_this(),Child)));
+            }
+        }
+    }
 
     Value CLIModule::p_Stacker(Evaluator& Evaluator,Dict& Attributes,List& Children)
     {
@@ -261,19 +304,8 @@ namespace MBLisp
                 SetAtr_Stacker(Stacker,Attribute.first.GetType<String>(),Attribute.second);
             }
         }
-       
+        SetChildren_Stacker(Evaluator,Stacker,Children);
 
-        for(auto& Child : Children)
-        {
-            if(Child.IsType<MBCLI::Window>())
-            {
-                Stacker.AddElement(Child.GetSharedPtr<MBCLI::Window>());
-            }
-            else
-            {
-                Stacker.AddElement(std::shared_ptr<MBCLI::Window>(std::make_shared<LispWindow>(Evaluator.shared_from_this(),Child)));
-            }
-        }
         return ReturnValue;
     }
 
@@ -309,6 +341,11 @@ namespace MBLisp
         }
         return ReturnValue;
     }
+    Value GetLine_Repl(MBTUI::REPL& Repl)
+    {
+        return String(Repl.GetLineString());
+    }
+
     MBCLI::Dimensions CLIModule::p_PreferedDims(MBCLI::Window& Window,MBCLI::Dimensions SuggestedDims)
     {
         return Window.PreferedDimensions(SuggestedDims);
@@ -365,20 +402,6 @@ namespace MBLisp
     //static Value p_Repl(Dict& Attributes,List& Children);
     void CLIModule::SetChildren(MBLisp::Value,MBLisp::Ref<MBLisp::List> Children)
     {
-    }
-    static void SetChildren_Stacker(Evaluator& Eval,MBTUI::Stacker& Stacker,MBLisp::List Children)
-    {
-        for(auto& Child : Children)
-        {
-            if(Child.IsType<MBCLI::Window>())
-            {
-                Stacker.AddElement(MBUtility::SmartPtr<MBCLI::Window>(Child.GetSharedPtr<MBCLI::Window>()));
-            }
-            else
-            {
-                Stacker.AddElement(std::shared_ptr<MBCLI::Window>(std::make_shared<LispWindow>(Eval.shared_from_this(),Child)));
-            }
-        }
     }
 
 
@@ -501,11 +524,36 @@ namespace MBLisp
 
     void SetAttribute_Absolute(MBTUI::Absolute& Absolute,String const& Atr,Value const& Val)
     {
-        if(Atr == "center")
+        if(Atr == "orientation")
+        {
+            if(Val.IsType<String>())
+            {
+                Absolute.SetOrientation(MBTUI::StringToOrientation(Val.GetType<String>()));
+            }
+        }
+        else if(Atr == "relative")
         {
             if(Val.IsType<bool>())
             {
-                Absolute.SetCenter(Val.GetType<bool>());   
+                Absolute.SetRelative(Val.GetType<bool>());
+            }
+        }
+        else if(Atr == "row-offset")
+        {
+            if(Val.IsType<Int>())
+            {
+                auto Offset = Absolute.GetOffsets();
+                Offset.Height = Val.GetType<Int>();
+                Absolute.SetOffsets(Offset.Height,Offset.Width);
+            }
+        }
+        else if(Atr == "col-offset")
+        {
+            if(Val.IsType<Int>())
+            {
+                auto Offset = Absolute.GetOffsets();
+                Offset.Width = Val.GetType<Int>();
+                Absolute.SetOffsets(Offset.Height,Offset.Width);
             }
         }
         else if(Atr == "visible")
@@ -542,6 +590,53 @@ namespace MBLisp
             }
             break;
         }
+        return ReturnValue;
+    }
+
+    void Text_SetAtr(MBTUI::Text& Text,String const& Atr,Value const& Val)
+    {
+        if(Atr == "color")
+        {
+            if(Val.IsType<String>())
+            {
+                Text.SetColor(ParseColor(Val.GetType<String>()));
+            }
+        }
+        else if(Atr == "highlight-color")
+        {
+            if(Val.IsType<String>())
+            {
+                Text.SetHighlightColor(ParseColor(Val.GetType<String>()));
+            }
+        }
+    }
+    Value Text_Create(String const& Content)
+    {
+        auto ReturnValue = Value::EmplacePolymorphic<MBTUI::Text,MBCLI::Window>();
+        auto& Text = ReturnValue.GetType<MBTUI::Text>();
+        Text.SetText(Content);
+        return ReturnValue;
+    }
+    Value Text_Attributes(String const& Content,Dict& Attributes)
+    {
+        auto ReturnValue = Value::EmplacePolymorphic<MBTUI::Text,MBCLI::Window>();
+        auto& Text = ReturnValue.GetType<MBTUI::Text>();
+        for(auto const& Atr : Attributes)
+        {
+            if(Atr.first.IsType<String>())
+            {
+                Text_SetAtr(Text,Atr.first.GetType<String>(),Atr.second);
+            }
+        }
+        Text.SetText(Content);
+        return ReturnValue;
+    }
+
+    Value NewInput(String const& String)
+    {
+        Value ReturnValue = Value::EmplaceExternal<MBCLI::ConsoleInput>();
+
+        ReturnValue.GetType<MBCLI::ConsoleInput>().CharacterInput = String;
         return ReturnValue;
     }
 
@@ -588,12 +683,20 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<SetAttribute_Absolute>(ReturnValue,"set-atr");
         AssociatedEvaluator.AddGeneric<p_AddValueChildStacker>(ReturnValue,"add-child");
         AssociatedEvaluator.AddGeneric<GetSelected>(ReturnValue,"get-selected");
+        AssociatedEvaluator.AddGeneric<SetChildren_Stacker>(ReturnValue,"set-children");
         //AssociatedEvaluator.AddGeneric<p_AddChildStacker>(ReturnValue,"add-child");
         AssociatedEvaluator.AddObjectMethod<&MBTUI::Stacker::ClearChildren>(ReturnValue,"clear");
         AssociatedEvaluator.AddGeneric<p_Repl>(ReturnValue,"repl");
+        AssociatedEvaluator.AddGeneric<GetLine_Repl>("get-line");
+
+        AssociatedEvaluator.AddGeneric<NewInput>(ReturnValue,"create-input");
 
 
         AssociatedEvaluator.AddGeneric<CreateAbsolute>(ReturnValue,"absolute");
+
+        AssociatedEvaluator.AddGeneric<Text_Create>(ReturnValue,"Text");
+        AssociatedEvaluator.AddGeneric<Text_Attributes>(ReturnValue,"Text");
+        AssociatedEvaluator.AddType<MBTUI::Text>(ReturnValue,"Text_t");
 
         AssociatedEvaluator.AddGeneric<p_Terminal>(ReturnValue,"terminal");
         AssociatedEvaluator.AddGeneric<p_GetInput>(ReturnValue,"get-input");

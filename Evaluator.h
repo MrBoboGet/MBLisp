@@ -824,6 +824,17 @@ namespace MBLisp
         {
             AddMethod<ClassType>(m_GlobalScope,MethodName,p_MemberConverter<ClassType,MemberMethod>);
         }
+
+        template<typename T>
+        void AddType(Ref<Scope> Scope,std::string const& Name)
+        {
+            auto Val = ClassDefinition(Value::GetTypeTypeID<T>());   
+            SymbolID GenericSymbol = p_GetSymbolID(Name);
+            if(Scope->TryGet(GenericSymbol) == nullptr)
+            {
+                 Scope->SetVariable(GenericSymbol,Val);
+            }
+        }
         //
 
 

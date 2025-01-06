@@ -2,6 +2,9 @@
 #include <filesystem>
 #include <iostream>
 #include <MBUnicode/MBUnicode.h>
+#include <MBSystem/MBSystem.h>
+
+#include <MBUtility/MBStrings.h>
 using namespace std::chrono;
 int main(int argc,const char** argv)
 {
@@ -12,15 +15,62 @@ int main(int argc,const char** argv)
         {
             Evaluator->Repl();
         }
-        std::string FileContent = argv[1];
+        int ArgOffset = 2;
+        std::string SourceFile = argv[1];
         std::vector<std::string> LispArgv;
-        for(int i = 2; i < argc; i++)
+        if(argc >= 3 && std::strcmp(argv[1],"-m") == 0)
+        {
+            ArgOffset = 3;
+            std::string TargetFile = argv[2];
+            bool MultiPart = false;
+            for(auto& Character : TargetFile)
+            {
+                if(Character == '.')
+                {
+                    Character = '/';   
+                    MultiPart = true;
+                }
+            }
+            TargetFile += ".lisp";
+            auto LibDir = MBSystem::GetUserHomeDirectory()/".mblisp/libs";
+            std::string NewSourcefile;
+            if(MultiPart)
+            {
+                if(std::filesystem::exists(LibDir/TargetFile))
+                {
+                    NewSourcefile = MBUnicode::PathToUTF8(LibDir/TargetFile);
+                }
+            }
+            else
+            {
+                auto DirIt = std::filesystem::directory_iterator(LibDir);
+                for(auto const& Entry : DirIt)
+                {
+                    if(Entry.is_directory())
+                    {
+                        auto SuggestedFile = Entry.path()/TargetFile;
+                        if(std::filesystem::exists(SuggestedFile))
+                        {
+                            NewSourcefile = MBUnicode::PathToUTF8(SuggestedFile);
+                            break;
+                        }
+                    }
+                }
+            }
+            if(NewSourcefile.empty())
+            {
+                std::cout<<"Unable to find module with name '"<<argv[2]<<"'"<<std::endl;
+                std::exit(1);
+            }
+            SourceFile = std::move(NewSourcefile);
+        }
+        for(int i = ArgOffset; i < argc; i++)
         {
             LispArgv.push_back(argv[i]);   
         }
         Evaluator->SetArgv(LispArgv);
         Evaluator->LoadStd();
-        Evaluator->Eval(FileContent);
+        Evaluator->Eval(SourceFile);
     }
     catch(MBLisp::LookupError const& e)
     {
