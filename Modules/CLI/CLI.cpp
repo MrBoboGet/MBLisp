@@ -7,6 +7,7 @@
 #include <MBTUI/SizeSpecification.h>
 #include <MBTUI/Absolute.h>
 #include <MBTUI/Text.h>
+#include <MBTUI/Hider.h>
 namespace MBLisp
 {
     static MBCLI::TerminalColor ParseColor(std::string_view Content)
@@ -345,6 +346,10 @@ namespace MBLisp
     {
         return String(Repl.GetLineString());
     }
+    void SetLine_Repl(MBTUI::REPL& Repl,String const& Content)
+    {
+        Repl.SetText(Content);
+    }
 
     MBCLI::Dimensions CLIModule::p_PreferedDims(MBCLI::Window& Window,MBCLI::Dimensions SuggestedDims)
     {
@@ -465,6 +470,18 @@ namespace MBLisp
     {
         return CompareInputString(Input,Key);
     }
+    static bool Ctrl(MBCLI::ConsoleInput const& Input)
+    {
+        return (Input.KeyModifiers & uint64_t(MBCLI::KeyModifier::CTRL)) != 0;
+    }
+    static bool Ctrl_Input(MBCLI::ConsoleInput const& Input,String const& Character)
+    {
+        if(Character.size() != 1)
+        {
+            throw std::runtime_error("Can only compare control character for single char string");
+        }
+        return (Input.KeyModifiers & uint64_t(MBCLI::KeyModifier::CTRL)) != 0 &&  Input.CharacterInput == MBCLI::CTRL(Character[0]);
+    }
 
 
     static void SetParentInfo(Value const& Value,std::shared_ptr<MBCLI::Window::ParentInfo> Parent)
@@ -520,6 +537,27 @@ namespace MBLisp
             return Lisp->GetUnderylingValue();
         }
         return FromShared(Shared);
+    }
+    static Value GetFirst_Stacker(MBTUI::Stacker& Stacker)
+    {
+        auto& SelectedWindow = Stacker.First();
+        auto Shared = SelectedWindow.GetShared();
+        //TODO: would rather avoid dynamic_cast if possible...
+        auto Builtin = dynamic_cast<BuiltinWindowAdapter*>(Shared.get());
+        if(Builtin != nullptr)
+        {
+            return Builtin->GetLispValue();
+        }
+        auto Lisp = dynamic_cast<LispWindow*>(Shared.get());
+        if(Lisp != nullptr)
+        {
+            return Lisp->GetUnderylingValue();
+        }
+        return FromShared(Shared);
+    }
+    static Value ChildCount_Stacker(MBTUI::Stacker& Stacker)
+    {
+        return Int(Stacker.ChildCount());
     }
 
     void SetAttribute_Absolute(MBTUI::Absolute& Absolute,String const& Atr,Value const& Val)
@@ -641,6 +679,47 @@ namespace MBLisp
     }
 
 
+    void SetAttribute_Hider(MBTUI::Hider& Hider,String const& Atr,Value const& Value)
+    {
+        if(Atr == "visible")
+        {
+            if(Value.IsType<bool>())
+            {
+                Hider.SetVisible(Value.GetType<bool>());
+            }
+        }
+    }
+
+
+    Value CreateHider(Evaluator& Evaluator,Dict& Attributes,List& Children)
+    {
+        auto ReturnValue = Value::EmplacePolymorphic<MBTUI::Hider,MBCLI::Window>();
+        auto& Hider = ReturnValue.GetType<MBTUI::Hider>();
+        for(auto const& Attribute : Attributes)
+        {
+            if(Attribute.first.IsType<String>())
+            {
+                SetAttribute_Hider(Hider,Attribute.first.GetType<String>(),Attribute.second);
+            }
+        }
+       
+
+        for(auto& Child : Children)
+        {
+            if(Child.IsType<MBCLI::Window>())
+            {
+                Hider.SetSubwindow(Child.GetSharedPtr<MBCLI::Window>());
+            }
+            else
+            {
+                Hider.SetSubwindow(std::shared_ptr<MBCLI::Window>(std::make_shared<LispWindow>(Evaluator.shared_from_this(),Child)));
+            }
+            break;
+        }
+        return ReturnValue;
+    }
+
+
     MBLisp::Ref<MBLisp::Scope> CLIModule::GetModuleScope(MBLisp::Evaluator& AssociatedEvaluator)
     {
         auto ReturnValue = MBLisp::MakeRef<MBLisp::Scope>();
@@ -683,13 +762,18 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<SetAttribute_Absolute>(ReturnValue,"set-atr");
         AssociatedEvaluator.AddGeneric<p_AddValueChildStacker>(ReturnValue,"add-child");
         AssociatedEvaluator.AddGeneric<GetSelected>(ReturnValue,"get-selected");
+        AssociatedEvaluator.AddGeneric<GetFirst_Stacker>(ReturnValue,"first");
+        AssociatedEvaluator.AddGeneric<ChildCount_Stacker>(ReturnValue,"child-count");
         AssociatedEvaluator.AddGeneric<SetChildren_Stacker>(ReturnValue,"set-children");
         //AssociatedEvaluator.AddGeneric<p_AddChildStacker>(ReturnValue,"add-child");
         AssociatedEvaluator.AddObjectMethod<&MBTUI::Stacker::ClearChildren>(ReturnValue,"clear");
         AssociatedEvaluator.AddGeneric<p_Repl>(ReturnValue,"repl");
         AssociatedEvaluator.AddGeneric<GetLine_Repl>("get-line");
+        AssociatedEvaluator.AddGeneric<SetLine_Repl>(ReturnValue,"set-line");
 
         AssociatedEvaluator.AddGeneric<NewInput>(ReturnValue,"create-input");
+        AssociatedEvaluator.AddGeneric<Ctrl>(ReturnValue,"ctrl");
+        AssociatedEvaluator.AddGeneric<Ctrl_Input>(ReturnValue,"ctrl");
 
 
         AssociatedEvaluator.AddGeneric<CreateAbsolute>(ReturnValue,"absolute");
@@ -711,6 +795,12 @@ namespace MBLisp
 
         AssociatedEvaluator.AddGeneric<Input_Eq>("eq");
         AssociatedEvaluator.AddGeneric<Input_Eq_2>("eq");
+
+
+        //Hider
+        AssociatedEvaluator.AddGeneric<CreateHider>(ReturnValue,"hider");
+        AssociatedEvaluator.AddGeneric<SetAttribute_Hider>(ReturnValue,"set-atr");
+        //
 
         //AssociatedEvaluator.AddObjectMethod<&MBTUI::Stacker::EnableOverlow>(ReturnValue,"enable-overflow");
 
