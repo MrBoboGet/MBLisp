@@ -640,6 +640,13 @@ namespace MBLisp
                 Text.SetColor(ParseColor(Val.GetType<String>()));
             }
         }
+        else if(Atr == "content")
+        {
+            if(Val.IsType<String>())
+            {
+                Text.SetText(Val.GetType<String>());
+            }
+        }
         else if(Atr == "highlight-color")
         {
             if(Val.IsType<String>())
@@ -653,6 +660,19 @@ namespace MBLisp
         auto ReturnValue = Value::EmplacePolymorphic<MBTUI::Text,MBCLI::Window>();
         auto& Text = ReturnValue.GetType<MBTUI::Text>();
         Text.SetText(Content);
+        return ReturnValue;
+    }
+    Value Text_CreateDict(Dict const& Atrs,List const& Children)
+    {
+        auto ReturnValue = Value::EmplacePolymorphic<MBTUI::Text,MBCLI::Window>();
+        auto& Text = ReturnValue.GetType<MBTUI::Text>();
+        for(auto const& Atr : Atrs)
+        {
+            if(Atr.first.IsType<String>())
+            {
+                Text_SetAtr(Text,Atr.first.GetType<String>(),Atr.second);
+            }
+        }
         return ReturnValue;
     }
     Value Text_Attributes(String const& Content,Dict& Attributes)
@@ -779,6 +799,7 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<CreateAbsolute>(ReturnValue,"absolute");
 
         AssociatedEvaluator.AddGeneric<Text_Create>(ReturnValue,"Text");
+        AssociatedEvaluator.AddGeneric<Text_CreateDict>(ReturnValue,"Text");
         AssociatedEvaluator.AddGeneric<Text_Attributes>(ReturnValue,"Text");
         AssociatedEvaluator.AddType<MBTUI::Text>(ReturnValue,"Text_t");
 

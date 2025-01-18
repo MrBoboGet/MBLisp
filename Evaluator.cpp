@@ -1420,6 +1420,17 @@ namespace MBLisp
             {
                    
             }
+            catch(UncaughtSignal const& e)
+            {
+                if(e.ThrownValue.IsType<String>())
+                {
+                    p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState, e.ThrownValue.GetType<String>()),true);
+                }
+                else
+                {
+                    p_EmitSignal(CurrentState,e.ThrownValue,true);
+                }
+            }
             catch(std::exception const& e)
             {
                 p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState, String(e.what())),true);

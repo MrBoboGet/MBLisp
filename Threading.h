@@ -58,6 +58,7 @@ namespace MBLisp
             std::unique_ptr<std::thread> SystemThread;
             bool WakedUp = false;
             std::condition_variable WaitConditional;
+            std::mutex WaitMutex;
             ExecutionState* State = nullptr;
         };
         static constexpr float m_SwapTime = 0.005f;
