@@ -85,7 +85,7 @@ namespace MBLisp
             {
                 if(Parent.Shadowing)
                     continue;
-                ReturnValue = Parent.AssociatedScope->TryGet(Variable);
+                ReturnValue = Parent.AssociatedScope->TryGetNonShadowing(Variable);
                 if(ReturnValue != nullptr)
                 {
                     return ReturnValue;

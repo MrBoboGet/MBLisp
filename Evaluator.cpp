@@ -104,6 +104,11 @@ namespace MBLisp
         m_ThreadPaused = true;
         m_AssociatedEvaluator->m_ThreadingState.TempSuspend(m_CurrentState->AssociatedThread,true);
     }
+    void CallContext::UnpauseThread()
+    {
+        m_ThreadPaused = false;
+        m_AssociatedEvaluator->m_ThreadingState.TempSuspend(m_CurrentState->AssociatedThread,false);
+    }
     bool CallContext::IsMultiThreaded()
     {
         return m_AssociatedEvaluator->m_ThreadingState.MultipleThreadsActive();
@@ -321,6 +326,26 @@ namespace MBLisp
                 Print(AssociatedEvaluator,Value.Slots[i].second);
             }
             std::cout<<"}";
+        }
+        else if(ValueToPrint.IsType<ClassDefinition>())
+        {
+            auto const& Value = ValueToPrint.GetType<ClassDefinition>();
+            if(Value.Name.ID != -1)
+            {
+                std::cout<< AssociatedEvaluator.GetSymbolString(Value.Name.ID);
+            }
+            else
+            {
+                auto BuiltinIt = AssociatedEvaluator.m_BuiltinTypeDefinitions.find(Value.ID);
+                if(BuiltinIt != AssociatedEvaluator.m_BuiltinTypeDefinitions.end())
+                {
+                    std::cout<< AssociatedEvaluator.GetSymbolString(BuiltinIt->second.GetType<ClassDefinition>().Name.ID);
+                }
+                else
+                {
+                    std::cout<< "?";
+                }
+            }
         }
         else if(ValueToPrint.IsType<bool>())
         {
@@ -986,6 +1011,25 @@ namespace MBLisp
     {
         return Context.GetEvaluator().GetString(Arguments[0].GetType<StackTrace>());
     }
+    Value Evaluator::Str_Type BUILTIN_ARGLIST
+    {
+        String ReturnValue = "?";
+        auto const& Type = Arguments[0].GetType<ClassDefinition>();
+        if(Type.Name.ID != -1)
+        {
+            ReturnValue = Context.GetEvaluator().GetSymbolString(Type.Name.ID);
+        }
+        else
+        {
+            auto It = Context.GetEvaluator().m_BuiltinTypeDefinitions.find(Type.ID);
+            if(It != Context.GetEvaluator().m_BuiltinTypeDefinitions.end())
+            {
+                Context.GetEvaluator().GetSymbolString(It->second.GetType<ClassDefinition>().Name.ID);
+            }
+        }
+        return ReturnValue;
+    }
+
     Value Evaluator::Symbol_String BUILTIN_ARGLIST
     {
         return Symbol(Context.GetEvaluator().GetSymbolID(Arguments[0].GetType<String>()));
@@ -1185,6 +1229,9 @@ namespace MBLisp
         }
         if(Context.IsSetting())
         {
+#ifndef NDEBUG 
+            auto ValueType = Context.GetEvaluator().p_TypeString(Context.GetSetValue());
+#endif
             SymbolIt->second = Context.GetSetValue();
         }
         return SymbolIt->second;
@@ -1268,8 +1315,8 @@ namespace MBLisp
         {
             return;   
         }
-        CurrentState.UnwindingStack = true;
-        CurrentState.FrameTarget = TargetIndex-1;
+        CurrentState.ActiveUnwindState.UnwindingStack = true;
+        CurrentState.ActiveUnwindState.FrameTarget = TargetIndex-1;
         try
         {
             p_Eval(CurrentState,TargetIndex);
@@ -1277,8 +1324,8 @@ namespace MBLisp
         catch(ContinueUnwind const&)
         {
         }
-        CurrentState.FrameTarget = -1;
-        CurrentState.UnwindingStack = false;
+        CurrentState.ActiveUnwindState.FrameTarget = -1;
+        CurrentState.ActiveUnwindState.UnwindingStack = false;
     }
     Ref<Scope> Evaluator::GetModuleScope(std::string const& ModuleName)
     {
@@ -1322,8 +1369,20 @@ namespace MBLisp
         }
         m_GlobalScope->SetVariable(p_GetSymbolID("argv"),std::move(NewValue));
     }
-    void Evaluator::p_EmitSignal(ExecutionState& CurrentState,Value SignalValue,bool ForceUnwind)
+    void Evaluator::p_EmitSignal(ExecutionState& CurrentState,Value SignalValue,bool ForceUnwind,bool IgnoreDebug)
     {
+
+        if(m_DebugState.SignalTrapped(CurrentState,ForceUnwind) && !IgnoreDebug)
+        {
+            auto SignalToStore = MBUtility::MakeCopyableUnique<StoredSignal>();
+            SignalToStore->SignalValue = std::move(SignalValue);
+            SignalToStore->ForcedUnwind = ForceUnwind;
+            CurrentState.StackFrames.back().StoredSignal = std::move(SignalToStore);
+
+            p_InvokeTrapHandler(CurrentState);
+            return;
+        }
+
         //the signal form returns a value in the current frame, which
         int CurrentFrameIndex = CurrentState.StackFrames.size()-1;
         bool SignalFound = false;
@@ -1370,7 +1429,7 @@ namespace MBLisp
                     SignalFound = true;
                     if(ForceUnwind)
                     {
-                        CurrentState.UnwindForced = true;
+                        CurrentState.ActiveUnwindState.UnwindForced = true;
                     }
                     break;
                 }
@@ -1392,19 +1451,23 @@ namespace MBLisp
     }
     void Evaluator::p_InvokeTrapHandler(ExecutionState& State)
     {
+        State.StackFrames.back().StoredUnwindState = MBUtility::MakeCopyableUnique<UnwindState>(State.ActiveUnwindState);
         Value Handler = m_DebugState.GetTrapHandler();
         FuncArgVector Args;
-        State.StackFrames.back().PopExtra = 1;
+        State.StackFrames.back().PopExtra += 1;
         p_Invoke(Handler,Args,State,false,true);
         State.TraphandlerIndex = State.StackFrames.size();
     }
     void Evaluator::p_Invoke(Value& ObjectToCall,FuncArgVector& Arguments,ExecutionState& CurrentState,bool Setting,bool IsTrapHandler)
     {
         auto& CurrentCallStack = CurrentState.StackFrames;
+        assert(!CurrentState.CurrentCallContext.m_ThreadPaused);
         if(ObjectToCall.IsType<Function>())
         {
             BuiltinFuncType AssociatedFunc = ObjectToCall.GetType<Function>().Func;
             assert(AssociatedFunc != nullptr);
+
+            auto PauseLock = CurrentState.GetPauseLock();
 
             for(auto& Arg : Arguments)
             {
@@ -1435,16 +1498,12 @@ namespace MBLisp
             {
                 p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState, String(e.what())),true);
             }
-            if(CurrentState.CurrentCallContext.m_ThreadPaused)
-            {
-                m_ThreadingState.TempSuspend(CurrentState.AssociatedThread,false);
-                CurrentState.CurrentCallContext.m_ThreadPaused = false;
-            }
             assert(CurrentCallStack.back().ArgumentStack.size() == 0 || !CurrentCallStack.back().ArgumentStack.back().IsType<List>() || CurrentCallStack.back().ArgumentStack.back().GetRef<List>() != nullptr);
         }
         else if(ObjectToCall.IsType<FunctionObject>())
         {
             FunctionObject& ObjectToInvoke = ObjectToCall.GetType<FunctionObject>();
+            auto PauseLock = CurrentState.GetPauseLock();
             for(auto& Arg : Arguments)
             {
                 assert(!Arg.IsType<List>() || Arg.GetRef<List>() != nullptr);
@@ -1462,11 +1521,6 @@ namespace MBLisp
             catch(std::exception const& e)
             {
                 p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState, String(e.what())),true);
-            }
-            if(CurrentState.CurrentCallContext.m_ThreadPaused)
-            {
-                m_ThreadingState.TempSuspend(CurrentState.AssociatedThread,false);
-                CurrentState.CurrentCallContext.m_ThreadPaused = false;
             }
             assert(CurrentCallStack.back().ArgumentStack.size() == 0 || !CurrentCallStack.back().ArgumentStack.back().IsType<List>() || CurrentCallStack.back().ArgumentStack.back().GetRef<List>() != nullptr);
 
@@ -1568,8 +1622,6 @@ namespace MBLisp
                 return;
             }
             p_Invoke(*Callable,Arguments,CurrentState,Setting,IsTrapHandler);
-            //should only invoke trap handler at the lowest point of the recursive call to p_Invoke
-            return;
         }
         else
         {
@@ -1577,6 +1629,7 @@ namespace MBLisp
             std::string ErrorString = "Cannot invoke object of type " + p_TypeString(ObjectToCall);
             p_EmitSignal(CurrentState,Value::EmplaceExternal<StackTrace>( CurrentState,ErrorString),true);
         }
+        assert(!CurrentState.CurrentCallContext.m_ThreadPaused);
     }
     
     Value Evaluator::p_Eval(ExecutionState& CurrentState,int ReturnIndex)
@@ -1592,13 +1645,26 @@ namespace MBLisp
             {
                 m_ThreadingState.WaitForTurn(CurrentState.AssociatedThread,&CurrentState);
             }
-            if(CurrentState.UnwindingStack)
+
+            if(CurrentState.StackFrames.back().StoredUnwindState != nullptr)
+            {
+                CurrentState.ActiveUnwindState = *CurrentState.StackFrames.back().StoredUnwindState;
+                CurrentState.StackFrames.back().StoredUnwindState.reset();
+            }
+            if(CurrentState.StackFrames.back().StoredSignal != nullptr)
+            {
+                StoredSignal Value = std::move(*CurrentState.StackFrames.back().StoredSignal);
+                CurrentState.StackFrames.back().StoredSignal.reset();
+                p_EmitSignal(CurrentState,Value.SignalValue,
+                        Value.ForcedUnwind,true);
+            }
+            if(CurrentState.ActiveUnwindState.UnwindingStack)
             {
                 assert(CurrentState.StackFrames.size() > 0);
-                if(CurrentState.FrameTarget == StackFrames.size() -1)
+                if(CurrentState.ActiveUnwindState.FrameTarget == StackFrames.size() -1)
                 {
-                    CurrentState.UnwindingStack = false;
-                    CurrentState.FrameTarget = -1; 
+                    CurrentState.ActiveUnwindState.UnwindingStack = false;
+                    CurrentState.ActiveUnwindState.FrameTarget = -1; 
                 }
                 else
                 {
@@ -1681,6 +1747,7 @@ namespace MBLisp
             }
             
             CurrentFrame.ExecutionPosition.Pop();
+            assert(!CurrentState.CurrentCallContext.m_ThreadPaused);
             if(CurrentCode.IsType<OpCode_Pop>())
             {
                 assert(CurrentFrame.ArgumentStack.size() != 0);
@@ -1721,6 +1788,9 @@ namespace MBLisp
                             VarToPushPointer = &DynIt->second.back();
                         }
                     }
+#ifndef NDEBUG 
+                    auto ValueType = p_TypeString(*VarToPushPointer);
+#endif
                     CurrentFrame.ArgumentStack.push_back(*VarToPushPointer);
                 }
             }
@@ -1748,6 +1818,9 @@ namespace MBLisp
                     }
                     LiteralToPush = NewValue;
                 }
+#ifndef NDEBUG 
+                auto ValueType = p_TypeString(LiteralToPush);
+#endif
                 CurrentFrame.ArgumentStack.push_back(LiteralToPush);
             }
             else if(CurrentCode.IsType<OpCode_PushLambda>())
@@ -1836,6 +1909,9 @@ namespace MBLisp
             {
                 assert(CurrentFrame.ArgumentStack.size() >= 1);
                 CurrentState.CurrentCallContext.m_SetValue = std::move(CurrentFrame.ArgumentStack.back());
+#ifndef NDEBUG 
+                auto ValueType = p_TypeString(CurrentState.CurrentCallContext.m_SetValue);
+#endif
                 CurrentFrame.ArgumentStack.pop_back();
             }
             else if(CurrentCode.IsType<OpCode_Set>())
@@ -1908,16 +1984,16 @@ namespace MBLisp
             }
             else if(CurrentCode.IsType<OpCode_SignalHandler_Done>())
             {
-                if(!CurrentState.UnwindForced)
+                if(!CurrentState.ActiveUnwindState.UnwindForced)
                 {
                     CurrentFrame.ExecutionPosition.SetEnd();
                 }
                 else
                 {
                     assert(CurrentFrame.SignalFrameIndex != -1);
-                    CurrentState.UnwindForced = false;
-                    CurrentState.UnwindingStack = true;
-                    CurrentState.FrameTarget = CurrentFrame.SignalFrameIndex;
+                    CurrentState.ActiveUnwindState.UnwindForced = false;
+                    CurrentState.ActiveUnwindState.UnwindingStack = true;
+                    CurrentState.ActiveUnwindState.FrameTarget = CurrentFrame.SignalFrameIndex;
                     StackFrames[CurrentFrame.SignalFrameIndex].ExecutionPosition.SetIP(CurrentCode.GetType<OpCode_SignalHandler_Done>().HandlersEnd);
                     StackFrames[CurrentFrame.SignalFrameIndex].ArgumentStack.resize(CurrentCode.GetType<OpCode_SignalHandler_Done>().NewStackSize+1);
                 }
@@ -1975,7 +2051,7 @@ namespace MBLisp
                 assert(CurrentFrame.ActiveUnwindProtectors.size() > 0);
                 CurrentFrame.ActiveUnwindProtectors.pop_back();
                 CurrentFrame.ProtectDepth -= 1;
-                if(CurrentState.UnwindingStack)
+                if(CurrentState.ActiveUnwindState.UnwindingStack)
                 {
                     if(CurrentFrame.ActiveUnwindProtectors.size() > 0)
                     {
@@ -2009,9 +2085,9 @@ namespace MBLisp
 
                 auto& TargetFrame = StackFrames[CurrentFrame.SignalFrameIndex];
                 assert(UnwindCode.TargetUnwindDepth -1 || UnwindCode.TargetUnwindDepth <= TargetFrame.ActiveUnwindProtectors.size());
-                CurrentState.UnwindForced = false;
-                CurrentState.UnwindingStack = true;
-                CurrentState.FrameTarget = CurrentFrame.SignalFrameIndex;
+                CurrentState.ActiveUnwindState.UnwindForced = false;
+                CurrentState.ActiveUnwindState.UnwindingStack = true;
+                CurrentState.ActiveUnwindState.FrameTarget = CurrentFrame.SignalFrameIndex;
                 if(UnwindCode.TargetUnwindDepth -1 || UnwindCode.TargetUnwindDepth == TargetFrame.ActiveUnwindProtectors.size())
                 {
                     TargetFrame.ExecutionPosition.SetIP(CurrentCode.GetType<OpCode_Unwind>().HandlersEnd);
@@ -2051,6 +2127,11 @@ namespace MBLisp
                     }   
                     DynamicVariable& VariableToModify = Arguments[i*2].GetType<DynamicVariable>();
                     ModifiedBindings.push_back(VariableToModify.ID);
+                       
+
+#ifndef NDEBUG 
+                    auto ValueType = p_TypeString(Arguments[i*2+1]);
+#endif
                     NewValues.push_back(std::move(Arguments[i*2+1]));
                 }
                 if(ValidBindings)
@@ -2121,6 +2202,7 @@ namespace MBLisp
             {
                 assert(false && "p_Eval doesnt cover all opcode cases");
             }
+            assert(!CurrentState.CurrentCallContext.m_ThreadPaused);
         }
         return ReturnValue;
 
@@ -2165,6 +2247,15 @@ namespace MBLisp
         else if(ValueToInspect.IsBuiltin())
         {
             ReturnValue = GetSymbolString(m_BuiltinTypeDefinitions[ValueToInspect.GetTypeID()].GetType<ClassDefinition>().Name.ID);
+        }
+        else
+        {
+            auto BuiltinType = ValueToInspect.GetTypeID();
+            auto It = m_BuiltinTypeDefinitions.find(BuiltinType);
+            if(It != m_BuiltinTypeDefinitions.end())
+            {
+                ReturnValue = GetSymbolString(It->second.GetType<ClassDefinition>().Name.ID);
+            }
         }
         return ReturnValue;
     }
@@ -2796,6 +2887,7 @@ namespace MBLisp
         AddGeneric<Str_ThreadHandle>("str");
         AddGeneric<Int_ThreadHandle>("int");
         AddMethod<StackTrace>("str",Str_StackTrace);
+        AddMethod<ClassDefinition>("str",Str_Type);
         AddMethod<String>("int",Int_Str);
         AddMethod<String,Int>("substr",Substr);
         AddMethod<String,Int,Int>("substr",Substr);
@@ -2956,6 +3048,8 @@ namespace MBLisp
     }
 
 
+    //Why is this needed again...
+    thread_local std::unique_ptr<ExecutionState> i_ThreadExecutionState;
     Value Evaluator::Thread BUILTIN_ARGLIST
     {
         ThreadHandle NewThread;
@@ -2963,9 +3057,9 @@ namespace MBLisp
         {
             throw std::runtime_error("Thread requires a callable as first argument");
         }
-        ExecutionState NewExecState;
-        NewExecState.StackFrames.push_back(StackFrame());
-        NewExecState.StackFrames.back().StackScope = Context.GetState().StackFrames.back().StackScope;
+        std::unique_ptr<ExecutionState> NewExecState = std::make_unique<ExecutionState>();
+        NewExecState->StackFrames.push_back(StackFrame());
+        NewExecState->StackFrames.back().StackScope = Context.GetState().StackFrames.back().StackScope;
         FuncArgVector Args;
         for(int i = 1; i < Arguments.size();i++)
         {
@@ -2973,16 +3067,19 @@ namespace MBLisp
         }
         //janky...
         //
-        NewExecState.StackFrames.push_back(StackFrame());
-        NewExecState.StackFrames.back().StackScope = Context.GetState().GetScopeRef();
-        NewExecState.CurrentCallContext.m_CurrentState = &NewExecState;
-        NewExecState.CurrentCallContext.m_AssociatedEvaluator = &Context.GetEvaluator();
-        Context.GetEvaluator().p_Invoke(Arguments[0],Args,NewExecState);
-        NewExecState.AssociatedThread = Context.GetEvaluator().m_ThreadingState.GetNextID();
-        NewThread.ID = NewExecState.AssociatedThread;
-        Context.GetEvaluator().m_ThreadingState.AddThread([&,ExecState=std::move(NewExecState)]() mutable
+        NewExecState->StackFrames.push_back(StackFrame());
+        NewExecState->StackFrames.back().StackScope = Context.GetState().GetScopeRef();
+        NewExecState->CurrentCallContext.m_CurrentState = NewExecState.get();
+        NewExecState->CurrentCallContext.m_AssociatedEvaluator = &Context.GetEvaluator();
+        NewExecState->AssociatedThread = Context.GetEvaluator().m_ThreadingState.GetNextID();
+        NewThread.ID = NewExecState->AssociatedThread;
+
+        Context.GetEvaluator().m_ThreadingState.AddThread([Evaluator = &Context.GetEvaluator(),ExecState=std::move(NewExecState),Args = std::move(Args),Callable = Arguments[0] ]() mutable
                 {
-                    Context.GetEvaluator().p_Eval(ExecState,1);
+                    assert(i_ThreadExecutionState == nullptr);
+                    i_ThreadExecutionState = std::move(ExecState);
+                    Evaluator->p_Invoke(Callable,Args,*i_ThreadExecutionState);
+                    Evaluator->p_Eval(*i_ThreadExecutionState,1);
                 });
         return NewThread;
     }
@@ -3336,8 +3433,6 @@ namespace MBLisp
         }
     }
 
-    //Why is this needed again...
-    thread_local std::unique_ptr<ExecutionState> i_ThreadExecutionState;
     ExecutionState& Evaluator::p_GetThreadExecutionState()
     {
         if(i_ThreadExecutionState == nullptr)

@@ -317,7 +317,7 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<static_cast<MBLSP::LineIndex(*)(String const&)>(CreateLineIndex)>(ReturnValue,"line-index");
         AssociatedEvaluator.AddGeneric<static_cast<MBLSP::LineIndex(*)(MBUtility::StreamReader&)>(CreateLineIndex)>(ReturnValue,"line-index");
         AssociatedEvaluator.AddGeneric<GetPosition>(ReturnValue,"get-byte-position");
-        AssociatedEvaluator.AddGeneric<GetLine>(ReturnValue,"get-line");
+        AssociatedEvaluator.AddGeneric<GetLine>("get-line");
         AssociatedEvaluator.AddGeneric<GetCol>(ReturnValue,"get-col");
         AssociatedEvaluator.AddGeneric<JSONEscape>(ReturnValue,"json-escape");
         AssociatedEvaluator.AddGeneric<SplitQuoted_Simple>(ReturnValue,"split-quoted");
@@ -340,8 +340,12 @@ namespace MBLisp
         AssociatedEvaluator.AddObjectMethod<&StreamTokenizer::Peek>(ReturnValue,"peek");
         AssociatedEvaluator.AddObjectMethod<&StreamTokenizer::ConsumeToken>(ReturnValue,"consume-token");
         AssociatedEvaluator.AddGeneric<Read_Regex>(ReturnValue,"read-regex");
-
         AssociatedEvaluator.AddGeneric<Trim>(ReturnValue,"trim");
+
+        AssociatedEvaluator.AddType<SymbolStore>(ReturnValue,"symbol-store_t");
+        AssociatedEvaluator.AddType<std::regex>(ReturnValue,"regex_t");
+        AssociatedEvaluator.AddType<MBLSP::LineIndex>(ReturnValue,"line-index_t");
+        AssociatedEvaluator.AddType<StreamTokenizer>(ReturnValue,"stream-tokenizer_t");
         
         constexpr bool IsRef = IsTemplateInstantiation<Ref<MBUtility::StreamReader>,Ref>::value;
         return ReturnValue;

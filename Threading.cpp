@@ -4,97 +4,119 @@
 namespace MBLisp
 {
        
-    void ThreadingState::p_ScheduleNext(ThreadSchedulingInfo& CurrentThreadInfo,ThreadID ID)
+    void ThreadingState::p_ScheduleNext(ThreadSchedulingInfo& CurrentThreadInfo,ThreadID ID,bool Force)
     {
         clock_t LastClock = m_LastClock.load();
         clock_t CurrentClock = clock();
         float Diff = (CurrentClock-LastClock)/float(CLOCKS_PER_SEC);
         m_ElapsedTime.store(m_ElapsedTime.load() + Diff);
-        if(m_ElapsedTime.load() > m_SwapTime ||   CurrentThreadInfo.HardPaused  == true || CurrentThreadInfo.SleepDuration  > 0)
+        if(m_ElapsedTime.load() > m_SwapTime ||   CurrentThreadInfo.HardPaused  == true || CurrentThreadInfo.SleepDuration  > 0 || Force)
         {
             ThreadID NextID = -1;
+            ThreadID CurrentBest = -1;
             bool IsTempPaused = false;
-            float MinSleepTime = 1000;
-            for(auto& ThreadIt : m_ActiveThreads)
+            float BestSleepTime = std::numeric_limits<float>::max();
+            size_t ItCount = 0;
+            for(auto& ThreadIt : Iterate(ID))
+            //for(auto& ThreadIt : m_ActiveThreads)
             {
                 ThreadIt.second->SleepDuration = std::max(ThreadIt.second->SleepDuration-Diff,float(0));
-                if(!ThreadIt.second->HardPaused && ThreadIt.second->SleepDuration <= 0 && ThreadIt.first != m_CurrentThread)
+                if(!ThreadIt.second->HardPaused && ThreadIt.second->SleepDuration <= 0 && !ThreadIt.second->TemporaryPaused)
                 {
-                    if(!ThreadIt.second->TemporaryPaused || IsTempPaused || NextID == -1)
-                    {
-                        NextID = ThreadIt.first;
-                        IsTempPaused = ThreadIt.second->TemporaryPaused;
-                    }
+                    NextID = ThreadIt.first;
+                    break;
                 }
                 if(!ThreadIt.second->HardPaused)
                 {
-                    MinSleepTime = std::min(MinSleepTime,ThreadIt.second->SleepDuration);
+                    if(!ThreadIt.second->TemporaryPaused && ThreadIt.second->SleepDuration <= BestSleepTime)
+                    {
+                        CurrentBest = ThreadIt.first;
+                        BestSleepTime = ThreadIt.second->SleepDuration;
+                    }
+                    else if(CurrentBest == -1)
+                    {
+                        CurrentBest = ThreadIt.first;
+                    }
                 }
+                ItCount++;
             }
-            //NextID being TempPaused means that no better candidate exists, and
-            //given that this thread isn't in any way suspended would mean that  
-            //we should not switch
-            if(IsTempPaused && !(CurrentThreadInfo.HardPaused || CurrentThreadInfo.TemporaryPaused))
+            assert(NextID == -1 || m_ActiveThreads[NextID]->TemporaryPaused == false);
+            assert(NextID != -1 || ItCount == m_ActiveThreads.size());
+            if(NextID == -1)
             {
-                NextID = -1;
-            }
-            if(NextID == -1 && m_ActiveThreads[m_CurrentThread]->SleepDuration > 0)
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(int(MinSleepTime*1000)));
-                p_ScheduleNext(CurrentThreadInfo,ID);
-                return;
+                auto BestIt = m_ActiveThreads.find(CurrentBest);
+                if(BestIt->second->TemporaryPaused || BestIt->second->SleepDuration <= 0)
+                {
+                    NextID = CurrentBest;
+                }
+                else
+                {
+                    m_LastClock.store(clock());
+                    std::this_thread::sleep_for(std::chrono::milliseconds(int(BestSleepTime*1000)));
+                    p_ScheduleNext(CurrentThreadInfo,ID);
+                    assert(!m_ActiveThreads[m_CurrentThread]->HardPaused);
+                    assert(!m_ActiveThreads[m_CurrentThread]->TemporaryPaused || std::all_of(m_ActiveThreads.begin(),m_ActiveThreads.end(),
+                                [](auto const& t){return t.second->TemporaryPaused || t.second->HardPaused;}));
+                    return;
+                }
             }
             if(NextID != -1)
             {
                 auto ThreadIt = m_ActiveThreads.find(NextID);
                 assert(ThreadIt != m_ActiveThreads.end());
                 std::shared_ptr<ThreadSchedulingInfo>& ThreadToWake = ThreadIt->second;
-                assert(NextID != m_CurrentThread);
                 m_CurrentThread = NextID;
+                assert(!m_ActiveThreads[m_CurrentThread]->TemporaryPaused || std::all_of(m_ActiveThreads.begin(),m_ActiveThreads.end(),
+                            [](auto const& t){return t.second->TemporaryPaused || t.second->HardPaused;}));
                 ThreadToWake->WakedUp = true;
                 ThreadToWake->WaitConditional.notify_one();
             }
+
             //new thread to schedule
+            assert(!m_ActiveThreads[m_CurrentThread]->TemporaryPaused || std::all_of(m_ActiveThreads.begin(),m_ActiveThreads.end(),
+                        [](auto const& t){return t.second->TemporaryPaused || t.second->HardPaused;}));
+            m_ElapsedTime.store(0);
+            assert(!m_ActiveThreads[m_CurrentThread]->HardPaused);
         }
         m_LastClock.store(clock());
     }
-    void ThreadingState::p_StartNext()
-    {
-        clock_t LastClock = m_LastClock.load();
-        clock_t CurrentClock = clock();
-        float Diff = (CurrentClock-LastClock)/double(CLOCKS_PER_SEC);
-        m_ElapsedTime.store(m_ElapsedTime.load() + Diff);
-        if(m_ElapsedTime.load() > m_SwapTime)
-        {
-            ThreadID NextID = -1;
-            float LowestSleepTime = std::numeric_limits<float>::max();
-            float MinSleepTime = 1000;
-            for(auto& ThreadIt : m_ActiveThreads)
-            {
-                ThreadIt.second->SleepDuration = std::max(ThreadIt.second->SleepDuration-Diff,float(0));
-                if(ThreadIt.second->HardPaused || ThreadIt.first == m_CurrentThread)
-                {
-                    continue;
-                }
-                if(ThreadIt.second->SleepDuration < LowestSleepTime)
-                {
-                    NextID = ThreadIt.first;
-                    LowestSleepTime = ThreadIt.second->SleepDuration;
-                }
-            }
-            if(NextID != -1)
-            {
-                std::shared_ptr<ThreadSchedulingInfo> ThreadToWake = m_ActiveThreads[NextID];
-                ThreadToWake->WakedUp = true;
-                ThreadToWake->WaitConditional.notify_one();
-                //ThreadToWake->SleepDuration = 0;
-                m_CurrentThread = NextID;
-            }
-            //new thread to schedule
-        }
-        m_LastClock.store(clock());
-           
-    }
+    //void ThreadingState::p_StartNext()
+    //{
+    //    clock_t LastClock = m_LastClock.load();
+    //    clock_t CurrentClock = clock();
+    //    float Diff = (CurrentClock-LastClock)/double(CLOCKS_PER_SEC);
+    //    m_ElapsedTime.store(m_ElapsedTime.load() + Diff);
+    //    if(m_ElapsedTime.load() > m_SwapTime)
+    //    {
+    //        ThreadID NextID = -1;
+    //        float LowestSleepTime = std::numeric_limits<float>::max();
+    //        float MinSleepTime = 1000;
+    //        for(auto& ThreadIt : m_ActiveThreads)
+    //        {
+    //            ThreadIt.second->SleepDuration = std::max(ThreadIt.second->SleepDuration-Diff,float(0));
+    //            if(ThreadIt.second->HardPaused || ThreadIt.first == m_CurrentThread)
+    //            {
+    //                continue;
+    //            }
+    //            if(ThreadIt.second->SleepDuration < LowestSleepTime)
+    //            {
+    //                NextID = ThreadIt.first;
+    //                LowestSleepTime = ThreadIt.second->SleepDuration;
+    //            }
+    //        }
+    //        if(NextID != -1)
+    //        {
+    //            std::shared_ptr<ThreadSchedulingInfo> ThreadToWake = m_ActiveThreads[NextID];
+    //            ThreadToWake->WakedUp = true;
+    //            ThreadToWake->WaitConditional.notify_one();
+    //            //ThreadToWake->SleepDuration = 0;
+    //            m_CurrentThread = NextID;
+    //        }
+    //        //new thread to schedule
+    //    }
+    //    m_LastClock.store(clock());
+    //       
+    //}
     ThreadingState::ThreadingState()
     {
         auto& NewThread = m_ActiveThreads[0];
@@ -192,20 +214,28 @@ namespace MBLisp
         if(m_ActiveThreads.size() == 1)
         {
             m_CurrentThread = ID;
+            assert(!m_ActiveThreads[m_CurrentThread]->TemporaryPaused || std::all_of(m_ActiveThreads.begin(),m_ActiveThreads.end(),
+                        [](auto const& t){return t.second->TemporaryPaused || t.second->HardPaused;}));
             ThreadInfo->WakedUp = false;
             assert(ThreadInfo->SleepDuration <= 0.001);
             assert(m_CurrentThread == ID);
             return;
         }
-        if(m_CurrentThread == ID)
+        bool ScheduledThread = false;
+        bool ForceReschedule = m_ActiveThreads[m_CurrentThread]->TemporaryPaused || m_ActiveThreads[m_CurrentThread]->HardPaused;
+        if(m_CurrentThread == ID || ForceReschedule)
         {
-            p_ScheduleNext(*ThreadIt->second,ID);
+            p_ScheduleNext(*ThreadIt->second,ID,ForceReschedule);
+            ScheduledThread = true;
         }
         if(m_CurrentThread != ID  || ThreadIt->second->HardPaused)
         {
             //hard paused should indicate an irrecoverable deadlock,
             //but how to deal with that is not yet decided
 
+
+            assert(!m_ActiveThreads[m_CurrentThread]->TemporaryPaused || std::all_of(m_ActiveThreads.begin(),m_ActiveThreads.end(),
+                        [](auto const& t){return t.second->TemporaryPaused || t.second->HardPaused;}));
             
 #if !defined(NDEBUG)
             //bool AllArePaused = true;
@@ -240,6 +270,7 @@ namespace MBLisp
         }
         assert(ThreadInfo->SleepDuration <= 0.001);
         assert(m_CurrentThread == ID || (std::cout<<m_CurrentThread<<" "<<ID && false));
+        assert(m_ActiveThreads[m_CurrentThread]->TemporaryPaused == false);
     }
 
     void ThreadingState::Pause(ThreadID ID)
@@ -271,7 +302,7 @@ namespace MBLisp
         //ID == m_CurrentThread and schedule a new one.
         if(ID == m_CurrentThread && TempSuspended)
         {
-            p_StartNext();
+            p_ScheduleNext(*m_ActiveThreads[ID],ID,true );
         }
     }
     void ThreadingState::Resume(ThreadID ID)
@@ -304,10 +335,12 @@ namespace MBLisp
             InfoToRemove = std::move(ThreadIt->second);
             m_ActiveThreads.erase(ThreadIt);
             m_RemovedThreads[ID] = std::move(InfoToRemove);
-            p_StartNext();
+
+            auto First = m_ActiveThreads.begin();
+            p_ScheduleNext(*First->second,First->first,true);
         }
     }
-    ThreadID ThreadingState::AddThread(std::function<void()> Func)
+    ThreadID ThreadingState::AddThread(MBUtility::MOFunction<void()> Func)
     {
         std::lock_guard<std::mutex> InternalsLock(m_ThreadInfoMutex);
         m_ThreadCount.fetch_add(1);
@@ -316,7 +349,7 @@ namespace MBLisp
         auto& NewThread = m_ActiveThreads[ReturnValue];
         NewThread = std::make_unique<ThreadSchedulingInfo>();
         NewThread->SystemThread = std::make_unique<std::thread>(
-                    [&,Func=std::move(Func)](ThreadID ID)
+                    [&,Func=std::move(Func)] (ThreadID ID) mutable
                     {
                         try
                         {

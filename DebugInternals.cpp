@@ -121,6 +121,10 @@ namespace MBLisp
         }
         return ReturnValue;
     }
+    bool DebugState::SignalTrapped(ExecutionState&  CurrentState,bool Forced)
+    {
+        return m_TrapSignals && Forced;
+    }
     void DebugState::ClearTraps()
     {
         m_Traps.clear();

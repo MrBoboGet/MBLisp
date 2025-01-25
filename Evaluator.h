@@ -16,6 +16,8 @@
 #include "Module.h"
 
 #include "FunctionObjectConverter.h"
+
+#include <MBUtility/CopyableUnique.h>
 namespace MBLisp
 {
    
@@ -45,6 +47,20 @@ namespace MBLisp
         IPIndex End = -1;
         int EndStackCount = -1;
     };
+
+    struct UnwindState
+    {
+        int FrameTarget = -1;
+        bool UnwindingStack = false;
+        bool UnwindForced = false;
+    };
+
+    struct StoredSignal
+    {
+        Value SignalValue;
+        bool ForcedUnwind = false;
+    };
+
     struct StackFrame
     {
         //TODO MEGA HACKY 
@@ -69,6 +85,10 @@ namespace MBLisp
         std::vector<NonLocalGotoInfo> StoredGotos;
 
 
+        MBUtility::CopyableUnique<UnwindState> StoredUnwindState;
+        MBUtility::CopyableUnique<StoredSignal> StoredSignal;
+
+
         //GC Stuff
         
         //This is set to true whenever a 
@@ -85,6 +105,10 @@ namespace MBLisp
         {
                
         }
+        //StackFrame(StackFrame const&) = delete;
+        StackFrame(StackFrame&&) = default;
+        StackFrame(StackFrame const&) = default;
+        StackFrame& operator=(StackFrame&&) = default;
     };
 
     class Evaluator;
@@ -105,8 +129,15 @@ namespace MBLisp
         Value const& GetSetValue();
         Value GetVariable(std::string const& VarName);
         void PauseThread();
+        void UnpauseThread();
         bool IsMultiThreaded();
+        bool IsPaused() const
+        {
+            return m_ThreadPaused;   
+        }
     };
+
+
     struct ExecutionState
     {
         friend class Evaluator;
@@ -115,9 +146,9 @@ namespace MBLisp
         private:
         //-1 means last, other value entails being in a signal
         ThreadID AssociatedThread = 0;
-        int FrameTarget = -1;
-        bool UnwindingStack = false;
-        bool UnwindForced = false;
+
+        UnwindState ActiveUnwindState;
+
 
         //Debug Stuff
         int TraphandlerIndex = -1;
@@ -126,6 +157,30 @@ namespace MBLisp
         //and allowing for seamles setting/getting. Does however 
         //depend on the single threadeadness use of ExecutionState
         CallContext CurrentCallContext;
+
+
+        class CallLock
+        {
+            ExecutionState& m_AssociatedState;
+        public:
+            CallLock(ExecutionState& State)
+                : m_AssociatedState(State)
+            {
+                   
+            }
+            ~CallLock()
+            {
+                if(m_AssociatedState.CurrentCallContext.IsPaused())
+                {
+                    m_AssociatedState.CurrentCallContext.UnpauseThread();
+                }
+            }
+        };
+
+        CallLock GetPauseLock()
+        {
+            return CallLock(*this);
+        }
       
         void PopFrame();
         
@@ -297,6 +352,7 @@ namespace MBLisp
         static Value Str_Null BUILTIN_ARGLIST;
         static Value Str_Float BUILTIN_ARGLIST;
         static Value Str_StackTrace BUILTIN_ARGLIST;
+        static Value Str_Type BUILTIN_ARGLIST;
         static Value Symbol_String BUILTIN_ARGLIST;
         static Value Symbol_SymbolInt BUILTIN_ARGLIST;
         static Value GenSym BUILTIN_ARGLIST;
@@ -446,7 +502,7 @@ namespace MBLisp
 
         void p_Invoke(Value& ObjectToCall,FuncArgVector& Arguments,ExecutionState& CurrentState,bool Setting = false,bool IsTrapHandler = false);
         void p_InvokeTrapHandler(ExecutionState& State);
-        void p_EmitSignal(ExecutionState& State,Value SignalToEmit,bool ForceUnwind);
+        void p_EmitSignal(ExecutionState& State,Value SignalToEmit,bool ForceUnwind,bool IgnoreDebug = false);
         //The fundamental dispatch loop
         //Return index is the stack frame index where the value of the previous call should be returned instead of continuing evaluating 
         //further down the stack.
@@ -765,6 +821,13 @@ namespace MBLisp
         static std::shared_ptr<Evaluator> CreateEvaluator();
 
         //Adding methods
+        //template<typename T>
+        //void RegisterClassName(std::string const& MethodName)
+        //{
+        //    p_RegisterBuiltinClass<T>(MethodName);
+        //}
+
+        //Adding methods
         template<auto  Func>
         void AddGeneric(std::string const& MethodName)
         {
@@ -829,7 +892,9 @@ namespace MBLisp
         void AddType(Ref<Scope> Scope,std::string const& Name)
         {
             auto Val = ClassDefinition(Value::GetTypeTypeID<T>());   
+            p_RegisterBuiltinClass<T>(Name);
             SymbolID GenericSymbol = p_GetSymbolID(Name);
+            //m_BuiltinTypeDefinitions[Value::GetTypeTypeID<T>()] = Val;
             if(Scope->TryGet(GenericSymbol) == nullptr)
             {
                  Scope->SetVariable(GenericSymbol,Val);

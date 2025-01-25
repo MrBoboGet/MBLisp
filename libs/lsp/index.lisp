@@ -364,9 +364,11 @@
       (catch-signals
         (
               (while (not (eof file-stream))
-                     (setl new-term (eval `(read-term ,file-stream) new-envir))
-                     (skip-whitespace file-stream)
-                     (eval-selected new-term new-envir)
+                     (let ((load-envir new-envir))
+                        (setl new-term (eval `(read-term ,file-stream) new-envir))
+                        (skip-whitespace file-stream)
+                        (eval-selected new-term new-envir)
+                     )
                      (if (&& (type-eq new-term list_t) (< 0 (len new-term)) (type-eq (. new-term 0) symbol_t) (in (. new-term 0) delayed-map))
                             (append delayed-forms new-term)
                       else

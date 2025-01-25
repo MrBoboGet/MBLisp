@@ -85,4 +85,12 @@ int main(int argc,const char** argv)
     {
         std::cout<<e.what()<<std::endl;
     }
+    try
+    {
+        //Evaluator->Join();
+    }
+    catch(...)
+    {
+
+    }
 }

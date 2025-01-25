@@ -818,6 +818,15 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<Input_Eq_2>("eq");
 
 
+        AssociatedEvaluator.AddType<MBCLI::ConsoleInput>(ReturnValue,"input_t");
+        AssociatedEvaluator.AddType<MBTUI::Stacker>(ReturnValue,"stacker_t");
+        AssociatedEvaluator.AddType<MBTUI::Absolute>(ReturnValue,"absolute_t");
+        AssociatedEvaluator.AddType<MBCLI::Dimensions>(ReturnValue,"dims_t");
+        AssociatedEvaluator.AddType<MBCLI::Window>(ReturnValue,"window_t");
+        AssociatedEvaluator.AddType<MBTUI::Text>(ReturnValue,"text_t");
+        AssociatedEvaluator.AddType<MBTUI::REPL>(ReturnValue,"repl_t");
+
+
         //Hider
         AssociatedEvaluator.AddGeneric<CreateHider>(ReturnValue,"hider");
         AssociatedEvaluator.AddGeneric<SetAttribute_Hider>(ReturnValue,"set-atr");

@@ -35,6 +35,7 @@ namespace MBLisp
         DepthChangeType m_DepthChangeType = DepthChangeType::None;
         int m_TargetDepth = -1;
 
+
         void p_UpdateTraps(OpCodeExtractor&  ExecutionPosition);
     public:
         void SetTrapHandler(Value Handler)
@@ -64,6 +65,7 @@ namespace MBLisp
         //Observers
         bool DebuggingActive();
         bool IsTrapped(ExecutionState&  CurrentState);
+        bool SignalTrapped(ExecutionState&  CurrentState,bool Forced);
 
     };
 
