@@ -8,24 +8,42 @@
 #include <MBTUI/Absolute.h>
 #include <MBTUI/Text.h>
 #include <MBTUI/Hider.h>
+#include <cstdint>
+
+#include <MBUtility/MBStrings.h>
 namespace MBLisp
 {
     static MBCLI::TerminalColor ParseColor(std::string_view Content)
     {
         MBCLI::TerminalColor ReturnValue = MBCLI::ANSITerminalColor::BrightWhite;
-        if(Content == "red")
+        if(Content.size() > 0 && Content[0] == '#')
         {
-            ReturnValue = MBCLI::ANSITerminalColor::BrightRed;
+            if(Content.size() == 7)
+            {
+                std::array<uint8_t,4> Value;
+                bool Valid = true;
+                Value[0] = MBUtility::HexValueToByte(Content[1],Content[2],&Valid);
+                Value[1] = MBUtility::HexValueToByte(Content[3],Content[4],&Valid);
+                Value[2] = MBUtility::HexValueToByte(Content[5],Content[6],&Valid);
+                Value[3] = 255;
+                ReturnValue = Value;
+            }
         }
-        else if(Content == "green")
+        else
         {
-            ReturnValue = MBCLI::ANSITerminalColor::BrightGreen;
+            if(Content == "red")
+            {
+                ReturnValue = MBCLI::ANSITerminalColor::BrightRed;
+            }
+            else if(Content == "green")
+            {
+                ReturnValue = MBCLI::ANSITerminalColor::BrightGreen;
+            }
+            else if(Content == "yellow")
+            {
+                ReturnValue = MBCLI::ANSITerminalColor::BrightYellow;
+            }
         }
-        else if(Content == "yellow")
-        {
-            ReturnValue = MBCLI::ANSITerminalColor::BrightYellow;
-        }
-
         return ReturnValue;
     }
 
@@ -652,6 +670,13 @@ namespace MBLisp
             if(Val.IsType<String>())
             {
                 Text.SetHighlightColor(ParseColor(Val.GetType<String>()));
+            }
+        }
+        else if(Atr == "bg-color")
+        {
+            if(Val.IsType<String>())
+            {
+                Text.SetBGColor(ParseColor(Val.GetType<String>()));
             }
         }
     }
