@@ -271,7 +271,7 @@ namespace MBLisp
         int m_DebugID = 0;
         struct EncodingState
         {
-            std::vector<std::pair<SymbolID,IPIndex>> UnResolvedGotos;
+            std::vector<std::vector<std::pair<SymbolID,IPIndex>>> UnResolvedGotos;
             int InSignalHandler = 0;
             int UnwindProtectDepth = 0;
             int ArgumentStackCount = 0;

@@ -1782,7 +1782,7 @@ namespace MBLisp
                     continue;
                 }
                 //assert(!VarPointer->IsType<List>() || VarPointer->GetRef<List>() != nullptr);
-                if(!VarPointer->IsType<DynamicVariable>())
+                if(!VarPointer->IsType<DynamicVariable>() || PushCode.Local)
                 {
                     CurrentFrame.ArgumentStack.push_back(*VarPointer);
                 }

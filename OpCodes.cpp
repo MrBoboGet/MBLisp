@@ -103,6 +103,8 @@ namespace MBLisp
                     }
                     int CurrentOffset = 1;
                     std::unordered_map<SymbolID,IPIndex> SymbolToOffsetMap;
+                    CurrentState.UnResolvedGotos.emplace_back();
+                    size_t UnresolvedBegin =  CurrentState.UnResolvedGotos.size();
                     while(CurrentOffset < ListToConvert.size())
                     {
 
@@ -120,7 +122,11 @@ namespace MBLisp
                     }
                     int CurrentUnwindDepth = CurrentState.UnwindProtectDepth;
                     std::vector<std::pair<SymbolID,IPIndex>> NewUnresolvedSymbols;
-                    for(auto const& Pair : CurrentState.UnResolvedGotos) 
+                    assert(UnresolvedBegin == CurrentState.UnResolvedGotos.size());
+                    assert(CurrentState.UnResolvedGotos.size() > 0);
+                    auto LocalGotos = std::move(CurrentState.UnResolvedGotos.back());
+                    CurrentState.UnResolvedGotos.pop_back();
+                    for(auto const& Pair : LocalGotos)
                     {
                         if(SymbolToOffsetMap.find(Pair.first) != SymbolToOffsetMap.end())
                         {
@@ -140,7 +146,17 @@ namespace MBLisp
                             NewUnresolvedSymbols.push_back(Pair);
                         }
                     }
-                    std::swap(CurrentState.UnResolvedGotos,NewUnresolvedSymbols);
+                    if(NewUnresolvedSymbols.size() > 0)
+                    {
+                        if(CurrentState.UnResolvedGotos.size() == 0)
+                        {
+                            throw std::runtime_error("Unresolved go's in tagbody");   
+                        }
+                        CurrentState.UnResolvedGotos.back().insert(
+                                CurrentState.UnResolvedGotos.back().end(),
+                                NewUnresolvedSymbols.begin(),
+                                NewUnresolvedSymbols.end());
+                    }
                 }
                 else if(CurrentSymbol == SymbolID(PrimitiveForms::go))
                 {
@@ -158,7 +174,11 @@ namespace MBLisp
                     NewOpcode.NewStackSize = CurrentState.ArgumentStackCount;
                     NewOpcode.NewUnwindSize = CurrentState.UnwindProtectDepth;
                     ListToAppend.push_back(NewOpcode);
-                    CurrentState.UnResolvedGotos.push_back(std::make_pair(GoSymbol,GOIndex));
+                    if(CurrentState.UnResolvedGotos.size() == 0)
+                    {
+                        throw std::runtime_error("go can only occur within a tagbody");   
+                    }
+                    CurrentState.UnResolvedGotos.back().push_back(std::make_pair(GoSymbol,GOIndex));
                 }
                 else if(CurrentSymbol == SymbolID(PrimitiveForms::progn))
                 {
