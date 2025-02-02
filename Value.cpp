@@ -269,7 +269,7 @@ namespace MBLisp
     bool GenericFunction::p_TypesAreSatisifed(std::vector<ClassID> const& Overrides,Value const* Begin, Value const* End)
     {
         bool ReturnValue = true;
-        if(Overrides.size() > End-Begin)
+        if(Overrides.size() != End-Begin)
         {
             return false;   
         }

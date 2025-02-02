@@ -305,6 +305,7 @@ namespace MBLisp
         //class instance
         static Value Index_ClassInstance BUILTIN_ARGLIST;
         static List Slots_ClassInstance(ClassInstance& InstanceToInspect);
+        static List Slots_ClassDefinition(ClassDefinition& InstanceToInspect);
 
 
         static Value Expand BUILTIN_ARGLIST;

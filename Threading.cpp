@@ -124,39 +124,34 @@ namespace MBLisp
     }
     ThreadingState::~ThreadingState()
     {
-        m_Exiting.store(true);
-        for(auto& ThreadIt : m_ActiveThreads)
+        std::vector<std::shared_ptr<std::thread>> WaitThreads;
         {
+            std::lock_guard<std::mutex> Lock(m_ThreadInfoMutex);
+            m_Exiting.store(true);
+            for(auto& ThreadIt : m_ActiveThreads)
             {
-                std::lock_guard<std::mutex> Lock(m_ThreadInfoMutex);
                 ThreadIt.second->WakedUp = true;
                 ThreadIt.second->WaitConditional.notify_one();
-            }
-            try
-            {
                 if(ThreadIt.second->SystemThread != nullptr)
                 {
-                    ThreadIt.second->SystemThread->join();
+                    WaitThreads.push_back(ThreadIt.second->SystemThread);
                 }
             }
-            catch(...)
+            for(auto& ThreadIt : m_RemovedThreads)
             {
-                   
+                ThreadIt.second->WakedUp = true;
+                ThreadIt.second->WaitConditional.notify_one();
+                if(ThreadIt.second->SystemThread != nullptr)
+                {
+                    WaitThreads.push_back(ThreadIt.second->SystemThread);
+                }
             }
         }
-        for(auto& ThreadIt : m_RemovedThreads)
+        for(auto& Thread : WaitThreads)
         {
-            {
-                std::lock_guard<std::mutex> Lock(m_ThreadInfoMutex);
-                ThreadIt.second->WakedUp = true;
-                ThreadIt.second->WaitConditional.notify_one();
-            }
             try
             {
-                if(ThreadIt.second->SystemThread != nullptr)
-                {
-                    ThreadIt.second->SystemThread->join();
-                }
+                Thread->join();
             }
             catch(...)
             {
@@ -175,6 +170,10 @@ namespace MBLisp
         std::shared_ptr<ThreadSchedulingInfo> ThreadInfo;
         //m_ThreadInfoMutex.lock();
         std::unique_lock<std::mutex> Lock(m_ThreadInfoMutex);
+        if(m_Exiting.load())
+        {
+            throw std::runtime_error("Should exit");
+        }
         for(auto& RemovedThread : m_RemovedThreads)
         {
             if(RemovedThread.first == ID)
@@ -348,7 +347,7 @@ namespace MBLisp
         m_CurrentID++;
         auto& NewThread = m_ActiveThreads[ReturnValue];
         NewThread = std::make_unique<ThreadSchedulingInfo>();
-        NewThread->SystemThread = std::make_unique<std::thread>(
+        NewThread->SystemThread = std::make_shared<std::thread>(
                     [&,Func=std::move(Func)] (ThreadID ID) mutable
                     {
                         try

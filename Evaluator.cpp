@@ -1245,6 +1245,15 @@ namespace MBLisp
         }
         return ReturnValue;
     }
+    List Evaluator::Slots_ClassDefinition(ClassDefinition& InstanceToInspect)
+    {
+        List ReturnValue;
+        for(auto const& Slot : InstanceToInspect.SlotDefinitions)
+        {
+            ReturnValue.push_back(Slot.Symbol);
+        }
+        return ReturnValue;
+    }
     ///Value Evaluator::p_Eval(std::shared_ptr<Scope> AssociatedScope,FunctionDefinition& FunctionToExecute,std::vector<Value> Arguments)
     ///{
     ///    if(Arguments.size() < FunctionToExecute.Arguments.size())
@@ -2720,6 +2729,13 @@ namespace MBLisp
         return ReturnValue;
     }
 
+
+    template<typename T>
+    static T i_Copy(T const& Value)
+    {
+        return T(Value);
+    }
+
     void Evaluator::p_InternPrimitiveSymbols()
     {
         for(auto const& String : {"cond",
@@ -2811,7 +2827,7 @@ namespace MBLisp
         p_RegisterBuiltinClass<MBUtility::StreamReader>("in-stream_t");
         
         //list
-        AddMethod<List>("append",Append_List);
+        AddMethod<List,Any>("append",Append_List);
         AddGeneric<InsertAt>("insert-at");
         AddMethod<List>("back",Back_List);
         AddMethod<List,Int>("index",Index_List);
@@ -2939,11 +2955,12 @@ namespace MBLisp
         AddMethod<Lambda>("name",Name_Lambda);
         AddMethod<GenericFunction>("name",Name_Generic);
         AddMethod<ClassDefinition>("name",Name_ClassDefinition);
-        AddMethod<GenericFunction>("applicable",Applicable);
+        AddMethod<GenericFunction,Any>("applicable",Applicable);
 
         AddGeneric<Copy_List>("copy");
         AddGeneric<Copy_Str>("copy");
         AddGeneric<Copy_Any>("copy");
+        AddGeneric<i_Copy<ClassDefinition>>("copy");
 
         AddMethod<Symbol>("is-special",IsSpecial_Symbol);
         AddMethod<Symbol>("position",Position_Symbol);
@@ -2957,9 +2974,9 @@ namespace MBLisp
 
         
         //Readtables
-        AddMethod<ReadTable,String>("add-reader-character",AddReaderCharacter);
+        AddMethod<ReadTable,String,Any>("add-reader-character",AddReaderCharacter);
         AddMethod<ReadTable,String>("remove-reader-character",RemoveReaderCharacter);
-        AddMethod<ReadTable,String>("add-character-expander",AddCharacterExpander);
+        AddMethod<ReadTable,String,Any>("add-character-expander",AddCharacterExpander);
         AddMethod<ReadTable,String>("remove-character-expander",RemoveCharacterExpander);
 
 

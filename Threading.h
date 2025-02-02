@@ -58,7 +58,7 @@ namespace MBLisp
             bool TemporaryPaused = false;
             float SleepDuration = 0;
             //not existing means that the scheduler represents the main thread
-            std::unique_ptr<std::thread> SystemThread;
+            std::shared_ptr<std::thread> SystemThread;
             bool WakedUp = false;
             std::condition_variable WaitConditional;
             std::mutex WaitMutex;
