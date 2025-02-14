@@ -408,6 +408,7 @@
   (lsp:set-document-diagnostics handler uri diagnostics)
   (lsp:set-document-jumps handler uri jump-symbols)
 )
+
 (defun main ()
     (catch-signals 
         (
@@ -417,6 +418,7 @@
         catch (any_t e)
         (
             #(write debug-file (str e))
+            (print e)
             null
         )
     )

@@ -113,6 +113,7 @@ namespace MBLisp
     {
         IPIndex HandlersEnd = -1;
         int NewStackSize =  -1;
+        int UnwindDepth =  -1;
     };
     struct OpCode_RemoveSignalHandlers
     {

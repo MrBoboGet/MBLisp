@@ -396,6 +396,8 @@ namespace MBLisp
                     ListToAppend.push_back(OpCode_AddSignalHandlers());
                     IPIndex UnwindProtectIndex = ListToAppend.size();
                     ListToAppend.push_back(OpCode_UnwindProtect_Add());
+
+
                     CurrentState.UnwindProtectDepth += 1;
 
                     int TargetUnwindDepth = CurrentState.UnwindProtectDepth;
@@ -451,6 +453,7 @@ namespace MBLisp
                     {
                         ListToAppend[HandlerDoneIndex].GetType<OpCode_SignalHandler_Done>().HandlersEnd = HandlersEnd;
                         ListToAppend[HandlerDoneIndex].GetType<OpCode_SignalHandler_Done>().NewStackSize = CurrentState.ArgumentStackCount;
+                        ListToAppend[HandlerDoneIndex].GetType<OpCode_SignalHandler_Done>().UnwindDepth = CurrentState.UnwindProtectDepth;
                     }
                     CurrentState.UnwindProtectDepth -= 1;
                     ListToAppend[UnwindProtectIndex].GetType<OpCode_UnwindProtect_Add>().UnwindBegin = ListToAppend.size();
@@ -644,26 +647,7 @@ namespace MBLisp
         }
         p_FillDebugInfo();
     }
-    //OpCodeList::OpCodeList(List const& ListToConvert,int Offset,bool  InLambda)
-    //{
-    //    EncodingState CurrentState;
-    //    CurrentState.InLambda = InLambda;
-    //    p_WriteProgn(ListToConvert,m_OpCodes,CurrentState,Offset);
-    //    if(InLambda)
-    //    {
-    //        for(auto UnresolvedReturn : CurrentState.UnresolvedReturns)
-    //        {
-    //            auto& CurrentCode = m_OpCodes[UnresolvedReturn].GetType<OpCode_Goto>();
-    //            CurrentCode.NewIP = m_OpCodes.size();
-    //            CurrentCode.NewUnwindSize = 0;
-    //        }
-    //    }
-    //    if(CurrentState.UnResolvedGotos.size() != 0)
-    //    {
-    //        throw std::runtime_error("go's to tags without corresponding label detected");
-    //    }
-    //    p_FillDebugInfo();
-    //}
+
     OpCodeList::OpCodeList(List const& ListToConvert,int Offset,FunctionDefinition& LambdaDef ,
             EncodingState const& ParentState)
     {

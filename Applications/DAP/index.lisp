@@ -139,7 +139,7 @@
     (set first-stop false)
     (send-event "stopped" {reason: reason,threadId: (. process-state 'id),allThreadsStopped: true})
     (stopped)
-    (pause (. process-state 'id))
+    (ignore-signals (pause (. process-state 'id)))
 )
 
 

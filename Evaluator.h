@@ -38,6 +38,7 @@ namespace MBLisp
         IPIndex ReturnAdress = -1;
         int TargetUnwindDepth = -1;
         int StackSize = -1;
+        bool AllowLarger = false;
     };
     typedef FuncArgVector StackArgVector;
 

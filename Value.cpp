@@ -144,11 +144,11 @@ namespace MBLisp
     }
     void Scope::SetVariable(SymbolID Variable,Value NewValue)
     {
-        for(auto& Parent : m_ParentScope)  ///m_ParentScope.AssociatedScope != nullptr && !m_ParentScope.Shadowing)
+        for(auto& Parent : m_ParentScope)
         {
             if(Parent.Shadowing) 
                 continue;
-            if(auto It = Parent.AssociatedScope->TryGet(Variable); It != nullptr)
+            if(auto It = Parent.AssociatedScope->TryGetNonShadowing(Variable); It != nullptr)
             {
                 *It = std::move(NewValue);
                 return;

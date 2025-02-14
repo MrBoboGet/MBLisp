@@ -1095,7 +1095,7 @@ namespace MBLisp
     {
         Scope& AssociatedScope = Arguments[0].GetType<Scope>();
         SymbolID SymbolIndex = Arguments[1].GetType<Symbol>().ID;
-        Value* ReturnValue = AssociatedScope.TryGet(SymbolIndex);
+        Value* ReturnValue = AssociatedScope.TryGetNonShadowing(SymbolIndex);
         if(ReturnValue == nullptr)
         {
             AssociatedScope.OverrideVariable(SymbolIndex,Value());
@@ -1404,16 +1404,17 @@ namespace MBLisp
             if(CurrentFrame.ProtectDepth > 0)
             {
                 assert(CurrentFrame.ActiveUnwindProtectors.size() > 0);
+                assert(i == CurrentFrameIndex);
                 auto const& CurrentProtector = CurrentFrame.ActiveUnwindProtectors.back();
                 CurrentFrame.ArgumentStack.resize(CurrentProtector.EndStackCount+1);
                 CurrentFrame.ExecutionPosition.SetIP(CurrentProtector.End);
                 return;
             }
+            //TODO: Actually handle this case
+            assert(std::none_of(CurrentState.StackFrames.begin()+CurrentFrameIndex,
+                        CurrentState.StackFrames.end(),
+                        [](StackFrame const& Frame){return Frame.ProtectDepth > 0;}));
 
-            //if(CurrentFrame.SignalFrameIndex != -1 && i == CurrentFrameIndex)
-            //{
-            //    continue;   
-            //}
             //Ensure that exceptions in signal handlers can handle their own exceptions, or signal
             //above the original signals handler position
             if(CurrentFrame.SignalFrameIndex != -1 && (i < CurrentFrameIndex && i > CurrentFrame.SignalFrameIndex))
@@ -1999,12 +2000,28 @@ namespace MBLisp
                 }
                 else
                 {
+                    auto const& HandlerDone = CurrentCode.GetType<OpCode_SignalHandler_Done>();
                     assert(CurrentFrame.SignalFrameIndex != -1);
                     CurrentState.ActiveUnwindState.UnwindForced = false;
                     CurrentState.ActiveUnwindState.UnwindingStack = true;
                     CurrentState.ActiveUnwindState.FrameTarget = CurrentFrame.SignalFrameIndex;
-                    StackFrames[CurrentFrame.SignalFrameIndex].ExecutionPosition.SetIP(CurrentCode.GetType<OpCode_SignalHandler_Done>().HandlersEnd);
-                    StackFrames[CurrentFrame.SignalFrameIndex].ArgumentStack.resize(CurrentCode.GetType<OpCode_SignalHandler_Done>().NewStackSize+1);
+                    assert(StackFrames[CurrentFrame.SignalFrameIndex].ActiveUnwindProtectors.size() >=  HandlerDone.UnwindDepth);
+                    if(StackFrames[CurrentFrame.SignalFrameIndex].ActiveUnwindProtectors.size() ==  HandlerDone.UnwindDepth)
+                    {
+                        StackFrames[CurrentFrame.SignalFrameIndex].ExecutionPosition.SetIP(CurrentCode.GetType<OpCode_SignalHandler_Done>().HandlersEnd);
+                        StackFrames[CurrentFrame.SignalFrameIndex].ArgumentStack.resize(CurrentCode.GetType<OpCode_SignalHandler_Done>().NewStackSize+1);
+                    }
+                    else
+                    {
+                        //resolve unwind handlers
+                        NonLocalGotoInfo& GotoInfo = StackFrames[CurrentFrame.SignalFrameIndex].StoredGotos.emplace_back();
+                        GotoInfo.TargetUnwindDepth = HandlerDone.UnwindDepth;
+                        GotoInfo.ReturnAdress = HandlerDone.HandlersEnd;
+                        GotoInfo.StackSize = HandlerDone.NewStackSize+1;
+                        GotoInfo.AllowLarger = true;
+                        assert(StackFrames[CurrentFrame.SignalFrameIndex].ActiveUnwindProtectors.size() > 1);
+                        StackFrames[CurrentFrame.SignalFrameIndex].ExecutionPosition.SetIP(StackFrames[CurrentFrame.SignalFrameIndex].ActiveUnwindProtectors.back().Begin);
+                    }
                 }
             } 
             else if(CurrentCode.IsType<OpCode_AddSignalHandlers>())
@@ -2058,6 +2075,7 @@ namespace MBLisp
             else if(CurrentCode.IsType<OpCode_UnwindProtect_Pop>())
             {
                 assert(CurrentFrame.ActiveUnwindProtectors.size() > 0);
+                assert(CurrentFrame.ProtectDepth > 0);
                 CurrentFrame.ActiveUnwindProtectors.pop_back();
                 CurrentFrame.ProtectDepth -= 1;
                 if(CurrentState.ActiveUnwindState.UnwindingStack)
@@ -2074,7 +2092,7 @@ namespace MBLisp
                     if(CurrentFrame.ActiveUnwindProtectors.size() == CurrentFrame.StoredGotos.back().TargetUnwindDepth)
                     {
                         CurrentFrame.ExecutionPosition.SetIP(CurrentFrame.StoredGotos.back().ReturnAdress);
-                        assert(CurrentFrame.ArgumentStack.size() >= CurrentFrame.StoredGotos.back().StackSize);
+                        assert(CurrentFrame.StoredGotos.back().AllowLarger || CurrentFrame.ArgumentStack.size() >= CurrentFrame.StoredGotos.back().StackSize);
                         CurrentFrame.ArgumentStack.resize(CurrentFrame.StoredGotos.back().StackSize);
                         CurrentFrame.StoredGotos.pop_back();
                     }

@@ -123,6 +123,14 @@ namespace MBLisp
     }
     bool DebugState::SignalTrapped(ExecutionState&  CurrentState,bool Forced)
     {
+        if(CurrentState.InTrapHandler())
+        {
+            return false;   
+        }
+        if(m_ExcludedThreads.find(CurrentState.AssociatedThread) != m_ExcludedThreads.end())
+        {
+            return false;   
+        }
         return m_TrapSignals && Forced;
     }
     void DebugState::ClearTraps()
