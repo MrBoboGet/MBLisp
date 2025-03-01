@@ -15,7 +15,7 @@ namespace MBLisp
 {
     static MBCLI::TerminalColor ParseColor(std::string_view Content)
     {
-        MBCLI::TerminalColor ReturnValue = MBCLI::ANSITerminalColor::BrightWhite;
+        MBCLI::TerminalColor ReturnValue = MBCLI::ANSITerminalColor::Default;
         if(Content.size() > 0 && Content[0] == '#')
         {
             if(Content.size() == 7)
@@ -34,6 +34,10 @@ namespace MBLisp
             if(Content == "red")
             {
                 ReturnValue = MBCLI::ANSITerminalColor::BrightRed;
+            }
+            else if(Content == "black")
+            {
+                ReturnValue = MBCLI::ANSITerminalColor::Black;
             }
             else if(Content == "green")
             {
@@ -648,6 +652,17 @@ namespace MBLisp
         }
         return ReturnValue;
     }
+    static void SetChild_Absolute(Evaluator& Eval,MBTUI::Absolute& Abs,Value Child)
+    {
+        if(Child.IsType<MBCLI::Window>())
+        {
+            Abs.SetSubwindow(Child.GetSharedPtr<MBCLI::Window>());
+        }
+        else
+        {
+            Abs.SetSubwindow(std::shared_ptr<MBCLI::Window>(std::make_shared<LispWindow>(Eval.shared_from_this(),Child)));
+        }
+    }
 
     void Text_SetAtr(MBTUI::Text& Text,String const& Atr,Value const& Val)
     {
@@ -677,6 +692,13 @@ namespace MBLisp
             if(Val.IsType<String>())
             {
                 Text.SetBGColor(ParseColor(Val.GetType<String>()));
+            }
+        }
+        else if(Atr == "multiline")
+        {
+            if(Val.IsType<bool>())
+            {
+                Text.SetMultiline(Val.GetType<bool>());
             }
         }
     }
@@ -822,6 +844,7 @@ namespace MBLisp
 
 
         AssociatedEvaluator.AddGeneric<CreateAbsolute>(ReturnValue,"absolute");
+        AssociatedEvaluator.AddGeneric<SetChild_Absolute>(ReturnValue,"set-child");
 
         AssociatedEvaluator.AddGeneric<Text_Create>(ReturnValue,"Text");
         AssociatedEvaluator.AddGeneric<Text_CreateDict>(ReturnValue,"Text");
