@@ -2852,6 +2852,7 @@ namespace MBLisp
         AddMethod<List>("len",Len_List);
         AddMethod<List>("sort",Sort);
         AddGeneric<Pop_List>("pop");
+        AddMethod<List,Any>("push",Append_List);
         AddGeneric<Reverse_List>("reverse");
         AddGeneric<SetLoc_List>("set-loc");
         AddGeneric<GetLoc_List>("get-loc");

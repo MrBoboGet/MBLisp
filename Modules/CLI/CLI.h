@@ -90,7 +90,7 @@ namespace MBLisp
             return m_Value;   
         }
 
-        virtual void HandleInput(MBCLI::ConsoleInput const& Input);
+        virtual bool HandleInput(MBCLI::ConsoleInput const& Input);
         virtual MBCLI::Dimensions PreferedDimensions(MBCLI::Dimensions SuggestedDimensions);
         virtual void SetFocus(bool IsFocused);
         virtual MBCLI::CursorInfo GetCursorInfo();
@@ -116,9 +116,9 @@ namespace MBLisp
         {
             return m_AssociatedValue;   
         }
-        virtual void HandleInput(MBCLI::ConsoleInput const& Input)
+        virtual bool HandleInput(MBCLI::ConsoleInput const& Input)
         {
-            m_Window->HandleInput(Input);   
+            return m_Window->HandleInput(Input);   
         }
         virtual MBCLI::Dimensions PreferedDimensions(MBCLI::Dimensions SuggestedDimensions)
         {
@@ -143,7 +143,7 @@ namespace MBLisp
     {
 
         static bool p_WindowUpdated(MBCLI::Window& Window);
-        static void p_WindowHandleInput(MBCLI::Window& Window,MBCLI::ConsoleInput const& Input);
+        static bool p_WindowHandleInput(MBCLI::Window& Window,MBCLI::ConsoleInput const& Input);
         static void p_WindowSetFocus(MBCLI::Window& Window,bool Focused);
         static MBCLI::CursorInfo p_GetCursorInfo(MBCLI::Window& Window);
         static void p_WriteBuffer(MBCLI::Window& Window,Temporary<MBCLI::BufferView> View,bool Redraw);

@@ -69,9 +69,14 @@ namespace MBLisp
         //(*NewParent)->Parent = GetParentInfo();
         m_Evaluator->Eval(m_ModuleScope,m_Evaluator->GetValue(*m_ModuleScope,"set-parent-info"),{m_Value, Value::EmplaceExternal<std::shared_ptr<MBCLI::Window::ParentInfo>>(GetParentInfo())  });
     }
-    void LispWindow::HandleInput(MBCLI::ConsoleInput const& Input)
+    bool LispWindow::HandleInput(MBCLI::ConsoleInput const& Input)
     {
-        m_Evaluator->Eval(m_ModuleScope,m_Evaluator->GetValue(*m_ModuleScope,"handle-input"),{m_Value,MBLisp::Value::EmplaceExternal<MBCLI::ConsoleInput>(Input)});
+        auto Result = m_Evaluator->Eval(m_ModuleScope,m_Evaluator->GetValue(*m_ModuleScope,"handle-input"),{m_Value,MBLisp::Value::EmplaceExternal<MBCLI::ConsoleInput>(Input)});
+        if(Result.IsType<bool>())
+        {
+            return Result.GetType<bool>();
+        }
+        return false;
     }
     MBCLI::Dimensions LispWindow::PreferedDimensions(MBCLI::Dimensions SuggestedDimensions)
     {
@@ -108,9 +113,9 @@ namespace MBLisp
     {
         return Window.Updated();
     }
-    void CLIModule::p_WindowHandleInput(MBCLI::Window& Window,MBCLI::ConsoleInput const& Input)
+    bool CLIModule::p_WindowHandleInput(MBCLI::Window& Window,MBCLI::ConsoleInput const& Input)
     {
-        Window.HandleInput(Input);
+        return Window.HandleInput(Input);
     }
     void CLIModule::p_WindowSetFocus(MBCLI::Window& Window,bool Focused)
     {
