@@ -3,6 +3,7 @@
 #include <MBUtility/StreamReader.h>
 #include "MBLSP/LSP_Structs.h"
 #include "MBUtility/MBInterfaces.h"
+#include "Value.h"
 #include "assert.h"
 #include <MBParsing/MBParsing.h>
 
@@ -2747,6 +2748,49 @@ namespace MBLisp
         return ReturnValue;
     }
 
+    static Value Copy_Deep(Value& Target)
+    {
+        Value ReturnValue;
+        ValueRecursionLock Lock(Target);
+        if(Target.IsType<List>())
+        {
+            List NewList;
+            for(auto& Element : Target.GetType<List>())
+            {
+                NewList.emplace_back(Copy_Deep(Element));
+            }
+            ReturnValue = std::move(NewList);
+        }
+        else if(Target.IsType<Dict>())
+        {
+            Dict NewDict;
+            for(auto& Element : Target.GetType<Dict>())
+            {
+                //NewList.emplace_back(Copy_Deep(Element));
+                //
+                auto Key = Element.first;
+                Key = Copy_Deep(Key);
+                auto Value = Copy_Deep(Element.second);
+            }
+            ReturnValue = std::move(NewDict);
+        }
+        else if(Target.IsType<ClassInstance>())
+        {
+            ClassInstance NewInstance;
+            NewInstance.AssociatedClass = Target.GetType<ClassInstance>().AssociatedClass;
+            for(auto& Element : Target.GetType<ClassInstance>().Slots)
+            {
+                NewInstance.Slots.push_back(std::make_pair(Element.first,Copy_Deep(Element.second)));
+            }
+            ReturnValue = std::move(NewInstance);
+        }
+        else
+        {
+            return Target;
+        }
+        return ReturnValue;
+    }
+
 
     template<typename T>
     static T i_Copy(T const& Value)
@@ -2980,6 +3024,9 @@ namespace MBLisp
         AddGeneric<Copy_Str>("copy");
         AddGeneric<Copy_Any>("copy");
         AddGeneric<i_Copy<ClassDefinition>>("copy");
+        AddGeneric<i_Copy<Dict>>("copy");
+
+        AddGeneric<Copy_Deep>("copy-deep");
 
         AddMethod<Symbol>("is-special",IsSpecial_Symbol);
         AddMethod<Symbol>("position",Position_Symbol);

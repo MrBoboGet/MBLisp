@@ -307,4 +307,23 @@ namespace MBLisp
         }
         return ReturnValue;
     }
+
+
+    ValueRecursionLock::ValueRecursionLock(Value& Val)
+        : m_Val(Val)
+    {
+        if (Val.m_Data.IsReference())
+        {
+            RefBase const& StoredRef = Val.m_Data.GetType<RefBase>();
+            StoredRef.LockRecursionLock();
+        }
+    }
+    ValueRecursionLock::~ValueRecursionLock()
+    {
+        if (m_Val.m_Data.IsReference())
+        {
+            RefBase const& StoredRef = m_Val.m_Data.GetType<RefBase>();
+            StoredRef.UnlockRecursionLock();
+        }
+    }
 }

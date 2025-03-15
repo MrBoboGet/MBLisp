@@ -119,6 +119,7 @@ public:
                
         }
         mutable std::unique_ptr<std::recursive_mutex> m_ReferenceMutex = nullptr;
+        bool m_RecursiveLocked = false;
     public:
         BuiltinLock GetLock() const
         {
@@ -128,6 +129,20 @@ public:
             }
             return std::make_unique<std::lock_guard<std::recursive_mutex>>(*m_ReferenceMutex);
         }
+
+        void LockRecursionLock()
+        {
+            if(m_RecursiveLocked)
+            {
+                throw std::runtime_error("Error accessing variable: recursion detected");
+            }
+            m_RecursiveLocked = true;
+        }
+        void UnlockRecursionLock()
+        {
+            m_RecursiveLocked = false;
+        }
+
         ClassID StoredClass = 0;
         int RefCount()
         {
@@ -232,6 +247,24 @@ public:
             }
             return m_AllocatedContent->GetLock();
         }
+        void LockRecursionLock() const
+        {
+            if(m_AllocatedContent == nullptr)
+            {
+                throw std::runtime_error("Cannot aquire recursion lock of null RefBase");
+            }
+            m_AllocatedContent->LockRecursionLock();
+        }
+        void UnlockRecursionLock() const
+        {
+            if(m_AllocatedContent == nullptr)
+            {
+                throw std::runtime_error("Cannot aquire recursion lock of null RefBase");
+            }
+            m_AllocatedContent->UnlockRecursionLock();
+        }
+
+
         ClassID GetTypeID() const
         {
             if(m_AllocatedContent == nullptr)
@@ -421,19 +454,12 @@ public:
         SymbolID EnvirParameter = 0;
         Ref<OpCodeList> Instructions;
     };
-    //TODO add support for 
     struct Lambda
     {
         Ref<FunctionDefinition> Definition;
         Ref<Scope> AssociatedScope;
         Symbol Name;
     };
-    //class Setter
-    //{
-    //public:
-    //    virtual void Set(Value const& ValueToSet) = 0;
-    //    virtual ~Setter(){};
-    //};
     class CallContext;
     typedef Value (*BuiltinFuncType)(CallContext&,FuncArgVector&);
     struct Function
@@ -721,26 +747,6 @@ public:
                 return VariantIndex<VariantType, T, Index + 1>();
             }
         } 
-        //template<typename VariantType, std::size_t Index = 0>
-        //static constexpr std::size_t MaxAlign() 
-        //{
-        //    //if(std::variant_size_v<VariantType> > Index)
-        //    //{
-        //    //    return 0;
-        //    //}
-        //    //size_t ReturnValue = std::max(alignof(decltype(std::get<Index>(VariantType()))),MaxAlign<VariantType,Index+1>());
-        //    return 1;
-        //} 
-        //template<typename VariantType, std::size_t Index = 0>
-        //static constexpr std::size_t MaxSize() 
-        //{
-        //    //if(std::variant_size_v<VariantType> > Index)
-        //    //{
-        //    //    return 0;
-        //    //}
-        //    //size_t ReturnValue = std::max(sizeof(decltype(std::get<Index>(VariantType()))),MaxAlign<VariantType,Index+1>());
-        //    return 1;
-        //} 
         class ValueVariant
         {
             alignas(i_MaxAlign<bool,Function,Int,Float,Symbol,ThreadHandle,Null>::value) char m_Content[i_MaxSize<bool,Function,Int,Float,Symbol,ThreadHandle,Null>::value];
@@ -748,10 +754,6 @@ public:
             //Null,bool,Function,Int,Float,Symbol,ThreadHandle
             static constexpr char m_BuiltinTypeSize[] = {0,sizeof(Null),sizeof(bool),sizeof(Function),sizeof(Int),sizeof(Float),sizeof(Symbol),sizeof(ThreadHandle)};
              
-            ///static constexpr int p_BuiltinByteSize(uint_least8_t ClassID) 
-            ///{
-            ///    return (ClassID >> 4)& 
-            ///}
             bool p_BuiltinStored() const
             {
                 return !(m_BuiltinClassID & 1u<<7);
@@ -1189,6 +1191,14 @@ public:
             }
             return *this;
         }
+    };
+
+    class ValueRecursionLock
+    {
+        Value& m_Val;
+    public:
+        ValueRecursionLock(Value& Val);
+        ~ValueRecursionLock();
     };
 
     template<typename T,typename... Args>

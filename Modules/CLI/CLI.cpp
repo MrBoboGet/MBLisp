@@ -318,6 +318,10 @@ namespace MBLisp
             }
         }
     }
+    static void ClearChildren_Stacker(MBTUI::Stacker& Stacker)
+    {
+        Stacker.ClearChildren();
+    }
 
     Value CLIModule::p_Stacker(Evaluator& Evaluator,Dict& Attributes,List& Children)
     {
@@ -741,6 +745,10 @@ namespace MBLisp
         Text.SetText(Content);
         return ReturnValue;
     }
+    Value Text_GetContent(MBTUI::Text& Element)
+    {
+        return String(Element.GetContent());
+    }
 
     Value NewInput(String const& String)
     {
@@ -837,6 +845,7 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<GetFirst_Stacker>(ReturnValue,"first");
         AssociatedEvaluator.AddGeneric<ChildCount_Stacker>(ReturnValue,"child-count");
         AssociatedEvaluator.AddGeneric<SetChildren_Stacker>(ReturnValue,"set-children");
+        AssociatedEvaluator.AddGeneric<ClearChildren_Stacker>(ReturnValue,"clear-children");
         //AssociatedEvaluator.AddGeneric<p_AddChildStacker>(ReturnValue,"add-child");
         AssociatedEvaluator.AddObjectMethod<&MBTUI::Stacker::ClearChildren>(ReturnValue,"clear");
         AssociatedEvaluator.AddGeneric<p_Repl>(ReturnValue,"repl");
@@ -854,6 +863,7 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<Text_Create>(ReturnValue,"Text");
         AssociatedEvaluator.AddGeneric<Text_CreateDict>(ReturnValue,"Text");
         AssociatedEvaluator.AddGeneric<Text_Attributes>(ReturnValue,"Text");
+        AssociatedEvaluator.AddGeneric<Text_GetContent>(ReturnValue,"get-content");
         AssociatedEvaluator.AddType<MBTUI::Text>(ReturnValue,"Text_t");
 
         AssociatedEvaluator.AddGeneric<p_Terminal>(ReturnValue,"terminal");
