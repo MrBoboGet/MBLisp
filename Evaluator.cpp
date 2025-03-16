@@ -789,10 +789,11 @@ namespace MBLisp
             throw std::runtime_error("Can only index list type with integer");
         }
         Int Index = Arguments[1].GetType<Int>();
-        if(Index >= AssociatedList.size() || Index < 0)
+        if(Index >= AssociatedList.size() || (Index < 0 && (-Index) > AssociatedList.size()))
         {
             throw std::runtime_error("Index out of range when indexing list: " + std::to_string(Index)); 
         }
+        Index = Index >= 0 ? Index : AssociatedList.size()+Index;
         Value& AssociatedValue = AssociatedList[Index];
         assert(!AssociatedValue.IsType<List>() || AssociatedValue.GetRef<List>() != nullptr);
         if(Context.IsSetting())
@@ -938,6 +939,17 @@ namespace MBLisp
     Value Evaluator::In_String BUILTIN_ARGLIST
     {
         return Arguments[1].GetType<String>().find(Arguments[0].GetType<String>()) != std::string::npos;
+    }
+    String Index_String(String& Str,Int Index)
+    {
+        String ReturnValue;
+        Index = Index >= 0 ? Index : Str.size()+Index;
+        if(Index < 0 || Index >= Str.size())
+        {
+            throw std::runtime_error("Index "+std::to_string(Index)+" out of range for string");
+        }
+        ReturnValue += Str[Index];
+        return ReturnValue;
     }
     Value Evaluator::In_Environment BUILTIN_ARGLIST
     {
@@ -2953,6 +2965,7 @@ namespace MBLisp
         //Strings
         AddMethod<String,String>("split",Split_String);
         AddMethod<String,String>("in",In_String);
+        AddGeneric<Index_String>("index");
         AddMethod<String>("len",Len_String);
         AddMethod<Symbol,Scope>("in",In_Environment);
         AddMethod<Scope>("clear",Clear_Environment);
