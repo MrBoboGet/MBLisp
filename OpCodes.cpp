@@ -48,12 +48,14 @@ namespace MBLisp
     {
         IPIndex CurrentPosition = OutCodes.size();
         p_CreateOpCodes(ListToConvert.front(),OutCodes,CurrentState);
+        CurrentState.ArgumentStackCount += 1;
         for(int i = 1; i < ListToConvert.size();i++)
         {
             p_CreateOpCodes(ListToConvert[i],OutCodes,CurrentState);
             CurrentState.ArgumentStackCount += 1;
         }
-        CurrentState.ArgumentStackCount -= ListToConvert.size()-1;
+        //CurrentState.ArgumentStackCount -= ListToConvert.size()-1;
+        CurrentState.ArgumentStackCount -= ListToConvert.size();
         OpCode_CallFunc FunCall(ListToConvert.size()-1,Setting);
         m_OpCodes.push_back(FunCall);
 
@@ -627,7 +629,6 @@ namespace MBLisp
         EncodingState CurrentState;
         p_CreateOpCodes(ListToConvert,m_OpCodes,CurrentState);
         //TODO fix with let/cc
-        //m_OpCodes.push_back(OpCode_Pop());
         if(CurrentState.UnResolvedGotos.size() != 0)
         {
             throw std::runtime_error("go's to tags without corresponding label detected");
@@ -640,7 +641,6 @@ namespace MBLisp
         EncodingState CurrentState;
         p_CreateOpCodes(ListToConvert,m_OpCodes,CurrentState);
         //TODO fix with let/cc
-        //m_OpCodes.push_back(OpCode_Pop());
         if(CurrentState.UnResolvedGotos.size() != 0)
         {
             throw std::runtime_error("go's to tags without corresponding label detected");

@@ -1238,7 +1238,9 @@ namespace MBLisp
                 });
         if(SymbolIt == AssociatedInstance.Slots.end() || SymbolIt->first != IndexSymbol.ID)
         {
-            throw std::runtime_error("Couldn't find symbol '" + Context.GetEvaluator().GetSymbolString(IndexSymbol.ID) + "' when indexing class instance");
+            std::string ErrorMessage = "Couldn't find symbol '" + Context.GetEvaluator().GetSymbolString(IndexSymbol.ID) + "' when indexing class instance of type ";
+            ErrorMessage += Context.GetEvaluator().GetSymbolString(AssociatedInstance.AssociatedClass->Name.ID);
+            throw std::runtime_error(std::move(ErrorMessage));
         }
         if(Context.IsSetting())
         {
@@ -1906,12 +1908,19 @@ namespace MBLisp
                 //creates new stack frame
                 assert(CurrentFrame.ArgumentStack.size() != 0);
                 OpCode_CallFunc&  CallFuncCode = CurrentCode.GetType<OpCode_CallFunc>();
+                if(! (CurrentFrame.ArgumentStack.size() >= CallFuncCode.ArgumentCount+1))
+                {
+                    auto Trace = StackTrace(CurrentState,"Assert called");
+                    std::cout<< GetString(Trace)<<std::endl;
+                }
+                assert( CurrentFrame.ArgumentStack.size()>=CallFuncCode.ArgumentCount+1);
                 Value FunctionToCall = std::move(CurrentFrame.ArgumentStack[CurrentFrame.ArgumentStack.size()-(CallFuncCode.ArgumentCount+1)]);
                 FuncArgVector Arguments;
                 for(int i = 0; i < CallFuncCode.ArgumentCount;i++)
                 {
                     Arguments.push_back(std::move(CurrentFrame.ArgumentStack[CurrentFrame.ArgumentStack.size()-CallFuncCode.ArgumentCount+i]));
                 }
+                assert( ((int)CurrentFrame.ArgumentStack.size())-(CallFuncCode.ArgumentCount+1) >= 0);
                 CurrentFrame.ArgumentStack.resize(CurrentFrame.ArgumentStack.size()-(CallFuncCode.ArgumentCount+1));
                 //for(int i = 0; i < CallFuncCode.ArgumentCount;i++)
                 //{

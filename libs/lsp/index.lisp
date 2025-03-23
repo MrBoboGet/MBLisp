@@ -310,7 +310,7 @@
     )
     catch (any_t e)
     (
-      #(write debug-file (str e))
+      (write debug-file (str e))
       false
     )
    )
@@ -417,8 +417,8 @@
         )
         catch (any_t e)
         (
-            #(write debug-file (str e))
-            (print e)
+            (write debug-file (str e))
+            #(print e)
             null
         )
     )
