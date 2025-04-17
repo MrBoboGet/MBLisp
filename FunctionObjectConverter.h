@@ -43,7 +43,7 @@ namespace MBLisp
     template<typename T>
     Value ToBuiltin(T&& RegularValue)
     {
-        if constexpr(std::is_same_v<T,Value>())
+        if constexpr(std::is_same_v<T,Value>)
         {
             return RegularValue;
         }

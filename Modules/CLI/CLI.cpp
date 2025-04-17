@@ -703,6 +703,13 @@ namespace MBLisp
                 Text.SetBGColor(ParseColor(Val.GetType<String>()));
             }
         }
+        else if(Atr == "highlight-bg-color")
+        {
+            if(Val.IsType<String>())
+            {
+                Text.SetHighlightBGColor(ParseColor(Val.GetType<String>()));
+            }
+        }
         else if(Atr == "multiline")
         {
             if(Val.IsType<bool>())
@@ -893,6 +900,7 @@ namespace MBLisp
         //Hider
         AssociatedEvaluator.AddGeneric<CreateHider>(ReturnValue,"hider");
         AssociatedEvaluator.AddGeneric<SetAttribute_Hider>(ReturnValue,"set-atr");
+        AssociatedEvaluator.AddGeneric<Text_SetAtr>(ReturnValue,"set-atr");
         //
 
         //AssociatedEvaluator.AddObjectMethod<&MBTUI::Stacker::EnableOverlow>(ReturnValue,"enable-overflow");

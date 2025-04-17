@@ -35,6 +35,15 @@
 namespace MBLisp
 {
 
+    static String FileName(String const& Path)
+    {
+        return MBUnicode::PathToUTF8(std::filesystem::path(Path).filename());
+    }
+    static String PathAppend(String const& Base,String const& NewFile)
+    {
+        return MBUnicode::PathToUTF8(std::filesystem::path(Base) / NewFile);
+    }
+
     //Stacktrace
     Evaluator::StackTrace::StackTrace(ExecutionState& CurrentState,String  const& Message)
     {
@@ -3059,6 +3068,8 @@ namespace MBLisp
         AddMethod<String>("canonical",Canonical);
         AddMethod<String>("is-file",IsFile);
         AddMethod<String>("path-id",PathID);
+        AddGeneric<FileName>("file-name");
+        AddGeneric<PathAppend>("path-append");
 
         
         //Readtables
@@ -3389,7 +3400,7 @@ namespace MBLisp
         {
             throw std::runtime_error("parent-path requires exactly 1 argument of type string");
         }
-        return MBUnicode::PathToUTF8(std::filesystem::path(Arguments[0].GetType<String>()).parent_path());
+        return MBUnicode::PathToUTF8(std::filesystem::weakly_canonical(std::filesystem::path(Arguments[0].GetType<String>())).parent_path());
     }
     Value Evaluator::PathID BUILTIN_ARGLIST
     {
@@ -3416,6 +3427,8 @@ namespace MBLisp
         }
         return ReturnValue;
     }
+
+
     Value Evaluator::IsDirectory BUILTIN_ARGLIST
     {
         if(Arguments.size() != 1 ||  !Arguments[0].IsType<String>())
