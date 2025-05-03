@@ -24,6 +24,8 @@
    )
    (if (not (eq current-sym null))
         (setl res (signal ((index types 'semantic-token) current-sym  ((index types 'type-to-string) (type current-envir) ) )))
+    else 
+        (signal ((index types 'extra-diagnostic) (back symbol-parts)  "symbol not found"))
    )
   `(,\. ,@(index symbol-parts 0) ,@symbol-symbols)
 )

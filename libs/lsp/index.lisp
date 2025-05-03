@@ -298,6 +298,10 @@
     (
        (append jumps (slot loc symbols))
     )
+    catch (extra-diagnostic err)
+    (
+       (append diagnostics (list :ast err :message err))
+    )
     catch (semantic-token new-token)
     (
        (append tokens (slot new-token content))
@@ -351,62 +355,68 @@
   (setl input-stream-symbol (gensym))
   (setl (index new-envir input-stream-symbol) file-stream)
 
-  (set no-import-handler import-program-envir)
-  (setl jump-symbols (list))
+  #(set no-import-handler import-program-envir)
+  (let ((no-import-handler import-program-envir))
+      (setl jump-symbols (list))
 
-  (setl semantic-tokens (list))
-  (setl diagnostics (list))
-  (setl delayed-forms (list))
-  (setl diagnostics (list))
-  (set-current-scope new-envir)
-  (setl extra-ast-values (list))
-  (let ((load-filepath uri))
-      (catch-signals
-        (
-              (while (not (eof file-stream))
-                     (let ((load-envir new-envir))
-                        (setl new-term (eval `(read-term ,file-stream) new-envir))
-                        (skip-whitespace file-stream)
-                        (eval-selected new-term new-envir)
-                     )
-                     (if (&& (type-eq new-term list_t) (< 0 (len new-term)) (type-eq (. new-term 0) symbol_t) (in (. new-term 0) delayed-map))
-                            (append delayed-forms new-term)
-                      else
-                            (handle-form new-envir new-term semantic-tokens jump-symbols diagnostics)
-                     )
-              )
-              (doit ast extra-ast-values
-                  (insert-elements semantic-tokens (default-extractor new-envir ast))
-              )
-        )    
-        catch (symbol-location loc)
-        (
-           (append jump-symbols (slot loc symbols))
-        )
-        catch (semantic-token new-token)
-        (
-           (append semantic-tokens (slot new-token content))
-           "ligma"
-        )
-        catch (extra-ast new-token)
-        (
-           (append extra-ast-values :ast new-token)
-           "ligma"
-        )
-        catch (any_t e)
-        (
-          #(write debug-file (str e))
-          false
-        )
+      (setl semantic-tokens (list))
+      (setl diagnostics (list))
+      (setl delayed-forms (list))
+      (setl diagnostics (list))
+      (set-current-scope new-envir)
+      (setl extra-ast-values (list))
+      (let ((load-filepath uri))
+          (catch-signals
+            (
+                  (while (not (eof file-stream))
+                         (let ((load-envir new-envir))
+                            (setl new-term (eval `(read-term ,file-stream) new-envir))
+                            (skip-whitespace file-stream)
+                            (eval-selected new-term new-envir)
+                         )
+                         (if (&& (type-eq new-term list_t) (< 0 (len new-term)) (type-eq (. new-term 0) symbol_t) (in (. new-term 0) delayed-map))
+                                (append delayed-forms new-term)
+                          else
+                                (handle-form new-envir new-term semantic-tokens jump-symbols diagnostics)
+                         )
+                  )
+                  (doit ast extra-ast-values
+                      (insert-elements semantic-tokens (default-extractor new-envir ast))
+                  )
+            )    
+            catch (symbol-location loc)
+            (
+               (append jump-symbols (slot loc symbols))
+            )
+            catch (extra-diagnostic err)
+            (
+               (append diagnostics (list :ast err :message err))
+            )
+            catch (semantic-token new-token)
+            (
+               (append semantic-tokens (slot new-token content))
+               "ligma"
+            )
+            catch (extra-ast new-token)
+            (
+               (append extra-ast-values :ast new-token)
+               "ligma"
+            )
+            catch (any_t e)
+            (
+              #(write debug-file (str e))
+              false
+            )
+          )
       )
+      (doit new-term delayed-forms
+             (handle-form new-envir new-term semantic-tokens jump-symbols diagnostics)
+      )
+      (clear new-envir)
+      (lsp:set-document-tokens handler uri semantic-tokens)
+      (lsp:set-document-diagnostics handler uri diagnostics)
+      (lsp:set-document-jumps handler uri jump-symbols)
   )
-  (doit new-term delayed-forms
-         (handle-form new-envir new-term semantic-tokens jump-symbols diagnostics)
-  )
-  (clear new-envir)
-  (lsp:set-document-tokens handler uri semantic-tokens)
-  (lsp:set-document-diagnostics handler uri diagnostics)
-  (lsp:set-document-jumps handler uri jump-symbols)
 )
 
 (defun main ()

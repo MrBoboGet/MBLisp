@@ -1256,6 +1256,19 @@ public:
         Ref<ClassDefinition> AssociatedClass;
         //binary search to find
         std::vector<std::pair<SymbolID,Value>> Slots;
+
+        Value* TryGet(SymbolID ID)
+        {
+            auto It = std::lower_bound(Slots.begin(),Slots.end(),ID,[](std::pair<SymbolID,Value> const& lhs,SymbolID rhs)
+                    {
+                        return lhs.first < rhs;
+                    });
+            if(It != Slots.end() && It->first == ID)
+            {
+                return &It->second;
+            }
+            return nullptr;
+        }
     };
     class GenericFunction
     {
@@ -1328,6 +1341,10 @@ public:
     {
         bool IsStackScope = false;
     };
+    struct GenericParent
+    {
+        virtual Value* TryGetVariable(SymbolID ID) = 0;
+    };
     class Scope
     {
         struct ParentScope
@@ -1335,7 +1352,16 @@ public:
             Ref<Scope> AssociatedScope;   
             bool Shadowing = false;
         };
+
+
+        struct GenericParentScope
+        {
+            std::unique_ptr<GenericParent> Parent;
+            bool Shadowing = false;
+        };
+
         MBUtility::MBVector<ParentScope,4> m_ParentScope;
+        MBUtility::MBVector<GenericParentScope,1> m_GenericParents;
         std::unordered_map<SymbolID,Value> m_Variables;
 
         MBUtility::MBVector<Value,4> m_LocalVars;
@@ -1344,17 +1370,22 @@ public:
 
         ScopeStackframeInfo  m_StackFrameInfo;
     public:
+        Scope() = default;
+        Scope(FunctionDefinition const& FunctionDef)
+        {
+            m_LocalVars.resize(FunctionDef.LocalSymCount);
+            m_LocalSymBegin = FunctionDef.LocalSymBegin;
+            m_LocalVarsNames = FunctionDef.LocalVars;
+        }
+
+
+        //parent stuff
+
+        void AddGenericParent(std::unique_ptr<GenericParent> Parent,bool Shadowing = false);
+        
         void SetParentScope(Ref<Scope> ParentScope);
         void AddParentScope(Ref<Scope> ParentScope);
         void SetShadowingParent(Ref<Scope> ParentScope);
-
-        //very niche, used to construct opcodes when eval in a specific scope
-        std::vector<std::pair<SymbolID,int>> GetLocalSyms() const;
-        int GetLocalSymBegin() const
-        {
-            return m_LocalSymBegin;   
-        }
-
         int ParentCount() const
         {
             return m_ParentScope.size();   
@@ -1368,42 +1399,24 @@ public:
             return m_ParentScope[Index].AssociatedScope;
         }
 
-        //setters
-        void SetVariable(SymbolID Variable,Value NewValue);
-        void OverrideVariable(SymbolID Variable,Value NewValue);
-        void SetLocalVariable(int Index,Value NewValue);
-        //assigns as direct offset in current scope
-        void SetLocalDirect(int Index,Value NewValue);
-        //getters
-        Value FindVariable(SymbolID Variable);
-        Value* TryGet(SymbolID Variable);
-        Value* TryGetNonShadowing(SymbolID Variable);
-        Value* GetOrCreate(SymbolID Variable);
-        Value& GetLocal(SymbolID Variable);
-        Value* TryGetLocalByID(SymbolID Variable);
+        //variables reflection
+
+        //very niche, used to construct opcodes when eval in a specific scope
+        std::vector<std::pair<SymbolID,int>> GetLocalSyms() const;
+        int GetLocalSymBegin() const
+        {
+            return m_LocalSymBegin;   
+        }
         int TotalLocalSymCount() const
         {
             return m_LocalSymBegin + m_LocalVars.size();   
         }
-
-        Scope() = default;
-        Scope(FunctionDefinition const& FunctionDef)
-        {
-            m_LocalVars.resize(FunctionDef.LocalSymCount);
-            m_LocalSymBegin = FunctionDef.LocalSymBegin;
-            m_LocalVarsNames = FunctionDef.LocalVars;
-        }
-        
-        void Clear();
         size_t VarCount() const
         {
             return m_Variables.size();   
         }
-        ScopeStackframeInfo& GetStackInfo()
-        {
-            return m_StackFrameInfo;   
-        }
         std::vector<SymbolID> Vars() const;
+
         auto begin()
         {
             return m_Variables.begin();
@@ -1412,6 +1425,33 @@ public:
         {
             return m_Variables.end();
         }
+
+        //setters
+        void SetVariable(SymbolID Variable,Value NewValue);
+        void OverrideVariable(SymbolID Variable,Value NewValue);
+        void SetLocalVariable(int Index,Value NewValue);
+        void Clear();
+        //assigns as direct offset in current scope
+        void SetLocalDirect(int Index,Value NewValue);
+        //getters
+        Value FindVariable(SymbolID Variable);
+        Value* GetOrCreate(SymbolID Variable);
+        Value* TryGet(SymbolID Variable);
+        Value* TryGetNonShadowing(SymbolID Variable);
+
+        Value& GetLocal(SymbolID Variable);
+        Value* TryGetLocalByID(SymbolID Variable);
+
+        
+
+
+        //deprecated
+        ScopeStackframeInfo& GetStackInfo()
+        {
+            return m_StackFrameInfo;   
+        }
+
+
         //kinda hacky, might consider doing proper garbage collecting...
     };
     template<>

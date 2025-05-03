@@ -1142,6 +1142,49 @@ namespace MBLisp
         ScopeToModify.AddParentScope(Arguments[1].GetRef<Scope>());
         return Value();
     }
+    static void AddParent_Dict(Scope& Scope,Ref<Dict> Dictionary)
+    {
+        struct DictParent : public GenericParent
+        {
+            Ref<Dict> UnderlyingDict;
+
+            DictParent(Ref<Dict> NewDict)
+                : UnderlyingDict(std::move(NewDict))
+            {
+
+            }
+
+            Value* TryGetVariable(SymbolID ID) override
+            {
+                auto It = UnderlyingDict->find(Symbol(ID));
+                if(It != UnderlyingDict->end())
+                {
+                    return &It->second;   
+                }
+                return nullptr;
+            }
+        };
+        Scope.AddGenericParent(std::unique_ptr<GenericParent>(new DictParent(std::move(Dictionary))));
+    }
+    static void AddParent_Instance(Scope& Scope,Ref<ClassInstance> Dictionary)
+    {
+        struct ObjectParent : public GenericParent
+        {
+            Ref<ClassInstance> UnderlyingObject;
+
+            ObjectParent(Ref<ClassInstance> NewDict)
+                : UnderlyingObject(std::move(NewDict))
+            {
+
+            }
+
+            Value* TryGetVariable(SymbolID ID) override
+            {
+                return UnderlyingObject->TryGet(ID);
+            }
+        };
+        Scope.AddGenericParent(std::unique_ptr<GenericParent>(new ObjectParent(std::move(Dictionary))));
+    }
     Value Evaluator::Clear_Environment BUILTIN_ARGLIST
     {
         Arguments[0].GetType<Scope>().Clear();
@@ -2939,6 +2982,8 @@ namespace MBLisp
         AddMethod<Scope,Symbol,Any>("set-var",SetVar_Environment);
         AddMethod<Scope,Scope>("set-parent",SetParent_Environment);
         AddMethod<Scope,Scope>("add-parent",AddParent_Environment);
+        AddGeneric<AddParent_Instance>("add-parent");
+        AddGeneric<AddParent_Dict>("add-parent");
         AddMethod<Scope,Symbol>("shadow",Shadow_Environment);
         AddGeneric<Vars>("vars");
         //comparisons
@@ -3726,5 +3771,53 @@ namespace MBLisp
             ReturnValue = true;   
         }
         return ReturnValue;
+    }
+
+
+    void Evaluator::DumpInternalModule(std::string_view Name,Scope& Scope)
+    {
+        auto DumpPath = MBSystem::GetUserHomeDirectory()/".mblisp/modules"/(std::string(Name)+".json");
+        if(!std::filesystem::exists(DumpPath.parent_path()))
+        {
+            std::filesystem::create_directories(DumpPath.parent_path());
+        }
+        std::ofstream OutFile = std::ofstream(DumpPath);
+        std::vector<MBParsing::JSONObject> Objects;
+        for(auto const& Var : Scope)
+        {
+            auto& Object = Objects.emplace_back(MBParsing::JSONObjectType::Aggregate).GetMapData();
+            Object["name"] = GetSymbolString(Var.first);
+            std::string Type;
+            if(Var.second.IsType<Lambda>())
+            {
+                Type = "function";
+            }
+            else if(Var.second.IsType<Function>())
+            {
+                Type = "function";
+            }
+            else if(Var.second.IsType<FunctionObject>())
+            {
+                Type = "function";
+            }
+            else if(Var.second.IsType<GenericFunction>())
+            {
+                Type = "function";
+            }
+            else if(Var.second.IsType<Macro>())
+            {
+                Type = "macro";
+            }
+            else if(Var.second.IsType<ClassDefinition>())
+            {
+                Type = "type";
+            }
+            else
+            {
+                Type = "var";
+            }
+            Object["type"] = std::move(Type);
+        }
+        OutFile << MBParsing::JSONObject(std::move(Objects)).ToPrettyString();
     }
 }

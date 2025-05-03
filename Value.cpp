@@ -22,6 +22,12 @@ namespace MBLisp
         NewParent.AssociatedScope = NewScope;
         m_ParentScope.push_back(NewParent);
     }
+    void Scope::AddGenericParent(std::unique_ptr<GenericParent> Parent,bool Shadowing)
+    {
+        auto& ScopeParent = m_GenericParents.emplace_back();
+        ScopeParent.Parent = std::move(Parent);
+        ScopeParent.Shadowing = Shadowing;
+    }
     void Scope::SetShadowingParent(Ref<Scope> NewScope)
     {
         //ghetto clear
@@ -70,6 +76,17 @@ namespace MBLisp
                 }
             }
         }
+        if(m_GenericParents.size() != 0)
+        {
+            for(auto& Parent : m_GenericParents)
+            {
+                ReturnValue = Parent.Parent->TryGetVariable(Variable);
+                if(ReturnValue != nullptr)
+                {
+                    return ReturnValue;
+                }
+            }
+        }
         return ReturnValue;
     }
     Value* Scope::TryGetNonShadowing(SymbolID Variable)
@@ -86,6 +103,19 @@ namespace MBLisp
                 if(Parent.Shadowing)
                     continue;
                 ReturnValue = Parent.AssociatedScope->TryGetNonShadowing(Variable);
+                if(ReturnValue != nullptr)
+                {
+                    return ReturnValue;
+                }
+            }
+        }
+        if(m_GenericParents.size() != 0)
+        {
+            for(auto& Parent : m_GenericParents)
+            {
+                if(Parent.Shadowing)
+                    continue;
+                ReturnValue = Parent.Parent->TryGetVariable(Variable);
                 if(ReturnValue != nullptr)
                 {
                     return ReturnValue;
@@ -149,6 +179,16 @@ namespace MBLisp
             if(Parent.Shadowing) 
                 continue;
             if(auto It = Parent.AssociatedScope->TryGetNonShadowing(Variable); It != nullptr)
+            {
+                *It = std::move(NewValue);
+                return;
+            }
+        }
+        for(auto& Parent : m_GenericParents)
+        {
+            if(Parent.Shadowing) 
+                continue;
+            if(auto It = Parent.Parent->TryGetVariable(Variable); It != nullptr)
             {
                 *It = std::move(NewValue);
                 return;

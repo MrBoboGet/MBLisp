@@ -931,5 +931,8 @@ namespace MBLisp
         Value Eval(Ref<Scope> AssociatedScope,Value Callable,FuncArgVector Arguments);
         Value Eval(Value Callable,FuncArgVector Arguments);
         //
+        
+        
+        void DumpInternalModule(std::string_view Name,Scope& Scope);
     };
 }

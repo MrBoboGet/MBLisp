@@ -12,6 +12,15 @@
     )
 )
 
+(defclass extra-diagnostic ()
+    (ast null)
+    (message null)
+    (constructor (location message)
+        (set :ast this location)
+        (set :message this message)
+    )
+)
+
 (defclass semantic-token ()
     (content null)
     (constructor (token token-type) 
