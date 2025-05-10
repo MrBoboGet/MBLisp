@@ -271,6 +271,15 @@ namespace MBLisp
                 Stacker.SetOverflowDirection(Value.GetType<bool>());
             }
         }
+        else if(Attribute == "passthrough")
+        {
+            if(Value.IsType<String>())
+            {
+                std::vector<std::string> Characters;
+                Characters = MBUtility::Split(Value.GetType<String>(),",");
+                Stacker.SetInputPassthrough(Characters);
+            }
+        }
         else if(Attribute == "border")
         {
             if(Value.IsType<bool>())
@@ -454,44 +463,7 @@ namespace MBLisp
     }
     static bool CompareInputString(MBCLI::ConsoleInput const& Input,String const& Key)
     {
-        if(Input.SpecialInput != MBCLI::SpecialKey::Null)
-        {
-            switch(Input.SpecialInput)
-            {
-                case MBCLI::SpecialKey::Backspace: return Key == "backspace";
-                case MBCLI::SpecialKey::Left: return Key == "left";
-                case MBCLI::SpecialKey::Right: return Key == "right";
-                case MBCLI::SpecialKey::Up: return Key == "up";
-                case MBCLI::SpecialKey::Down: return Key == "down";
-                case MBCLI::SpecialKey::Home: return Key == "home";
-                case MBCLI::SpecialKey::End: return Key == "end";
-                case MBCLI::SpecialKey::Ins: return Key == "ins";
-                case MBCLI::SpecialKey::Esc: return Key == "esc";
-                case MBCLI::SpecialKey::PageUp: return Key == "pageUp";
-                case MBCLI::SpecialKey::PageDown: return Key == "pageDown";
-                case MBCLI::SpecialKey::Del: return Key == "del";
-                case MBCLI::SpecialKey::F1: return Key == "f1";
-                case MBCLI::SpecialKey::F2: return Key == "f2";
-                case MBCLI::SpecialKey::F3: return Key == "f3";
-                case MBCLI::SpecialKey::F4: return Key == "f4";
-                case MBCLI::SpecialKey::F5: return Key == "f5";
-                case MBCLI::SpecialKey::F6: return Key == "f6";
-                case MBCLI::SpecialKey::F7: return Key == "f7";
-                case MBCLI::SpecialKey::F8: return Key == "f8";
-                case MBCLI::SpecialKey::F9: return Key == "f9";
-                case MBCLI::SpecialKey::F10: return Key == "f10";
-                case MBCLI::SpecialKey::F11: return Key == "f11";
-                case MBCLI::SpecialKey::F12: return Key == "f12";
-
-
-                case MBCLI::SpecialKey::Null: return false;
-            };
-        }
-        if(Input.CharacterInput == '\n' || Input.CharacterInput == "\r\n")
-        {
-            return Key == "enter";
-        }
-        return Input.CharacterInput == Key;
+        return Input == Key;
     }
     static bool Input_Eq(MBCLI::ConsoleInput const& Input,String const& Key)
     {
