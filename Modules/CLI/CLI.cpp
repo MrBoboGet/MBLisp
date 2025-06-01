@@ -301,13 +301,32 @@ namespace MBLisp
         {
             if(Value.IsType<String>())
             {
-                if(Value.GetType<String>() == "green")
+                Stacker.SetBorderColor(ParseColor(Value.GetType<String>()));
+            }
+        }
+        else if(Attribute == "bg-color")
+        {
+            if(Value.IsType<String>())
+            {
+                Stacker.SetBGColor(ParseColor(Value.GetType<String>()));
+            }
+        }
+        else if(Attribute == "text-color")
+        {
+            if(Value.IsType<String>())
+            {
+                Stacker.SetTextColor(ParseColor(Value.GetType<String>()));
+            }
+        }
+        else if(Attribute == "justification")
+        {
+            if(Value.IsType<String>())
+            {
+                MBTUI::Stacker::Justification Justification;
+                auto Res = MBTUI::Stacker::ParseJustification(Value.GetType<String>(),Justification);
+                if(Res)
                 {
-                    Stacker.SetBorderColor(MBCLI::ANSITerminalColor::BrightGreen);
-                }
-                else if(Value.GetType<String>() == "white")
-                {
-                    Stacker.SetBorderColor(MBCLI::ANSITerminalColor::BrightWhite);
+                    Stacker.SetJustification(Justification);
                 }
             }
         }

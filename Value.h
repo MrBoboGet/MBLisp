@@ -698,7 +698,14 @@ public:
         //typedef std::variant<Null,bool,Function,Int,Float,Symbol,ThreadHandle,Null> ValueTypes; 
 
         typedef std::variant<Null,bool,Function,Int,Float,Symbol,ThreadHandle> ValueTypes;
-        typedef std::variant<Null,bool,Function,Int,Float,Symbol,ThreadHandle,
+        typedef std::variant<
+            Null,
+            bool,
+            Function,
+            Int,
+            Float,
+            Symbol,
+            ThreadHandle,
             String,
             Macro,
             Lambda,
@@ -749,10 +756,12 @@ public:
         } 
         class ValueVariant
         {
-            alignas(i_MaxAlign<bool,Function,Int,Float,Symbol,ThreadHandle,Null>::value) char m_Content[i_MaxSize<bool,Function,Int,Float,Symbol,ThreadHandle,Null>::value];
+            alignas(i_MaxAlign<bool,Function,Int,Float,Symbol,ThreadHandle,Null>::value) 
+                char m_Content[i_MaxSize<bool,Function,Int,Float,Symbol,ThreadHandle,Null>::value];
             uint_least8_t m_BuiltinClassID = 1u;//Null type
             //Null,bool,Function,Int,Float,Symbol,ThreadHandle
-            static constexpr char m_BuiltinTypeSize[] = {0,sizeof(Null),sizeof(bool),sizeof(Function),sizeof(Int),sizeof(Float),sizeof(Symbol),sizeof(ThreadHandle)};
+            static constexpr char m_BuiltinTypeSize[] = {0,
+                sizeof(Null),sizeof(bool),sizeof(Function),sizeof(Int),sizeof(Float),sizeof(Symbol),sizeof(ThreadHandle)};
              
             bool p_BuiltinStored() const
             {

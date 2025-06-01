@@ -17,11 +17,14 @@ term else = "else";
 term semi = ";";
 term num = "\d+";
 term str = "\"([^\"\\]|\\.)*\"";
-term regex = "(s|d|e)?/(([^\n/\\]|\\.)*/)*\w*";
+term regex = "(s|d|e|m)/(([^\n/\\]|\\.)*/)+\w*";
+term underscore = "_";
 term idf = "\w+|\$_";
 term dot = "\.";
 term plus = "\+";
 term times = "\*";
+term div = "/";
+term backslash = "\\\\\\";
 term comp = "=~";
 term le = "<";
 term leq = "<=";
@@ -182,6 +185,12 @@ struct Expr_String : Expr
     tokenPos Begin;
     string Content;
 }
+struct Expr_Lambda : Expr
+{
+    List<Idf> Variables;
+    List<Statement> Body;
+}
+
 
 
 Idf = Position=TOKEN.Position Value=idf;
@@ -189,19 +198,24 @@ Expr_Idf = Identifier=Idf;
 Expr_Num =  Position=TOKEN.Position Value=num;
 Expr_Bool =  (Value=true T | Value=false F);
 Op = (Value = dot | Value=comp | Value=plus | Value=times | Value=eq | Value=eqq | Value=le | Value=leq
-        | Value=ge | Value=geq) 
+        | Value=ge | Value=geq | Value=div) 
             (eq Assignment = true)?;
 def PostOp = Op;
 PostOp = Value=lsquare (ExtraArgs=Expr (comma ExtraArgs=Expr)*)?  rsquare;
 Expr_FuncCall = Identifier=Idf lpar (Arguments=Expr (comma Arguments=Expr)*)?  rpar ;
 Expr_Regex = Begin = TOKEN.Position Content = regex;
 Expr_String = Begin = TOKEN.Position Content = str;
+Expr_Lambda = backslash (Variables=Idf (comma Variables=Idf)*)? colon lcurl Body=Statement* rcurl;
+def Expr_Lambda_Short = Expr_Lambda;
+Expr_Lambda_Short = Variables=Expr_Underscore.Identifier Body=Statement_Expr(Expr=Expr_FuncCall | lpar Expr=Expr rpar );
+def Expr_Underscore =  Expr_Idf;
+Expr_Underscore = Identifier.Position=TOKEN.Position Identifier.Value=underscore;
 DictEntry = Key=Expr colon Value=Expr;
 Expr_List = Begin=TOKEN.Position lsquare (Values=Expr (comma Values=Expr)*)? rsquare;
 Expr_Dict = Begin=TOKEN.Position lcurl (Values=DictEntry (comma Values=DictEntry)*)? rcurl;
 def Expr_Term = Expr;
 Expr_Term = lpar this=Expr rpar | this=Expr_Idf | this = Expr_FuncCall | this=Expr_Num | 
-    this=Expr_Bool | this=Expr_Regex | this=Expr_String | this=Expr_List | this=Expr_Dict;
+    this=Expr_Bool | this=Expr_Regex | this=Expr_String | this=Expr_List | this=Expr_Dict | this=Expr_Lambda | this=Expr_Lambda_Short | this=Expr_Underscore;
 Expr_Operators = Lhs=Expr_Term 
     Parts=OperatorPart(Operator=Op (Rhs=Expr_Term) | Operator=PostOp)*;
 Expr = this=Expr_Operators;
