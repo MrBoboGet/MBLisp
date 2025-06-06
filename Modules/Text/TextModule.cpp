@@ -5,6 +5,7 @@
 #include <MBCC/Compilers/MBLisp.h>
 
 #include <MBUtility/StreamUtils.h>
+#include <MBUtility/MBStrings.h>
 
 namespace MBLisp
 {
@@ -310,6 +311,29 @@ namespace MBLisp
         }
         return ReturnValue;
     }
+
+    static String HexEncode(String const& Input)
+    {
+        return MBUtility::HexEncodeBytes(Input.data(),Input.size());
+    }
+    static String HexDecode(String const& Input)
+    {
+        String ReturnValue;
+        if(Input.size() % 2 != 0)
+        {
+            throw std::runtime_error("Invalid hex string: must be even length");
+        }
+        for(int i = 0; i < Input.size()/2;i++)
+        {
+            bool Result = true;
+            ReturnValue += MBUtility::HexValueToByte(Input[i*2],Input[i*2+1],&Result);
+            if(!Result)
+            {
+                throw std::runtime_error(std::string("Invalid hex pair: ")+Input[i*2]+ Input[i*2+1]);
+            }
+        }
+        return ReturnValue;
+    }
     
     Ref<Scope> TextModule::GetModuleScope(Evaluator& AssociatedEvaluator) 
     {
@@ -323,6 +347,8 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<SplitQuoted_Simple>(ReturnValue,"split-quoted");
         AssociatedEvaluator.AddGeneric<SplitQuoted>(ReturnValue,"split-quoted");
         AssociatedEvaluator.AddGeneric<IsWhitespace>(ReturnValue,"is-whitespace");
+        AssociatedEvaluator.AddGeneric<HexEncode>(ReturnValue,"hex-encode");
+        AssociatedEvaluator.AddGeneric<HexDecode>(ReturnValue,"hex-decode");
 
         //regex stuff
         AssociatedEvaluator.AddGeneric<Regex>(ReturnValue,"regex");
