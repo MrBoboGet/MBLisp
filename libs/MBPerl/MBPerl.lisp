@@ -138,12 +138,17 @@
     (Content null)
     
 )
+(defclass Expr_Lambda(Expr)
+    (Variables (list))
+    (Body (list))
+    
+)
 (defun get-tokenizer ()
-    (tokenizer "\\s+"(list "true" "false" "class" "func" "return" ":" "\\{" "\\}" "\\[" "\\]" "for" "if" "in\\s" "while" "else" ";" "\\d+" "\"([^\"\\\\]|\\\\.)*\"" "(s|d|e)?/(([^\\n/\\\\]|\\\\.)*/)*\\w*" "\\w+|\\$_" "\\." "\\+" "\\*" "=~" "<" "<=" ">" ">=" "==" "=" "\\(" "\\)" ","))
+    (tokenizer "\\s+"(list "true" "false" "class" "func" "return" ":" "\\{" "\\}" "\\[" "\\]" "for" "if" "in\\s" "while" "else" ";" "\\d+" "\"([^\"\\\\]|\\\\.)*\"" "(s|d|e|m)/(([^\\n/\\\\]|\\\\.)*/)+\\w*" "_" "\\w+|\\$_" "\\." "\\+" "\\*" "/" "\\\\\\" "=~" "<" "<=" ">" ">=" "==" "=" "\\(" "\\)" ","))
 )
 (defun FillIdf_0 (ReturnValue tokenizer)
     (setl (. ReturnValue 'Position) :position (peek tokenizer 0))
-    (if (not (eq :type (peek tokenizer 0) 19))
+    (if (not (eq :type (peek tokenizer 0) 20))
         (error (+ "Error parsing Idf at position "  (str :position (peek tokenizer 0)) ": expected idf"))
         
     )
@@ -154,7 +159,7 @@
 (defun ParseIdf_0 (tokenizer)
     (setl ReturnValue (Idf))
     (setl (. ReturnValue 'Position) :position (peek tokenizer 0))
-    (if (not (eq :type (peek tokenizer 0) 19))
+    (if (not (eq :type (peek tokenizer 0) 20))
         (error (+ "Error parsing Idf at position "  (str :position (peek tokenizer 0)) ": expected idf"))
         
     )
@@ -165,7 +170,7 @@
 )
 (defun FillIdf (ReturnValue tokenizer)
     (setl (. ReturnValue 'Position) :position (peek tokenizer 0))
-    (if (not (eq :type (peek tokenizer 0) 19))
+    (if (not (eq :type (peek tokenizer 0) 20))
         (error (+ "Error parsing Idf at position "  (str :position (peek tokenizer 0)) ": expected idf"))
         
     )
@@ -176,7 +181,7 @@
 (defun ParseIdf (tokenizer)
     (setl ReturnValue (Idf))
     (setl (. ReturnValue 'Position) :position (peek tokenizer 0))
-    (if (not (eq :type (peek tokenizer 0) 19))
+    (if (not (eq :type (peek tokenizer 0) 20))
         (error (+ "Error parsing Idf at position "  (str :position (peek tokenizer 0)) ": expected idf"))
         
     )
@@ -367,7 +372,7 @@
 )
 (defun FillOp_0 (ReturnValue tokenizer)
     (if (&& (. LOOKTable 14 0 :type (peek tokenizer 0))(. LOOKTable 14 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 20))
+        (if (not (eq :type (peek tokenizer 0) 21))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected dot"))
             
         )
@@ -376,7 +381,7 @@
         
     
     else if (&& (. LOOKTable 15 0 :type (peek tokenizer 0))(. LOOKTable 15 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 23))
+        (if (not (eq :type (peek tokenizer 0) 26))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected comp"))
             
         )
@@ -385,7 +390,7 @@
         
     
     else if (&& (. LOOKTable 16 0 :type (peek tokenizer 0))(. LOOKTable 16 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 21))
+        (if (not (eq :type (peek tokenizer 0) 22))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected plus"))
             
         )
@@ -394,7 +399,7 @@
         
     
     else if (&& (. LOOKTable 17 0 :type (peek tokenizer 0))(. LOOKTable 17 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 22))
+        (if (not (eq :type (peek tokenizer 0) 23))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected times"))
             
         )
@@ -403,7 +408,7 @@
         
     
     else if (&& (. LOOKTable 18 0 :type (peek tokenizer 0))(. LOOKTable 18 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 29))
+        (if (not (eq :type (peek tokenizer 0) 32))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected eq"))
             
         )
@@ -412,7 +417,7 @@
         
     
     else if (&& (. LOOKTable 19 0 :type (peek tokenizer 0))(. LOOKTable 19 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 28))
+        (if (not (eq :type (peek tokenizer 0) 31))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected eqq"))
             
         )
@@ -421,7 +426,7 @@
         
     
     else if (&& (. LOOKTable 20 0 :type (peek tokenizer 0))(. LOOKTable 20 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 24))
+        (if (not (eq :type (peek tokenizer 0) 27))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected le"))
             
         )
@@ -430,7 +435,7 @@
         
     
     else if (&& (. LOOKTable 21 0 :type (peek tokenizer 0))(. LOOKTable 21 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 25))
+        (if (not (eq :type (peek tokenizer 0) 28))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected leq"))
             
         )
@@ -439,7 +444,7 @@
         
     
     else if (&& (. LOOKTable 22 0 :type (peek tokenizer 0))(. LOOKTable 22 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 26))
+        (if (not (eq :type (peek tokenizer 0) 29))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected ge"))
             
         )
@@ -448,8 +453,17 @@
         
     
     else if (&& (. LOOKTable 23 0 :type (peek tokenizer 0))(. LOOKTable 23 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 27))
+        (if (not (eq :type (peek tokenizer 0) 30))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected geq"))
+            
+        )
+        (setl (. ReturnValue 'Value) :value (peek tokenizer 0))
+        (consume-token tokenizer)
+        
+    
+    else if (&& (. LOOKTable 24 0 :type (peek tokenizer 0))(. LOOKTable 24 1 :type (peek tokenizer 1)))
+        (if (not (eq :type (peek tokenizer 0) 24))
+            (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected div"))
             
         )
         (setl (. ReturnValue 'Value) :value (peek tokenizer 0))
@@ -459,9 +473,9 @@
     else (error (+ "Error parsing Op at position "  (str :position (peek tokenizer 0)) ": expected _L2"))
     
 
-)(if (&& (. LOOKTable 24 0 :type (peek tokenizer 0))(. LOOKTable 24 1 :type (peek tokenizer 1)))
-    (if (&& (. LOOKTable 25 0 :type (peek tokenizer 0))(. LOOKTable 25 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 29))
+)(if (&& (. LOOKTable 25 0 :type (peek tokenizer 0))(. LOOKTable 25 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 26 0 :type (peek tokenizer 0))(. LOOKTable 26 1 :type (peek tokenizer 1)))
+        (if (not (eq :type (peek tokenizer 0) 32))
             (error (+ "Error parsing _L3 at position "  (str :position (peek tokenizer 0)) ": expected eq"))
             
         )
@@ -479,7 +493,7 @@
 (defun ParseOp_0 (tokenizer)
     (setl ReturnValue (Op))
     (if (&& (. LOOKTable 14 0 :type (peek tokenizer 0))(. LOOKTable 14 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 20))
+        (if (not (eq :type (peek tokenizer 0) 21))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected dot"))
             
         )
@@ -488,7 +502,7 @@
         
     
     else if (&& (. LOOKTable 15 0 :type (peek tokenizer 0))(. LOOKTable 15 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 23))
+        (if (not (eq :type (peek tokenizer 0) 26))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected comp"))
             
         )
@@ -497,7 +511,7 @@
         
     
     else if (&& (. LOOKTable 16 0 :type (peek tokenizer 0))(. LOOKTable 16 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 21))
+        (if (not (eq :type (peek tokenizer 0) 22))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected plus"))
             
         )
@@ -506,7 +520,7 @@
         
     
     else if (&& (. LOOKTable 17 0 :type (peek tokenizer 0))(. LOOKTable 17 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 22))
+        (if (not (eq :type (peek tokenizer 0) 23))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected times"))
             
         )
@@ -515,7 +529,7 @@
         
     
     else if (&& (. LOOKTable 18 0 :type (peek tokenizer 0))(. LOOKTable 18 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 29))
+        (if (not (eq :type (peek tokenizer 0) 32))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected eq"))
             
         )
@@ -524,7 +538,7 @@
         
     
     else if (&& (. LOOKTable 19 0 :type (peek tokenizer 0))(. LOOKTable 19 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 28))
+        (if (not (eq :type (peek tokenizer 0) 31))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected eqq"))
             
         )
@@ -533,7 +547,7 @@
         
     
     else if (&& (. LOOKTable 20 0 :type (peek tokenizer 0))(. LOOKTable 20 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 24))
+        (if (not (eq :type (peek tokenizer 0) 27))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected le"))
             
         )
@@ -542,7 +556,7 @@
         
     
     else if (&& (. LOOKTable 21 0 :type (peek tokenizer 0))(. LOOKTable 21 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 25))
+        (if (not (eq :type (peek tokenizer 0) 28))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected leq"))
             
         )
@@ -551,7 +565,7 @@
         
     
     else if (&& (. LOOKTable 22 0 :type (peek tokenizer 0))(. LOOKTable 22 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 26))
+        (if (not (eq :type (peek tokenizer 0) 29))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected ge"))
             
         )
@@ -560,8 +574,17 @@
         
     
     else if (&& (. LOOKTable 23 0 :type (peek tokenizer 0))(. LOOKTable 23 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 27))
+        (if (not (eq :type (peek tokenizer 0) 30))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected geq"))
+            
+        )
+        (setl (. ReturnValue 'Value) :value (peek tokenizer 0))
+        (consume-token tokenizer)
+        
+    
+    else if (&& (. LOOKTable 24 0 :type (peek tokenizer 0))(. LOOKTable 24 1 :type (peek tokenizer 1)))
+        (if (not (eq :type (peek tokenizer 0) 24))
+            (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected div"))
             
         )
         (setl (. ReturnValue 'Value) :value (peek tokenizer 0))
@@ -571,9 +594,9 @@
     else (error (+ "Error parsing Op at position "  (str :position (peek tokenizer 0)) ": expected _L2"))
     
 
-)(if (&& (. LOOKTable 24 0 :type (peek tokenizer 0))(. LOOKTable 24 1 :type (peek tokenizer 1)))
-    (if (&& (. LOOKTable 25 0 :type (peek tokenizer 0))(. LOOKTable 25 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 29))
+)(if (&& (. LOOKTable 25 0 :type (peek tokenizer 0))(. LOOKTable 25 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 26 0 :type (peek tokenizer 0))(. LOOKTable 26 1 :type (peek tokenizer 1)))
+        (if (not (eq :type (peek tokenizer 0) 32))
             (error (+ "Error parsing _L3 at position "  (str :position (peek tokenizer 0)) ": expected eq"))
             
         )
@@ -591,7 +614,7 @@
 )
 (defun FillOp (ReturnValue tokenizer)
     (if (&& (. LOOKTable 14 0 :type (peek tokenizer 0))(. LOOKTable 14 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 20))
+        (if (not (eq :type (peek tokenizer 0) 21))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected dot"))
             
         )
@@ -600,7 +623,7 @@
         
     
     else if (&& (. LOOKTable 15 0 :type (peek tokenizer 0))(. LOOKTable 15 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 23))
+        (if (not (eq :type (peek tokenizer 0) 26))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected comp"))
             
         )
@@ -609,7 +632,7 @@
         
     
     else if (&& (. LOOKTable 16 0 :type (peek tokenizer 0))(. LOOKTable 16 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 21))
+        (if (not (eq :type (peek tokenizer 0) 22))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected plus"))
             
         )
@@ -618,7 +641,7 @@
         
     
     else if (&& (. LOOKTable 17 0 :type (peek tokenizer 0))(. LOOKTable 17 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 22))
+        (if (not (eq :type (peek tokenizer 0) 23))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected times"))
             
         )
@@ -627,7 +650,7 @@
         
     
     else if (&& (. LOOKTable 18 0 :type (peek tokenizer 0))(. LOOKTable 18 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 29))
+        (if (not (eq :type (peek tokenizer 0) 32))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected eq"))
             
         )
@@ -636,7 +659,7 @@
         
     
     else if (&& (. LOOKTable 19 0 :type (peek tokenizer 0))(. LOOKTable 19 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 28))
+        (if (not (eq :type (peek tokenizer 0) 31))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected eqq"))
             
         )
@@ -645,7 +668,7 @@
         
     
     else if (&& (. LOOKTable 20 0 :type (peek tokenizer 0))(. LOOKTable 20 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 24))
+        (if (not (eq :type (peek tokenizer 0) 27))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected le"))
             
         )
@@ -654,7 +677,7 @@
         
     
     else if (&& (. LOOKTable 21 0 :type (peek tokenizer 0))(. LOOKTable 21 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 25))
+        (if (not (eq :type (peek tokenizer 0) 28))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected leq"))
             
         )
@@ -663,7 +686,7 @@
         
     
     else if (&& (. LOOKTable 22 0 :type (peek tokenizer 0))(. LOOKTable 22 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 26))
+        (if (not (eq :type (peek tokenizer 0) 29))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected ge"))
             
         )
@@ -672,8 +695,17 @@
         
     
     else if (&& (. LOOKTable 23 0 :type (peek tokenizer 0))(. LOOKTable 23 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 27))
+        (if (not (eq :type (peek tokenizer 0) 30))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected geq"))
+            
+        )
+        (setl (. ReturnValue 'Value) :value (peek tokenizer 0))
+        (consume-token tokenizer)
+        
+    
+    else if (&& (. LOOKTable 24 0 :type (peek tokenizer 0))(. LOOKTable 24 1 :type (peek tokenizer 1)))
+        (if (not (eq :type (peek tokenizer 0) 24))
+            (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected div"))
             
         )
         (setl (. ReturnValue 'Value) :value (peek tokenizer 0))
@@ -683,9 +715,9 @@
     else (error (+ "Error parsing Op at position "  (str :position (peek tokenizer 0)) ": expected _L2"))
     
 
-)(if (&& (. LOOKTable 24 0 :type (peek tokenizer 0))(. LOOKTable 24 1 :type (peek tokenizer 1)))
-    (if (&& (. LOOKTable 25 0 :type (peek tokenizer 0))(. LOOKTable 25 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 29))
+)(if (&& (. LOOKTable 25 0 :type (peek tokenizer 0))(. LOOKTable 25 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 26 0 :type (peek tokenizer 0))(. LOOKTable 26 1 :type (peek tokenizer 1)))
+        (if (not (eq :type (peek tokenizer 0) 32))
             (error (+ "Error parsing _L3 at position "  (str :position (peek tokenizer 0)) ": expected eq"))
             
         )
@@ -703,7 +735,7 @@
 (defun ParseOp (tokenizer)
     (setl ReturnValue (Op))
     (if (&& (. LOOKTable 14 0 :type (peek tokenizer 0))(. LOOKTable 14 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 20))
+        (if (not (eq :type (peek tokenizer 0) 21))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected dot"))
             
         )
@@ -712,7 +744,7 @@
         
     
     else if (&& (. LOOKTable 15 0 :type (peek tokenizer 0))(. LOOKTable 15 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 23))
+        (if (not (eq :type (peek tokenizer 0) 26))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected comp"))
             
         )
@@ -721,7 +753,7 @@
         
     
     else if (&& (. LOOKTable 16 0 :type (peek tokenizer 0))(. LOOKTable 16 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 21))
+        (if (not (eq :type (peek tokenizer 0) 22))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected plus"))
             
         )
@@ -730,7 +762,7 @@
         
     
     else if (&& (. LOOKTable 17 0 :type (peek tokenizer 0))(. LOOKTable 17 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 22))
+        (if (not (eq :type (peek tokenizer 0) 23))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected times"))
             
         )
@@ -739,7 +771,7 @@
         
     
     else if (&& (. LOOKTable 18 0 :type (peek tokenizer 0))(. LOOKTable 18 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 29))
+        (if (not (eq :type (peek tokenizer 0) 32))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected eq"))
             
         )
@@ -748,7 +780,7 @@
         
     
     else if (&& (. LOOKTable 19 0 :type (peek tokenizer 0))(. LOOKTable 19 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 28))
+        (if (not (eq :type (peek tokenizer 0) 31))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected eqq"))
             
         )
@@ -757,7 +789,7 @@
         
     
     else if (&& (. LOOKTable 20 0 :type (peek tokenizer 0))(. LOOKTable 20 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 24))
+        (if (not (eq :type (peek tokenizer 0) 27))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected le"))
             
         )
@@ -766,7 +798,7 @@
         
     
     else if (&& (. LOOKTable 21 0 :type (peek tokenizer 0))(. LOOKTable 21 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 25))
+        (if (not (eq :type (peek tokenizer 0) 28))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected leq"))
             
         )
@@ -775,7 +807,7 @@
         
     
     else if (&& (. LOOKTable 22 0 :type (peek tokenizer 0))(. LOOKTable 22 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 26))
+        (if (not (eq :type (peek tokenizer 0) 29))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected ge"))
             
         )
@@ -784,8 +816,17 @@
         
     
     else if (&& (. LOOKTable 23 0 :type (peek tokenizer 0))(. LOOKTable 23 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 27))
+        (if (not (eq :type (peek tokenizer 0) 30))
             (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected geq"))
+            
+        )
+        (setl (. ReturnValue 'Value) :value (peek tokenizer 0))
+        (consume-token tokenizer)
+        
+    
+    else if (&& (. LOOKTable 24 0 :type (peek tokenizer 0))(. LOOKTable 24 1 :type (peek tokenizer 1)))
+        (if (not (eq :type (peek tokenizer 0) 24))
+            (error (+ "Error parsing _L2 at position "  (str :position (peek tokenizer 0)) ": expected div"))
             
         )
         (setl (. ReturnValue 'Value) :value (peek tokenizer 0))
@@ -795,9 +836,9 @@
     else (error (+ "Error parsing Op at position "  (str :position (peek tokenizer 0)) ": expected _L2"))
     
 
-)(if (&& (. LOOKTable 24 0 :type (peek tokenizer 0))(. LOOKTable 24 1 :type (peek tokenizer 1)))
-    (if (&& (. LOOKTable 25 0 :type (peek tokenizer 0))(. LOOKTable 25 1 :type (peek tokenizer 1)))
-        (if (not (eq :type (peek tokenizer 0) 29))
+)(if (&& (. LOOKTable 25 0 :type (peek tokenizer 0))(. LOOKTable 25 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 26 0 :type (peek tokenizer 0))(. LOOKTable 26 1 :type (peek tokenizer 1)))
+        (if (not (eq :type (peek tokenizer 0) 32))
             (error (+ "Error parsing _L3 at position "  (str :position (peek tokenizer 0)) ": expected eq"))
             
         )
@@ -820,22 +861,22 @@
     )
     (setl (. ReturnValue 'Value) :value (peek tokenizer 0))
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 30 0 :type (peek tokenizer 0))(. LOOKTable 30 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 31 0 :type (peek tokenizer 0))(. LOOKTable 31 1 :type (peek tokenizer 1)))
-            (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (&& (. LOOKTable 31 0 :type (peek tokenizer 0))(. LOOKTable 31 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 32 0 :type (peek tokenizer 0))(. LOOKTable 32 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
                 (error (+ "Error parsing _L4 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
                 
             )
             (append (. ReturnValue 'ExtraArgs) (Expr))
             (set (back (. ReturnValue 'ExtraArgs))(ParseExpr tokenizer))
-            (while (&& (. LOOKTable 28 0 :type (peek tokenizer 0))(. LOOKTable 28 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 29 0 :type (peek tokenizer 0))(. LOOKTable 29 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
+            (while (&& (. LOOKTable 29 0 :type (peek tokenizer 0))(. LOOKTable 29 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 30 0 :type (peek tokenizer 0))(. LOOKTable 30 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
                         (error (+ "Error parsing _L5 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
-                    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+                    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
                         (error (+ "Error parsing _L5 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
                         
                     )
@@ -870,22 +911,22 @@ else (error (+ "Error parsing PostOp at position "  (str :position (peek tokeniz
     )
     (setl (. ReturnValue 'Value) :value (peek tokenizer 0))
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 30 0 :type (peek tokenizer 0))(. LOOKTable 30 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 31 0 :type (peek tokenizer 0))(. LOOKTable 31 1 :type (peek tokenizer 1)))
-            (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (&& (. LOOKTable 31 0 :type (peek tokenizer 0))(. LOOKTable 31 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 32 0 :type (peek tokenizer 0))(. LOOKTable 32 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
                 (error (+ "Error parsing _L4 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
                 
             )
             (append (. ReturnValue 'ExtraArgs) (Expr))
             (set (back (. ReturnValue 'ExtraArgs))(ParseExpr tokenizer))
-            (while (&& (. LOOKTable 28 0 :type (peek tokenizer 0))(. LOOKTable 28 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 29 0 :type (peek tokenizer 0))(. LOOKTable 29 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
+            (while (&& (. LOOKTable 29 0 :type (peek tokenizer 0))(. LOOKTable 29 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 30 0 :type (peek tokenizer 0))(. LOOKTable 30 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
                         (error (+ "Error parsing _L5 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
-                    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+                    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
                         (error (+ "Error parsing _L5 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
                         
                     )
@@ -920,22 +961,22 @@ else (error (+ "Error parsing PostOp at position "  (str :position (peek tokeniz
     )
     (setl (. ReturnValue 'Value) :value (peek tokenizer 0))
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 30 0 :type (peek tokenizer 0))(. LOOKTable 30 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 31 0 :type (peek tokenizer 0))(. LOOKTable 31 1 :type (peek tokenizer 1)))
-            (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (&& (. LOOKTable 31 0 :type (peek tokenizer 0))(. LOOKTable 31 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 32 0 :type (peek tokenizer 0))(. LOOKTable 32 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
                 (error (+ "Error parsing _L4 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
                 
             )
             (append (. ReturnValue 'ExtraArgs) (Expr))
             (set (back (. ReturnValue 'ExtraArgs))(ParseExpr tokenizer))
-            (while (&& (. LOOKTable 28 0 :type (peek tokenizer 0))(. LOOKTable 28 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 29 0 :type (peek tokenizer 0))(. LOOKTable 29 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
+            (while (&& (. LOOKTable 29 0 :type (peek tokenizer 0))(. LOOKTable 29 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 30 0 :type (peek tokenizer 0))(. LOOKTable 30 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
                         (error (+ "Error parsing _L5 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
-                    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+                    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
                         (error (+ "Error parsing _L5 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
                         
                     )
@@ -970,22 +1011,22 @@ else (error (+ "Error parsing PostOp at position "  (str :position (peek tokeniz
     )
     (setl (. ReturnValue 'Value) :value (peek tokenizer 0))
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 30 0 :type (peek tokenizer 0))(. LOOKTable 30 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 31 0 :type (peek tokenizer 0))(. LOOKTable 31 1 :type (peek tokenizer 1)))
-            (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (&& (. LOOKTable 31 0 :type (peek tokenizer 0))(. LOOKTable 31 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 32 0 :type (peek tokenizer 0))(. LOOKTable 32 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
                 (error (+ "Error parsing _L4 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
                 
             )
             (append (. ReturnValue 'ExtraArgs) (Expr))
             (set (back (. ReturnValue 'ExtraArgs))(ParseExpr tokenizer))
-            (while (&& (. LOOKTable 28 0 :type (peek tokenizer 0))(. LOOKTable 28 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 29 0 :type (peek tokenizer 0))(. LOOKTable 29 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
+            (while (&& (. LOOKTable 29 0 :type (peek tokenizer 0))(. LOOKTable 29 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 30 0 :type (peek tokenizer 0))(. LOOKTable 30 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
                         (error (+ "Error parsing _L5 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
-                    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+                    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
                         (error (+ "Error parsing _L5 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
                         
                     )
@@ -1019,27 +1060,27 @@ else (error (+ "Error parsing PostOp at position "  (str :position (peek tokeniz
         
     )
     (FillIdf (. ReturnValue 'Identifier) tokenizer)
-    (if (not (eq :type (peek tokenizer 0) 30))
+    (if (not (eq :type (peek tokenizer 0) 33))
         (error (+ "Error parsing Expr_FuncCall at position "  (str :position (peek tokenizer 0)) ": expected lpar"))
         
     )
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 36 0 :type (peek tokenizer 0))(. LOOKTable 36 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 37 0 :type (peek tokenizer 0))(. LOOKTable 37 1 :type (peek tokenizer 1)))
-            (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (&& (. LOOKTable 37 0 :type (peek tokenizer 0))(. LOOKTable 37 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 38 0 :type (peek tokenizer 0))(. LOOKTable 38 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
                 (error (+ "Error parsing _L6 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
                 
             )
             (append (. ReturnValue 'Arguments) (Expr))
             (set (back (. ReturnValue 'Arguments))(ParseExpr tokenizer))
-            (while (&& (. LOOKTable 34 0 :type (peek tokenizer 0))(. LOOKTable 34 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 35 0 :type (peek tokenizer 0))(. LOOKTable 35 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
+            (while (&& (. LOOKTable 35 0 :type (peek tokenizer 0))(. LOOKTable 35 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 36 0 :type (peek tokenizer 0))(. LOOKTable 36 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
                         (error (+ "Error parsing _L7 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
-                    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+                    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
                         (error (+ "Error parsing _L7 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
                         
                     )
@@ -1059,7 +1100,7 @@ else (error (+ "Error parsing Expr_FuncCall at position "  (str :position (peek 
 
 )
 )
-(if (not (eq :type (peek tokenizer 0) 31))
+(if (not (eq :type (peek tokenizer 0) 34))
     (error (+ "Error parsing Expr_FuncCall at position "  (str :position (peek tokenizer 0)) ": expected rpar"))
     
 )
@@ -1073,27 +1114,27 @@ else (error (+ "Error parsing Expr_FuncCall at position "  (str :position (peek 
         
     )
     (FillIdf (. ReturnValue 'Identifier) tokenizer)
-    (if (not (eq :type (peek tokenizer 0) 30))
+    (if (not (eq :type (peek tokenizer 0) 33))
         (error (+ "Error parsing Expr_FuncCall at position "  (str :position (peek tokenizer 0)) ": expected lpar"))
         
     )
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 36 0 :type (peek tokenizer 0))(. LOOKTable 36 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 37 0 :type (peek tokenizer 0))(. LOOKTable 37 1 :type (peek tokenizer 1)))
-            (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (&& (. LOOKTable 37 0 :type (peek tokenizer 0))(. LOOKTable 37 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 38 0 :type (peek tokenizer 0))(. LOOKTable 38 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
                 (error (+ "Error parsing _L6 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
                 
             )
             (append (. ReturnValue 'Arguments) (Expr))
             (set (back (. ReturnValue 'Arguments))(ParseExpr tokenizer))
-            (while (&& (. LOOKTable 34 0 :type (peek tokenizer 0))(. LOOKTable 34 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 35 0 :type (peek tokenizer 0))(. LOOKTable 35 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
+            (while (&& (. LOOKTable 35 0 :type (peek tokenizer 0))(. LOOKTable 35 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 36 0 :type (peek tokenizer 0))(. LOOKTable 36 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
                         (error (+ "Error parsing _L7 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
-                    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+                    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
                         (error (+ "Error parsing _L7 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
                         
                     )
@@ -1113,7 +1154,7 @@ else (error (+ "Error parsing Expr_FuncCall at position "  (str :position (peek 
 
 )
 )
-(if (not (eq :type (peek tokenizer 0) 31))
+(if (not (eq :type (peek tokenizer 0) 34))
     (error (+ "Error parsing Expr_FuncCall at position "  (str :position (peek tokenizer 0)) ": expected rpar"))
     
 )
@@ -1127,27 +1168,27 @@ else (error (+ "Error parsing Expr_FuncCall at position "  (str :position (peek 
         
     )
     (FillIdf (. ReturnValue 'Identifier) tokenizer)
-    (if (not (eq :type (peek tokenizer 0) 30))
+    (if (not (eq :type (peek tokenizer 0) 33))
         (error (+ "Error parsing Expr_FuncCall at position "  (str :position (peek tokenizer 0)) ": expected lpar"))
         
     )
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 36 0 :type (peek tokenizer 0))(. LOOKTable 36 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 37 0 :type (peek tokenizer 0))(. LOOKTable 37 1 :type (peek tokenizer 1)))
-            (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (&& (. LOOKTable 37 0 :type (peek tokenizer 0))(. LOOKTable 37 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 38 0 :type (peek tokenizer 0))(. LOOKTable 38 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
                 (error (+ "Error parsing _L6 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
                 
             )
             (append (. ReturnValue 'Arguments) (Expr))
             (set (back (. ReturnValue 'Arguments))(ParseExpr tokenizer))
-            (while (&& (. LOOKTable 34 0 :type (peek tokenizer 0))(. LOOKTable 34 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 35 0 :type (peek tokenizer 0))(. LOOKTable 35 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
+            (while (&& (. LOOKTable 35 0 :type (peek tokenizer 0))(. LOOKTable 35 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 36 0 :type (peek tokenizer 0))(. LOOKTable 36 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
                         (error (+ "Error parsing _L7 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
-                    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+                    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
                         (error (+ "Error parsing _L7 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
                         
                     )
@@ -1167,7 +1208,7 @@ else (error (+ "Error parsing Expr_FuncCall at position "  (str :position (peek 
 
 )
 )
-(if (not (eq :type (peek tokenizer 0) 31))
+(if (not (eq :type (peek tokenizer 0) 34))
     (error (+ "Error parsing Expr_FuncCall at position "  (str :position (peek tokenizer 0)) ": expected rpar"))
     
 )
@@ -1181,27 +1222,27 @@ else (error (+ "Error parsing Expr_FuncCall at position "  (str :position (peek 
         
     )
     (FillIdf (. ReturnValue 'Identifier) tokenizer)
-    (if (not (eq :type (peek tokenizer 0) 30))
+    (if (not (eq :type (peek tokenizer 0) 33))
         (error (+ "Error parsing Expr_FuncCall at position "  (str :position (peek tokenizer 0)) ": expected lpar"))
         
     )
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 36 0 :type (peek tokenizer 0))(. LOOKTable 36 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 37 0 :type (peek tokenizer 0))(. LOOKTable 37 1 :type (peek tokenizer 1)))
-            (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (&& (. LOOKTable 37 0 :type (peek tokenizer 0))(. LOOKTable 37 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 38 0 :type (peek tokenizer 0))(. LOOKTable 38 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
                 (error (+ "Error parsing _L6 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
                 
             )
             (append (. ReturnValue 'Arguments) (Expr))
             (set (back (. ReturnValue 'Arguments))(ParseExpr tokenizer))
-            (while (&& (. LOOKTable 34 0 :type (peek tokenizer 0))(. LOOKTable 34 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 35 0 :type (peek tokenizer 0))(. LOOKTable 35 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
+            (while (&& (. LOOKTable 35 0 :type (peek tokenizer 0))(. LOOKTable 35 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 36 0 :type (peek tokenizer 0))(. LOOKTable 36 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
                         (error (+ "Error parsing _L7 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
-                    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+                    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
                         (error (+ "Error parsing _L7 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
                         
                     )
@@ -1221,7 +1262,7 @@ else (error (+ "Error parsing Expr_FuncCall at position "  (str :position (peek 
 
 )
 )
-(if (not (eq :type (peek tokenizer 0) 31))
+(if (not (eq :type (peek tokenizer 0) 34))
     (error (+ "Error parsing Expr_FuncCall at position "  (str :position (peek tokenizer 0)) ": expected rpar"))
     
 )
@@ -1317,8 +1358,454 @@ else (error (+ "Error parsing Expr_FuncCall at position "  (str :position (peek 
     (return ReturnValue)
     
 )
+(defun FillExpr_Lambda_0 (ReturnValue tokenizer)
+    (if (not (eq :type (peek tokenizer 0) 25))
+        (error (+ "Error parsing Expr_Lambda at position "  (str :position (peek tokenizer 0)) ": expected backslash"))
+        
+    )
+    (consume-token tokenizer)
+    (if (&& (. LOOKTable 47 0 :type (peek tokenizer 0))(. LOOKTable 47 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 48 0 :type (peek tokenizer 0))(. LOOKTable 48 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
+                (error (+ "Error parsing _L8 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+                
+            )
+            (append (. ReturnValue 'Variables) (Idf))
+            (FillIdf (back (. ReturnValue 'Variables)) tokenizer)
+            (while (&& (. LOOKTable 45 0 :type (peek tokenizer 0))(. LOOKTable 45 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 46 0 :type (peek tokenizer 0))(. LOOKTable 46 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
+                        (error (+ "Error parsing _L9 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
+                        
+                    )
+                    (consume-token tokenizer)
+                    (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
+                        (error (+ "Error parsing _L9 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+                        
+                    )
+                    (append (. ReturnValue 'Variables) (Idf))
+                    (FillIdf (back (. ReturnValue 'Variables)) tokenizer)
+                    
+                
+                else (error (+ "Error parsing _L8 at position "  (str :position (peek tokenizer 0)) ": expected _L9"))
+                
+            
+            )
+    )
+    
+
+else (error (+ "Error parsing Expr_Lambda at position "  (str :position (peek tokenizer 0)) ": expected _L8"))
+
+
+)
+)
+(if (not (eq :type (peek tokenizer 0) 5))
+    (error (+ "Error parsing Expr_Lambda at position "  (str :position (peek tokenizer 0)) ": expected colon"))
+    
+)
+(consume-token tokenizer)
+(if (not (eq :type (peek tokenizer 0) 6))
+    (error (+ "Error parsing Expr_Lambda at position "  (str :position (peek tokenizer 0)) ": expected lcurl"))
+    
+)
+(consume-token tokenizer)
+(while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
+    (append (. ReturnValue 'Body) (Statement))
+    (set (back (. ReturnValue 'Body))(ParseStatement tokenizer))
+    
+)
+(if (not (eq :type (peek tokenizer 0) 7))
+    (error (+ "Error parsing Expr_Lambda at position "  (str :position (peek tokenizer 0)) ": expected rcurl"))
+    
+)
+(consume-token tokenizer)
+
+)
+(defun ParseExpr_Lambda_0 (tokenizer)
+    (setl ReturnValue (Expr_Lambda))
+    (if (not (eq :type (peek tokenizer 0) 25))
+        (error (+ "Error parsing Expr_Lambda at position "  (str :position (peek tokenizer 0)) ": expected backslash"))
+        
+    )
+    (consume-token tokenizer)
+    (if (&& (. LOOKTable 47 0 :type (peek tokenizer 0))(. LOOKTable 47 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 48 0 :type (peek tokenizer 0))(. LOOKTable 48 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
+                (error (+ "Error parsing _L8 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+                
+            )
+            (append (. ReturnValue 'Variables) (Idf))
+            (FillIdf (back (. ReturnValue 'Variables)) tokenizer)
+            (while (&& (. LOOKTable 45 0 :type (peek tokenizer 0))(. LOOKTable 45 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 46 0 :type (peek tokenizer 0))(. LOOKTable 46 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
+                        (error (+ "Error parsing _L9 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
+                        
+                    )
+                    (consume-token tokenizer)
+                    (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
+                        (error (+ "Error parsing _L9 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+                        
+                    )
+                    (append (. ReturnValue 'Variables) (Idf))
+                    (FillIdf (back (. ReturnValue 'Variables)) tokenizer)
+                    
+                
+                else (error (+ "Error parsing _L8 at position "  (str :position (peek tokenizer 0)) ": expected _L9"))
+                
+            
+            )
+    )
+    
+
+else (error (+ "Error parsing Expr_Lambda at position "  (str :position (peek tokenizer 0)) ": expected _L8"))
+
+
+)
+)
+(if (not (eq :type (peek tokenizer 0) 5))
+    (error (+ "Error parsing Expr_Lambda at position "  (str :position (peek tokenizer 0)) ": expected colon"))
+    
+)
+(consume-token tokenizer)
+(if (not (eq :type (peek tokenizer 0) 6))
+    (error (+ "Error parsing Expr_Lambda at position "  (str :position (peek tokenizer 0)) ": expected lcurl"))
+    
+)
+(consume-token tokenizer)
+(while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
+    (append (. ReturnValue 'Body) (Statement))
+    (set (back (. ReturnValue 'Body))(ParseStatement tokenizer))
+    
+)
+(if (not (eq :type (peek tokenizer 0) 7))
+    (error (+ "Error parsing Expr_Lambda at position "  (str :position (peek tokenizer 0)) ": expected rcurl"))
+    
+)
+(consume-token tokenizer)
+(return ReturnValue)
+
+)
+(defun FillExpr_Lambda (ReturnValue tokenizer)
+    (if (not (eq :type (peek tokenizer 0) 25))
+        (error (+ "Error parsing Expr_Lambda at position "  (str :position (peek tokenizer 0)) ": expected backslash"))
+        
+    )
+    (consume-token tokenizer)
+    (if (&& (. LOOKTable 47 0 :type (peek tokenizer 0))(. LOOKTable 47 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 48 0 :type (peek tokenizer 0))(. LOOKTable 48 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
+                (error (+ "Error parsing _L8 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+                
+            )
+            (append (. ReturnValue 'Variables) (Idf))
+            (FillIdf (back (. ReturnValue 'Variables)) tokenizer)
+            (while (&& (. LOOKTable 45 0 :type (peek tokenizer 0))(. LOOKTable 45 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 46 0 :type (peek tokenizer 0))(. LOOKTable 46 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
+                        (error (+ "Error parsing _L9 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
+                        
+                    )
+                    (consume-token tokenizer)
+                    (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
+                        (error (+ "Error parsing _L9 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+                        
+                    )
+                    (append (. ReturnValue 'Variables) (Idf))
+                    (FillIdf (back (. ReturnValue 'Variables)) tokenizer)
+                    
+                
+                else (error (+ "Error parsing _L8 at position "  (str :position (peek tokenizer 0)) ": expected _L9"))
+                
+            
+            )
+    )
+    
+
+else (error (+ "Error parsing Expr_Lambda at position "  (str :position (peek tokenizer 0)) ": expected _L8"))
+
+
+)
+)
+(if (not (eq :type (peek tokenizer 0) 5))
+    (error (+ "Error parsing Expr_Lambda at position "  (str :position (peek tokenizer 0)) ": expected colon"))
+    
+)
+(consume-token tokenizer)
+(if (not (eq :type (peek tokenizer 0) 6))
+    (error (+ "Error parsing Expr_Lambda at position "  (str :position (peek tokenizer 0)) ": expected lcurl"))
+    
+)
+(consume-token tokenizer)
+(while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
+    (append (. ReturnValue 'Body) (Statement))
+    (set (back (. ReturnValue 'Body))(ParseStatement tokenizer))
+    
+)
+(if (not (eq :type (peek tokenizer 0) 7))
+    (error (+ "Error parsing Expr_Lambda at position "  (str :position (peek tokenizer 0)) ": expected rcurl"))
+    
+)
+(consume-token tokenizer)
+
+)
+(defun ParseExpr_Lambda (tokenizer)
+    (setl ReturnValue (Expr_Lambda))
+    (if (not (eq :type (peek tokenizer 0) 25))
+        (error (+ "Error parsing Expr_Lambda at position "  (str :position (peek tokenizer 0)) ": expected backslash"))
+        
+    )
+    (consume-token tokenizer)
+    (if (&& (. LOOKTable 47 0 :type (peek tokenizer 0))(. LOOKTable 47 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 48 0 :type (peek tokenizer 0))(. LOOKTable 48 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
+                (error (+ "Error parsing _L8 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+                
+            )
+            (append (. ReturnValue 'Variables) (Idf))
+            (FillIdf (back (. ReturnValue 'Variables)) tokenizer)
+            (while (&& (. LOOKTable 45 0 :type (peek tokenizer 0))(. LOOKTable 45 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 46 0 :type (peek tokenizer 0))(. LOOKTable 46 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
+                        (error (+ "Error parsing _L9 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
+                        
+                    )
+                    (consume-token tokenizer)
+                    (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
+                        (error (+ "Error parsing _L9 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+                        
+                    )
+                    (append (. ReturnValue 'Variables) (Idf))
+                    (FillIdf (back (. ReturnValue 'Variables)) tokenizer)
+                    
+                
+                else (error (+ "Error parsing _L8 at position "  (str :position (peek tokenizer 0)) ": expected _L9"))
+                
+            
+            )
+    )
+    
+
+else (error (+ "Error parsing Expr_Lambda at position "  (str :position (peek tokenizer 0)) ": expected _L8"))
+
+
+)
+)
+(if (not (eq :type (peek tokenizer 0) 5))
+    (error (+ "Error parsing Expr_Lambda at position "  (str :position (peek tokenizer 0)) ": expected colon"))
+    
+)
+(consume-token tokenizer)
+(if (not (eq :type (peek tokenizer 0) 6))
+    (error (+ "Error parsing Expr_Lambda at position "  (str :position (peek tokenizer 0)) ": expected lcurl"))
+    
+)
+(consume-token tokenizer)
+(while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
+    (append (. ReturnValue 'Body) (Statement))
+    (set (back (. ReturnValue 'Body))(ParseStatement tokenizer))
+    
+)
+(if (not (eq :type (peek tokenizer 0) 7))
+    (error (+ "Error parsing Expr_Lambda at position "  (str :position (peek tokenizer 0)) ": expected rcurl"))
+    
+)
+(consume-token tokenizer)
+(return ReturnValue)
+
+)
+(defun FillExpr_Lambda_Short_0 (ReturnValue tokenizer)
+    (if (not (&& (. LOOKTable 54 0 :type (peek tokenizer 0))(. LOOKTable 54 1 :type (peek tokenizer 1))))
+        (error (+ "Error parsing Expr_Lambda_Short at position "  (str :position (peek tokenizer 0)) ": expected Expr_Underscore"))
+        
+    )
+    (append (. ReturnValue 'Variables) (. (ParseExpr_Underscore tokenizer) 'Identifier))
+    (if (not (&& (. LOOKTable 51 0 :type (peek tokenizer 0))(. LOOKTable 51 1 :type (peek tokenizer 1))))
+        (error (+ "Error parsing Expr_Lambda_Short at position "  (str :position (peek tokenizer 0)) ": expected _L10"))
+        
+    )
+    (append (. ReturnValue 'Body) (Statement_Expr))
+    (set (back (. ReturnValue 'Body))(Parse_L10 tokenizer))
+    
+)
+(defun ParseExpr_Lambda_Short_0 (tokenizer)
+    (setl ReturnValue (Expr_Lambda))
+    (if (not (&& (. LOOKTable 54 0 :type (peek tokenizer 0))(. LOOKTable 54 1 :type (peek tokenizer 1))))
+        (error (+ "Error parsing Expr_Lambda_Short at position "  (str :position (peek tokenizer 0)) ": expected Expr_Underscore"))
+        
+    )
+    (append (. ReturnValue 'Variables) (. (ParseExpr_Underscore tokenizer) 'Identifier))
+    (if (not (&& (. LOOKTable 51 0 :type (peek tokenizer 0))(. LOOKTable 51 1 :type (peek tokenizer 1))))
+        (error (+ "Error parsing Expr_Lambda_Short at position "  (str :position (peek tokenizer 0)) ": expected _L10"))
+        
+    )
+    (append (. ReturnValue 'Body) (Statement_Expr))
+    (set (back (. ReturnValue 'Body))(Parse_L10 tokenizer))
+    (return ReturnValue)
+    
+)
+(defun FillExpr_Lambda_Short (ReturnValue tokenizer)
+    (if (not (&& (. LOOKTable 54 0 :type (peek tokenizer 0))(. LOOKTable 54 1 :type (peek tokenizer 1))))
+        (error (+ "Error parsing Expr_Lambda_Short at position "  (str :position (peek tokenizer 0)) ": expected Expr_Underscore"))
+        
+    )
+    (append (. ReturnValue 'Variables) (. (ParseExpr_Underscore tokenizer) 'Identifier))
+    (if (not (&& (. LOOKTable 51 0 :type (peek tokenizer 0))(. LOOKTable 51 1 :type (peek tokenizer 1))))
+        (error (+ "Error parsing Expr_Lambda_Short at position "  (str :position (peek tokenizer 0)) ": expected _L10"))
+        
+    )
+    (append (. ReturnValue 'Body) (Statement_Expr))
+    (set (back (. ReturnValue 'Body))(Parse_L10 tokenizer))
+    
+)
+(defun ParseExpr_Lambda_Short (tokenizer)
+    (setl ReturnValue (Expr_Lambda))
+    (if (not (&& (. LOOKTable 54 0 :type (peek tokenizer 0))(. LOOKTable 54 1 :type (peek tokenizer 1))))
+        (error (+ "Error parsing Expr_Lambda_Short at position "  (str :position (peek tokenizer 0)) ": expected Expr_Underscore"))
+        
+    )
+    (append (. ReturnValue 'Variables) (. (ParseExpr_Underscore tokenizer) 'Identifier))
+    (if (not (&& (. LOOKTable 51 0 :type (peek tokenizer 0))(. LOOKTable 51 1 :type (peek tokenizer 1))))
+        (error (+ "Error parsing Expr_Lambda_Short at position "  (str :position (peek tokenizer 0)) ": expected _L10"))
+        
+    )
+    (append (. ReturnValue 'Body) (Statement_Expr))
+    (set (back (. ReturnValue 'Body))(Parse_L10 tokenizer))
+    (return ReturnValue)
+    
+)
+(defun Fill_L10_0 (ReturnValue tokenizer)
+    (if (not (&& (. LOOKTable 33 0 :type (peek tokenizer 0))(. LOOKTable 33 1 :type (peek tokenizer 1))))
+        (error (+ "Error parsing _L10 at position "  (str :position (peek tokenizer 0)) ": expected Expr_FuncCall"))
+        
+    )
+    (set (. ReturnValue 'Expr)(ParseExpr_FuncCall tokenizer))
+    
+)
+(defun Parse_L10_0 (tokenizer)
+    (setl ReturnValue (Statement_Expr))
+    (if (not (&& (. LOOKTable 33 0 :type (peek tokenizer 0))(. LOOKTable 33 1 :type (peek tokenizer 1))))
+        (error (+ "Error parsing _L10 at position "  (str :position (peek tokenizer 0)) ": expected Expr_FuncCall"))
+        
+    )
+    (set (. ReturnValue 'Expr)(ParseExpr_FuncCall tokenizer))
+    (return ReturnValue)
+    
+)
+(defun Fill_L10_1 (ReturnValue tokenizer)
+    (if (not (eq :type (peek tokenizer 0) 33))
+        (error (+ "Error parsing _L10 at position "  (str :position (peek tokenizer 0)) ": expected lpar"))
+        
+    )
+    (consume-token tokenizer)
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
+        (error (+ "Error parsing _L10 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
+        
+    )
+    (set (. ReturnValue 'Expr)(ParseExpr tokenizer))
+    (if (not (eq :type (peek tokenizer 0) 34))
+        (error (+ "Error parsing _L10 at position "  (str :position (peek tokenizer 0)) ": expected rpar"))
+        
+    )
+    (consume-token tokenizer)
+    
+)
+(defun Parse_L10_1 (tokenizer)
+    (setl ReturnValue (Statement_Expr))
+    (if (not (eq :type (peek tokenizer 0) 33))
+        (error (+ "Error parsing _L10 at position "  (str :position (peek tokenizer 0)) ": expected lpar"))
+        
+    )
+    (consume-token tokenizer)
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
+        (error (+ "Error parsing _L10 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
+        
+    )
+    (set (. ReturnValue 'Expr)(ParseExpr tokenizer))
+    (if (not (eq :type (peek tokenizer 0) 34))
+        (error (+ "Error parsing _L10 at position "  (str :position (peek tokenizer 0)) ": expected rpar"))
+        
+    )
+    (consume-token tokenizer)
+    (return ReturnValue)
+    
+)
+(defun Fill_L10 (ReturnValue tokenizer)
+    (if (&& (. LOOKTable 52 0 :type (peek tokenizer 0))(. LOOKTable 52 1 :type (peek tokenizer 1)))
+        (Fill_L10_0 ReturnValue tokenizer)
+        
+    
+    else if (&& (. LOOKTable 53 0 :type (peek tokenizer 0))(. LOOKTable 53 1 :type (peek tokenizer 1)))
+        (Fill_L10_1 ReturnValue tokenizer)
+        
+    
+    else (error (+ "Error parsing _L10 at position "  (str :position (peek tokenizer 0)) ": expected _L10"))
+    
+
+)
+)
+(defun Parse_L10 (tokenizer)
+    (setl ReturnValue (Statement_Expr))
+    (if (&& (. LOOKTable 52 0 :type (peek tokenizer 0))(. LOOKTable 52 1 :type (peek tokenizer 1)))
+        (Fill_L10_0 ReturnValue tokenizer)
+        
+    
+    else if (&& (. LOOKTable 53 0 :type (peek tokenizer 0))(. LOOKTable 53 1 :type (peek tokenizer 1)))
+        (Fill_L10_1 ReturnValue tokenizer)
+        
+    
+    else (error (+ "Error parsing _L10 at position "  (str :position (peek tokenizer 0)) ": expected _L10"))
+    
+
+)(return ReturnValue)
+
+)
+(defun FillExpr_Underscore_0 (ReturnValue tokenizer)
+    (setl (. ReturnValue 'Identifier 'Position) :position (peek tokenizer 0))
+    (if (not (eq :type (peek tokenizer 0) 19))
+        (error (+ "Error parsing Expr_Underscore at position "  (str :position (peek tokenizer 0)) ": expected underscore"))
+        
+    )
+    (setl (. ReturnValue 'Identifier 'Value) :value (peek tokenizer 0))
+    (consume-token tokenizer)
+    
+)
+(defun ParseExpr_Underscore_0 (tokenizer)
+    (setl ReturnValue (Expr_Idf))
+    (setl (. ReturnValue 'Identifier 'Position) :position (peek tokenizer 0))
+    (if (not (eq :type (peek tokenizer 0) 19))
+        (error (+ "Error parsing Expr_Underscore at position "  (str :position (peek tokenizer 0)) ": expected underscore"))
+        
+    )
+    (setl (. ReturnValue 'Identifier 'Value) :value (peek tokenizer 0))
+    (consume-token tokenizer)
+    (return ReturnValue)
+    
+)
+(defun FillExpr_Underscore (ReturnValue tokenizer)
+    (setl (. ReturnValue 'Identifier 'Position) :position (peek tokenizer 0))
+    (if (not (eq :type (peek tokenizer 0) 19))
+        (error (+ "Error parsing Expr_Underscore at position "  (str :position (peek tokenizer 0)) ": expected underscore"))
+        
+    )
+    (setl (. ReturnValue 'Identifier 'Value) :value (peek tokenizer 0))
+    (consume-token tokenizer)
+    
+)
+(defun ParseExpr_Underscore (tokenizer)
+    (setl ReturnValue (Expr_Idf))
+    (setl (. ReturnValue 'Identifier 'Position) :position (peek tokenizer 0))
+    (if (not (eq :type (peek tokenizer 0) 19))
+        (error (+ "Error parsing Expr_Underscore at position "  (str :position (peek tokenizer 0)) ": expected underscore"))
+        
+    )
+    (setl (. ReturnValue 'Identifier 'Value) :value (peek tokenizer 0))
+    (consume-token tokenizer)
+    (return ReturnValue)
+    
+)
 (defun FillDictEntry_0 (ReturnValue tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing DictEntry at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
@@ -1328,7 +1815,7 @@ else (error (+ "Error parsing Expr_FuncCall at position "  (str :position (peek 
         
     )
     (consume-token tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing DictEntry at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
@@ -1337,7 +1824,7 @@ else (error (+ "Error parsing Expr_FuncCall at position "  (str :position (peek 
 )
 (defun ParseDictEntry_0 (tokenizer)
     (setl ReturnValue (DictEntry))
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing DictEntry at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
@@ -1347,7 +1834,7 @@ else (error (+ "Error parsing Expr_FuncCall at position "  (str :position (peek 
         
     )
     (consume-token tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing DictEntry at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
@@ -1356,7 +1843,7 @@ else (error (+ "Error parsing Expr_FuncCall at position "  (str :position (peek 
     
 )
 (defun FillDictEntry (ReturnValue tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing DictEntry at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
@@ -1366,7 +1853,7 @@ else (error (+ "Error parsing Expr_FuncCall at position "  (str :position (peek 
         
     )
     (consume-token tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing DictEntry at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
@@ -1375,7 +1862,7 @@ else (error (+ "Error parsing Expr_FuncCall at position "  (str :position (peek 
 )
 (defun ParseDictEntry (tokenizer)
     (setl ReturnValue (DictEntry))
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing DictEntry at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
@@ -1385,7 +1872,7 @@ else (error (+ "Error parsing Expr_FuncCall at position "  (str :position (peek 
         
     )
     (consume-token tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing DictEntry at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
@@ -1400,37 +1887,37 @@ else (error (+ "Error parsing Expr_FuncCall at position "  (str :position (peek 
         
     )
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 48 0 :type (peek tokenizer 0))(. LOOKTable 48 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 49 0 :type (peek tokenizer 0))(. LOOKTable 49 1 :type (peek tokenizer 1)))
-            (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L8 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
+    (if (&& (. LOOKTable 62 0 :type (peek tokenizer 0))(. LOOKTable 62 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 63 0 :type (peek tokenizer 0))(. LOOKTable 63 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
+                (error (+ "Error parsing _L11 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
                 
             )
             (append (. ReturnValue 'Values) (Expr))
             (set (back (. ReturnValue 'Values))(ParseExpr tokenizer))
-            (while (&& (. LOOKTable 46 0 :type (peek tokenizer 0))(. LOOKTable 46 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 47 0 :type (peek tokenizer 0))(. LOOKTable 47 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
-                        (error (+ "Error parsing _L9 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
+            (while (&& (. LOOKTable 60 0 :type (peek tokenizer 0))(. LOOKTable 60 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 61 0 :type (peek tokenizer 0))(. LOOKTable 61 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
+                        (error (+ "Error parsing _L12 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
-                    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
-                        (error (+ "Error parsing _L9 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
+                    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
+                        (error (+ "Error parsing _L12 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
                         
                     )
                     (append (. ReturnValue 'Values) (Expr))
                     (set (back (. ReturnValue 'Values))(ParseExpr tokenizer))
                     
                 
-                else (error (+ "Error parsing _L8 at position "  (str :position (peek tokenizer 0)) ": expected _L9"))
+                else (error (+ "Error parsing _L11 at position "  (str :position (peek tokenizer 0)) ": expected _L12"))
                 
             
             )
     )
     
 
-else (error (+ "Error parsing Expr_List at position "  (str :position (peek tokenizer 0)) ": expected _L8"))
+else (error (+ "Error parsing Expr_List at position "  (str :position (peek tokenizer 0)) ": expected _L11"))
 
 
 )
@@ -1450,37 +1937,37 @@ else (error (+ "Error parsing Expr_List at position "  (str :position (peek toke
         
     )
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 48 0 :type (peek tokenizer 0))(. LOOKTable 48 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 49 0 :type (peek tokenizer 0))(. LOOKTable 49 1 :type (peek tokenizer 1)))
-            (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L8 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
+    (if (&& (. LOOKTable 62 0 :type (peek tokenizer 0))(. LOOKTable 62 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 63 0 :type (peek tokenizer 0))(. LOOKTable 63 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
+                (error (+ "Error parsing _L11 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
                 
             )
             (append (. ReturnValue 'Values) (Expr))
             (set (back (. ReturnValue 'Values))(ParseExpr tokenizer))
-            (while (&& (. LOOKTable 46 0 :type (peek tokenizer 0))(. LOOKTable 46 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 47 0 :type (peek tokenizer 0))(. LOOKTable 47 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
-                        (error (+ "Error parsing _L9 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
+            (while (&& (. LOOKTable 60 0 :type (peek tokenizer 0))(. LOOKTable 60 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 61 0 :type (peek tokenizer 0))(. LOOKTable 61 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
+                        (error (+ "Error parsing _L12 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
-                    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
-                        (error (+ "Error parsing _L9 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
+                    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
+                        (error (+ "Error parsing _L12 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
                         
                     )
                     (append (. ReturnValue 'Values) (Expr))
                     (set (back (. ReturnValue 'Values))(ParseExpr tokenizer))
                     
                 
-                else (error (+ "Error parsing _L8 at position "  (str :position (peek tokenizer 0)) ": expected _L9"))
+                else (error (+ "Error parsing _L11 at position "  (str :position (peek tokenizer 0)) ": expected _L12"))
                 
             
             )
     )
     
 
-else (error (+ "Error parsing Expr_List at position "  (str :position (peek tokenizer 0)) ": expected _L8"))
+else (error (+ "Error parsing Expr_List at position "  (str :position (peek tokenizer 0)) ": expected _L11"))
 
 
 )
@@ -1500,37 +1987,37 @@ else (error (+ "Error parsing Expr_List at position "  (str :position (peek toke
         
     )
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 48 0 :type (peek tokenizer 0))(. LOOKTable 48 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 49 0 :type (peek tokenizer 0))(. LOOKTable 49 1 :type (peek tokenizer 1)))
-            (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L8 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
+    (if (&& (. LOOKTable 62 0 :type (peek tokenizer 0))(. LOOKTable 62 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 63 0 :type (peek tokenizer 0))(. LOOKTable 63 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
+                (error (+ "Error parsing _L11 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
                 
             )
             (append (. ReturnValue 'Values) (Expr))
             (set (back (. ReturnValue 'Values))(ParseExpr tokenizer))
-            (while (&& (. LOOKTable 46 0 :type (peek tokenizer 0))(. LOOKTable 46 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 47 0 :type (peek tokenizer 0))(. LOOKTable 47 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
-                        (error (+ "Error parsing _L9 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
+            (while (&& (. LOOKTable 60 0 :type (peek tokenizer 0))(. LOOKTable 60 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 61 0 :type (peek tokenizer 0))(. LOOKTable 61 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
+                        (error (+ "Error parsing _L12 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
-                    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
-                        (error (+ "Error parsing _L9 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
+                    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
+                        (error (+ "Error parsing _L12 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
                         
                     )
                     (append (. ReturnValue 'Values) (Expr))
                     (set (back (. ReturnValue 'Values))(ParseExpr tokenizer))
                     
                 
-                else (error (+ "Error parsing _L8 at position "  (str :position (peek tokenizer 0)) ": expected _L9"))
+                else (error (+ "Error parsing _L11 at position "  (str :position (peek tokenizer 0)) ": expected _L12"))
                 
             
             )
     )
     
 
-else (error (+ "Error parsing Expr_List at position "  (str :position (peek tokenizer 0)) ": expected _L8"))
+else (error (+ "Error parsing Expr_List at position "  (str :position (peek tokenizer 0)) ": expected _L11"))
 
 
 )
@@ -1550,37 +2037,37 @@ else (error (+ "Error parsing Expr_List at position "  (str :position (peek toke
         
     )
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 48 0 :type (peek tokenizer 0))(. LOOKTable 48 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 49 0 :type (peek tokenizer 0))(. LOOKTable 49 1 :type (peek tokenizer 1)))
-            (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L8 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
+    (if (&& (. LOOKTable 62 0 :type (peek tokenizer 0))(. LOOKTable 62 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 63 0 :type (peek tokenizer 0))(. LOOKTable 63 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
+                (error (+ "Error parsing _L11 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
                 
             )
             (append (. ReturnValue 'Values) (Expr))
             (set (back (. ReturnValue 'Values))(ParseExpr tokenizer))
-            (while (&& (. LOOKTable 46 0 :type (peek tokenizer 0))(. LOOKTable 46 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 47 0 :type (peek tokenizer 0))(. LOOKTable 47 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
-                        (error (+ "Error parsing _L9 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
+            (while (&& (. LOOKTable 60 0 :type (peek tokenizer 0))(. LOOKTable 60 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 61 0 :type (peek tokenizer 0))(. LOOKTable 61 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
+                        (error (+ "Error parsing _L12 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
-                    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
-                        (error (+ "Error parsing _L9 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
+                    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
+                        (error (+ "Error parsing _L12 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
                         
                     )
                     (append (. ReturnValue 'Values) (Expr))
                     (set (back (. ReturnValue 'Values))(ParseExpr tokenizer))
                     
                 
-                else (error (+ "Error parsing _L8 at position "  (str :position (peek tokenizer 0)) ": expected _L9"))
+                else (error (+ "Error parsing _L11 at position "  (str :position (peek tokenizer 0)) ": expected _L12"))
                 
             
             )
     )
     
 
-else (error (+ "Error parsing Expr_List at position "  (str :position (peek tokenizer 0)) ": expected _L8"))
+else (error (+ "Error parsing Expr_List at position "  (str :position (peek tokenizer 0)) ": expected _L11"))
 
 
 )
@@ -1600,37 +2087,37 @@ else (error (+ "Error parsing Expr_List at position "  (str :position (peek toke
         
     )
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 54 0 :type (peek tokenizer 0))(. LOOKTable 54 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 55 0 :type (peek tokenizer 0))(. LOOKTable 55 1 :type (peek tokenizer 1)))
-            (if (not (&& (. LOOKTable 42 0 :type (peek tokenizer 0))(. LOOKTable 42 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L10 at position "  (str :position (peek tokenizer 0)) ": expected DictEntry"))
+    (if (&& (. LOOKTable 68 0 :type (peek tokenizer 0))(. LOOKTable 68 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 69 0 :type (peek tokenizer 0))(. LOOKTable 69 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 56 0 :type (peek tokenizer 0))(. LOOKTable 56 1 :type (peek tokenizer 1))))
+                (error (+ "Error parsing _L13 at position "  (str :position (peek tokenizer 0)) ": expected DictEntry"))
                 
             )
             (append (. ReturnValue 'Values) (DictEntry))
             (FillDictEntry (back (. ReturnValue 'Values)) tokenizer)
-            (while (&& (. LOOKTable 52 0 :type (peek tokenizer 0))(. LOOKTable 52 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 53 0 :type (peek tokenizer 0))(. LOOKTable 53 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
-                        (error (+ "Error parsing _L11 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
+            (while (&& (. LOOKTable 66 0 :type (peek tokenizer 0))(. LOOKTable 66 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 67 0 :type (peek tokenizer 0))(. LOOKTable 67 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
+                        (error (+ "Error parsing _L14 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
-                    (if (not (&& (. LOOKTable 42 0 :type (peek tokenizer 0))(. LOOKTable 42 1 :type (peek tokenizer 1))))
-                        (error (+ "Error parsing _L11 at position "  (str :position (peek tokenizer 0)) ": expected DictEntry"))
+                    (if (not (&& (. LOOKTable 56 0 :type (peek tokenizer 0))(. LOOKTable 56 1 :type (peek tokenizer 1))))
+                        (error (+ "Error parsing _L14 at position "  (str :position (peek tokenizer 0)) ": expected DictEntry"))
                         
                     )
                     (append (. ReturnValue 'Values) (DictEntry))
                     (FillDictEntry (back (. ReturnValue 'Values)) tokenizer)
                     
                 
-                else (error (+ "Error parsing _L10 at position "  (str :position (peek tokenizer 0)) ": expected _L11"))
+                else (error (+ "Error parsing _L13 at position "  (str :position (peek tokenizer 0)) ": expected _L14"))
                 
             
             )
     )
     
 
-else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek tokenizer 0)) ": expected _L10"))
+else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek tokenizer 0)) ": expected _L13"))
 
 
 )
@@ -1650,37 +2137,37 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
         
     )
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 54 0 :type (peek tokenizer 0))(. LOOKTable 54 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 55 0 :type (peek tokenizer 0))(. LOOKTable 55 1 :type (peek tokenizer 1)))
-            (if (not (&& (. LOOKTable 42 0 :type (peek tokenizer 0))(. LOOKTable 42 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L10 at position "  (str :position (peek tokenizer 0)) ": expected DictEntry"))
+    (if (&& (. LOOKTable 68 0 :type (peek tokenizer 0))(. LOOKTable 68 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 69 0 :type (peek tokenizer 0))(. LOOKTable 69 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 56 0 :type (peek tokenizer 0))(. LOOKTable 56 1 :type (peek tokenizer 1))))
+                (error (+ "Error parsing _L13 at position "  (str :position (peek tokenizer 0)) ": expected DictEntry"))
                 
             )
             (append (. ReturnValue 'Values) (DictEntry))
             (FillDictEntry (back (. ReturnValue 'Values)) tokenizer)
-            (while (&& (. LOOKTable 52 0 :type (peek tokenizer 0))(. LOOKTable 52 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 53 0 :type (peek tokenizer 0))(. LOOKTable 53 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
-                        (error (+ "Error parsing _L11 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
+            (while (&& (. LOOKTable 66 0 :type (peek tokenizer 0))(. LOOKTable 66 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 67 0 :type (peek tokenizer 0))(. LOOKTable 67 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
+                        (error (+ "Error parsing _L14 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
-                    (if (not (&& (. LOOKTable 42 0 :type (peek tokenizer 0))(. LOOKTable 42 1 :type (peek tokenizer 1))))
-                        (error (+ "Error parsing _L11 at position "  (str :position (peek tokenizer 0)) ": expected DictEntry"))
+                    (if (not (&& (. LOOKTable 56 0 :type (peek tokenizer 0))(. LOOKTable 56 1 :type (peek tokenizer 1))))
+                        (error (+ "Error parsing _L14 at position "  (str :position (peek tokenizer 0)) ": expected DictEntry"))
                         
                     )
                     (append (. ReturnValue 'Values) (DictEntry))
                     (FillDictEntry (back (. ReturnValue 'Values)) tokenizer)
                     
                 
-                else (error (+ "Error parsing _L10 at position "  (str :position (peek tokenizer 0)) ": expected _L11"))
+                else (error (+ "Error parsing _L13 at position "  (str :position (peek tokenizer 0)) ": expected _L14"))
                 
             
             )
     )
     
 
-else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek tokenizer 0)) ": expected _L10"))
+else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek tokenizer 0)) ": expected _L13"))
 
 
 )
@@ -1700,37 +2187,37 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
         
     )
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 54 0 :type (peek tokenizer 0))(. LOOKTable 54 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 55 0 :type (peek tokenizer 0))(. LOOKTable 55 1 :type (peek tokenizer 1)))
-            (if (not (&& (. LOOKTable 42 0 :type (peek tokenizer 0))(. LOOKTable 42 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L10 at position "  (str :position (peek tokenizer 0)) ": expected DictEntry"))
+    (if (&& (. LOOKTable 68 0 :type (peek tokenizer 0))(. LOOKTable 68 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 69 0 :type (peek tokenizer 0))(. LOOKTable 69 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 56 0 :type (peek tokenizer 0))(. LOOKTable 56 1 :type (peek tokenizer 1))))
+                (error (+ "Error parsing _L13 at position "  (str :position (peek tokenizer 0)) ": expected DictEntry"))
                 
             )
             (append (. ReturnValue 'Values) (DictEntry))
             (FillDictEntry (back (. ReturnValue 'Values)) tokenizer)
-            (while (&& (. LOOKTable 52 0 :type (peek tokenizer 0))(. LOOKTable 52 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 53 0 :type (peek tokenizer 0))(. LOOKTable 53 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
-                        (error (+ "Error parsing _L11 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
+            (while (&& (. LOOKTable 66 0 :type (peek tokenizer 0))(. LOOKTable 66 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 67 0 :type (peek tokenizer 0))(. LOOKTable 67 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
+                        (error (+ "Error parsing _L14 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
-                    (if (not (&& (. LOOKTable 42 0 :type (peek tokenizer 0))(. LOOKTable 42 1 :type (peek tokenizer 1))))
-                        (error (+ "Error parsing _L11 at position "  (str :position (peek tokenizer 0)) ": expected DictEntry"))
+                    (if (not (&& (. LOOKTable 56 0 :type (peek tokenizer 0))(. LOOKTable 56 1 :type (peek tokenizer 1))))
+                        (error (+ "Error parsing _L14 at position "  (str :position (peek tokenizer 0)) ": expected DictEntry"))
                         
                     )
                     (append (. ReturnValue 'Values) (DictEntry))
                     (FillDictEntry (back (. ReturnValue 'Values)) tokenizer)
                     
                 
-                else (error (+ "Error parsing _L10 at position "  (str :position (peek tokenizer 0)) ": expected _L11"))
+                else (error (+ "Error parsing _L13 at position "  (str :position (peek tokenizer 0)) ": expected _L14"))
                 
             
             )
     )
     
 
-else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek tokenizer 0)) ": expected _L10"))
+else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek tokenizer 0)) ": expected _L13"))
 
 
 )
@@ -1750,37 +2237,37 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
         
     )
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 54 0 :type (peek tokenizer 0))(. LOOKTable 54 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 55 0 :type (peek tokenizer 0))(. LOOKTable 55 1 :type (peek tokenizer 1)))
-            (if (not (&& (. LOOKTable 42 0 :type (peek tokenizer 0))(. LOOKTable 42 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L10 at position "  (str :position (peek tokenizer 0)) ": expected DictEntry"))
+    (if (&& (. LOOKTable 68 0 :type (peek tokenizer 0))(. LOOKTable 68 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 69 0 :type (peek tokenizer 0))(. LOOKTable 69 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 56 0 :type (peek tokenizer 0))(. LOOKTable 56 1 :type (peek tokenizer 1))))
+                (error (+ "Error parsing _L13 at position "  (str :position (peek tokenizer 0)) ": expected DictEntry"))
                 
             )
             (append (. ReturnValue 'Values) (DictEntry))
             (FillDictEntry (back (. ReturnValue 'Values)) tokenizer)
-            (while (&& (. LOOKTable 52 0 :type (peek tokenizer 0))(. LOOKTable 52 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 53 0 :type (peek tokenizer 0))(. LOOKTable 53 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
-                        (error (+ "Error parsing _L11 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
+            (while (&& (. LOOKTable 66 0 :type (peek tokenizer 0))(. LOOKTable 66 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 67 0 :type (peek tokenizer 0))(. LOOKTable 67 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
+                        (error (+ "Error parsing _L14 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
-                    (if (not (&& (. LOOKTable 42 0 :type (peek tokenizer 0))(. LOOKTable 42 1 :type (peek tokenizer 1))))
-                        (error (+ "Error parsing _L11 at position "  (str :position (peek tokenizer 0)) ": expected DictEntry"))
+                    (if (not (&& (. LOOKTable 56 0 :type (peek tokenizer 0))(. LOOKTable 56 1 :type (peek tokenizer 1))))
+                        (error (+ "Error parsing _L14 at position "  (str :position (peek tokenizer 0)) ": expected DictEntry"))
                         
                     )
                     (append (. ReturnValue 'Values) (DictEntry))
                     (FillDictEntry (back (. ReturnValue 'Values)) tokenizer)
                     
                 
-                else (error (+ "Error parsing _L10 at position "  (str :position (peek tokenizer 0)) ": expected _L11"))
+                else (error (+ "Error parsing _L13 at position "  (str :position (peek tokenizer 0)) ": expected _L14"))
                 
             
             )
     )
     
 
-else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek tokenizer 0)) ": expected _L10"))
+else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek tokenizer 0)) ": expected _L13"))
 
 
 )
@@ -1794,17 +2281,17 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
 
 )
 (defun FillExpr_Term_0 (ReturnValue tokenizer)
-    (if (not (eq :type (peek tokenizer 0) 30))
+    (if (not (eq :type (peek tokenizer 0) 33))
         (error (+ "Error parsing Expr_Term at position "  (str :position (peek tokenizer 0)) ": expected lpar"))
         
     )
     (consume-token tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Expr_Term at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
     (set ReturnValue(ParseExpr tokenizer))
-    (if (not (eq :type (peek tokenizer 0) 31))
+    (if (not (eq :type (peek tokenizer 0) 34))
         (error (+ "Error parsing Expr_Term at position "  (str :position (peek tokenizer 0)) ": expected rpar"))
         
     )
@@ -1813,17 +2300,17 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
 )
 (defun ParseExpr_Term_0 (tokenizer)
     (setl ReturnValue (Expr))
-    (if (not (eq :type (peek tokenizer 0) 30))
+    (if (not (eq :type (peek tokenizer 0) 33))
         (error (+ "Error parsing Expr_Term at position "  (str :position (peek tokenizer 0)) ": expected lpar"))
         
     )
     (consume-token tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Expr_Term at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
     (set ReturnValue(ParseExpr tokenizer))
-    (if (not (eq :type (peek tokenizer 0) 31))
+    (if (not (eq :type (peek tokenizer 0) 34))
         (error (+ "Error parsing Expr_Term at position "  (str :position (peek tokenizer 0)) ": expected rpar"))
         
     )
@@ -1850,7 +2337,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     
 )
 (defun FillExpr_Term_2 (ReturnValue tokenizer)
-    (if (not (&& (. LOOKTable 32 0 :type (peek tokenizer 0))(. LOOKTable 32 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 33 0 :type (peek tokenizer 0))(. LOOKTable 33 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Expr_Term at position "  (str :position (peek tokenizer 0)) ": expected Expr_FuncCall"))
         
     )
@@ -1859,7 +2346,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
 )
 (defun ParseExpr_Term_2 (tokenizer)
     (setl ReturnValue (Expr))
-    (if (not (&& (. LOOKTable 32 0 :type (peek tokenizer 0))(. LOOKTable 32 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 33 0 :type (peek tokenizer 0))(. LOOKTable 33 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Expr_Term at position "  (str :position (peek tokenizer 0)) ": expected Expr_FuncCall"))
         
     )
@@ -1904,7 +2391,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     
 )
 (defun FillExpr_Term_5 (ReturnValue tokenizer)
-    (if (not (&& (. LOOKTable 38 0 :type (peek tokenizer 0))(. LOOKTable 38 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 39 0 :type (peek tokenizer 0))(. LOOKTable 39 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Expr_Term at position "  (str :position (peek tokenizer 0)) ": expected Expr_Regex"))
         
     )
@@ -1913,7 +2400,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
 )
 (defun ParseExpr_Term_5 (tokenizer)
     (setl ReturnValue (Expr))
-    (if (not (&& (. LOOKTable 38 0 :type (peek tokenizer 0))(. LOOKTable 38 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 39 0 :type (peek tokenizer 0))(. LOOKTable 39 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Expr_Term at position "  (str :position (peek tokenizer 0)) ": expected Expr_Regex"))
         
     )
@@ -1922,7 +2409,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     
 )
 (defun FillExpr_Term_6 (ReturnValue tokenizer)
-    (if (not (&& (. LOOKTable 40 0 :type (peek tokenizer 0))(. LOOKTable 40 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 41 0 :type (peek tokenizer 0))(. LOOKTable 41 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Expr_Term at position "  (str :position (peek tokenizer 0)) ": expected Expr_String"))
         
     )
@@ -1931,7 +2418,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
 )
 (defun ParseExpr_Term_6 (tokenizer)
     (setl ReturnValue (Expr))
-    (if (not (&& (. LOOKTable 40 0 :type (peek tokenizer 0))(. LOOKTable 40 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 41 0 :type (peek tokenizer 0))(. LOOKTable 41 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Expr_Term at position "  (str :position (peek tokenizer 0)) ": expected Expr_String"))
         
     )
@@ -1940,7 +2427,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     
 )
 (defun FillExpr_Term_7 (ReturnValue tokenizer)
-    (if (not (&& (. LOOKTable 44 0 :type (peek tokenizer 0))(. LOOKTable 44 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 58 0 :type (peek tokenizer 0))(. LOOKTable 58 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Expr_Term at position "  (str :position (peek tokenizer 0)) ": expected Expr_List"))
         
     )
@@ -1949,7 +2436,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
 )
 (defun ParseExpr_Term_7 (tokenizer)
     (setl ReturnValue (Expr))
-    (if (not (&& (. LOOKTable 44 0 :type (peek tokenizer 0))(. LOOKTable 44 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 58 0 :type (peek tokenizer 0))(. LOOKTable 58 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Expr_Term at position "  (str :position (peek tokenizer 0)) ": expected Expr_List"))
         
     )
@@ -1958,7 +2445,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     
 )
 (defun FillExpr_Term_8 (ReturnValue tokenizer)
-    (if (not (&& (. LOOKTable 50 0 :type (peek tokenizer 0))(. LOOKTable 50 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 64 0 :type (peek tokenizer 0))(. LOOKTable 64 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Expr_Term at position "  (str :position (peek tokenizer 0)) ": expected Expr_Dict"))
         
     )
@@ -1967,7 +2454,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
 )
 (defun ParseExpr_Term_8 (tokenizer)
     (setl ReturnValue (Expr))
-    (if (not (&& (. LOOKTable 50 0 :type (peek tokenizer 0))(. LOOKTable 50 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 64 0 :type (peek tokenizer 0))(. LOOKTable 64 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Expr_Term at position "  (str :position (peek tokenizer 0)) ": expected Expr_Dict"))
         
     )
@@ -1975,41 +2462,107 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     (return ReturnValue)
     
 )
+(defun FillExpr_Term_9 (ReturnValue tokenizer)
+    (if (not (&& (. LOOKTable 43 0 :type (peek tokenizer 0))(. LOOKTable 43 1 :type (peek tokenizer 1))))
+        (error (+ "Error parsing Expr_Term at position "  (str :position (peek tokenizer 0)) ": expected Expr_Lambda"))
+        
+    )
+    (set ReturnValue(ParseExpr_Lambda tokenizer))
+    
+)
+(defun ParseExpr_Term_9 (tokenizer)
+    (setl ReturnValue (Expr))
+    (if (not (&& (. LOOKTable 43 0 :type (peek tokenizer 0))(. LOOKTable 43 1 :type (peek tokenizer 1))))
+        (error (+ "Error parsing Expr_Term at position "  (str :position (peek tokenizer 0)) ": expected Expr_Lambda"))
+        
+    )
+    (set ReturnValue(ParseExpr_Lambda tokenizer))
+    (return ReturnValue)
+    
+)
+(defun FillExpr_Term_10 (ReturnValue tokenizer)
+    (if (not (&& (. LOOKTable 49 0 :type (peek tokenizer 0))(. LOOKTable 49 1 :type (peek tokenizer 1))))
+        (error (+ "Error parsing Expr_Term at position "  (str :position (peek tokenizer 0)) ": expected Expr_Lambda_Short"))
+        
+    )
+    (set ReturnValue(ParseExpr_Lambda_Short tokenizer))
+    
+)
+(defun ParseExpr_Term_10 (tokenizer)
+    (setl ReturnValue (Expr))
+    (if (not (&& (. LOOKTable 49 0 :type (peek tokenizer 0))(. LOOKTable 49 1 :type (peek tokenizer 1))))
+        (error (+ "Error parsing Expr_Term at position "  (str :position (peek tokenizer 0)) ": expected Expr_Lambda_Short"))
+        
+    )
+    (set ReturnValue(ParseExpr_Lambda_Short tokenizer))
+    (return ReturnValue)
+    
+)
+(defun FillExpr_Term_11 (ReturnValue tokenizer)
+    (if (not (&& (. LOOKTable 54 0 :type (peek tokenizer 0))(. LOOKTable 54 1 :type (peek tokenizer 1))))
+        (error (+ "Error parsing Expr_Term at position "  (str :position (peek tokenizer 0)) ": expected Expr_Underscore"))
+        
+    )
+    (set ReturnValue(ParseExpr_Underscore tokenizer))
+    
+)
+(defun ParseExpr_Term_11 (tokenizer)
+    (setl ReturnValue (Expr))
+    (if (not (&& (. LOOKTable 54 0 :type (peek tokenizer 0))(. LOOKTable 54 1 :type (peek tokenizer 1))))
+        (error (+ "Error parsing Expr_Term at position "  (str :position (peek tokenizer 0)) ": expected Expr_Underscore"))
+        
+    )
+    (set ReturnValue(ParseExpr_Underscore tokenizer))
+    (return ReturnValue)
+    
+)
 (defun FillExpr_Term (ReturnValue tokenizer)
-    (if (&& (. LOOKTable 57 0 :type (peek tokenizer 0))(. LOOKTable 57 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 71 0 :type (peek tokenizer 0))(. LOOKTable 71 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseExpr_Term_0 tokenizer))
         
     
-    else if (&& (. LOOKTable 58 0 :type (peek tokenizer 0))(. LOOKTable 58 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 72 0 :type (peek tokenizer 0))(. LOOKTable 72 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseExpr_Term_1 tokenizer))
         
     
-    else if (&& (. LOOKTable 59 0 :type (peek tokenizer 0))(. LOOKTable 59 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseExpr_Term_2 tokenizer))
         
     
-    else if (&& (. LOOKTable 60 0 :type (peek tokenizer 0))(. LOOKTable 60 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 74 0 :type (peek tokenizer 0))(. LOOKTable 74 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseExpr_Term_3 tokenizer))
         
     
-    else if (&& (. LOOKTable 61 0 :type (peek tokenizer 0))(. LOOKTable 61 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 75 0 :type (peek tokenizer 0))(. LOOKTable 75 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseExpr_Term_4 tokenizer))
         
     
-    else if (&& (. LOOKTable 62 0 :type (peek tokenizer 0))(. LOOKTable 62 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 76 0 :type (peek tokenizer 0))(. LOOKTable 76 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseExpr_Term_5 tokenizer))
         
     
-    else if (&& (. LOOKTable 63 0 :type (peek tokenizer 0))(. LOOKTable 63 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 77 0 :type (peek tokenizer 0))(. LOOKTable 77 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseExpr_Term_6 tokenizer))
         
     
-    else if (&& (. LOOKTable 64 0 :type (peek tokenizer 0))(. LOOKTable 64 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 78 0 :type (peek tokenizer 0))(. LOOKTable 78 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseExpr_Term_7 tokenizer))
         
     
-    else if (&& (. LOOKTable 65 0 :type (peek tokenizer 0))(. LOOKTable 65 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 79 0 :type (peek tokenizer 0))(. LOOKTable 79 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseExpr_Term_8 tokenizer))
+        
+    
+    else if (&& (. LOOKTable 80 0 :type (peek tokenizer 0))(. LOOKTable 80 1 :type (peek tokenizer 1)))
+        (set ReturnValue(ParseExpr_Term_9 tokenizer))
+        
+    
+    else if (&& (. LOOKTable 81 0 :type (peek tokenizer 0))(. LOOKTable 81 1 :type (peek tokenizer 1)))
+        (set ReturnValue(ParseExpr_Term_10 tokenizer))
+        
+    
+    else if (&& (. LOOKTable 82 0 :type (peek tokenizer 0))(. LOOKTable 82 1 :type (peek tokenizer 1)))
+        (set ReturnValue(ParseExpr_Term_11 tokenizer))
         
     
     else (error (+ "Error parsing Expr_Term at position "  (str :position (peek tokenizer 0)) ": expected Expr_Term"))
@@ -2019,40 +2572,52 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
 )
 (defun ParseExpr_Term (tokenizer)
     (setl ReturnValue (Expr))
-    (if (&& (. LOOKTable 57 0 :type (peek tokenizer 0))(. LOOKTable 57 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 71 0 :type (peek tokenizer 0))(. LOOKTable 71 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseExpr_Term_0 tokenizer))
         
     
-    else if (&& (. LOOKTable 58 0 :type (peek tokenizer 0))(. LOOKTable 58 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 72 0 :type (peek tokenizer 0))(. LOOKTable 72 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseExpr_Term_1 tokenizer))
         
     
-    else if (&& (. LOOKTable 59 0 :type (peek tokenizer 0))(. LOOKTable 59 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseExpr_Term_2 tokenizer))
         
     
-    else if (&& (. LOOKTable 60 0 :type (peek tokenizer 0))(. LOOKTable 60 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 74 0 :type (peek tokenizer 0))(. LOOKTable 74 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseExpr_Term_3 tokenizer))
         
     
-    else if (&& (. LOOKTable 61 0 :type (peek tokenizer 0))(. LOOKTable 61 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 75 0 :type (peek tokenizer 0))(. LOOKTable 75 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseExpr_Term_4 tokenizer))
         
     
-    else if (&& (. LOOKTable 62 0 :type (peek tokenizer 0))(. LOOKTable 62 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 76 0 :type (peek tokenizer 0))(. LOOKTable 76 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseExpr_Term_5 tokenizer))
         
     
-    else if (&& (. LOOKTable 63 0 :type (peek tokenizer 0))(. LOOKTable 63 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 77 0 :type (peek tokenizer 0))(. LOOKTable 77 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseExpr_Term_6 tokenizer))
         
     
-    else if (&& (. LOOKTable 64 0 :type (peek tokenizer 0))(. LOOKTable 64 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 78 0 :type (peek tokenizer 0))(. LOOKTable 78 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseExpr_Term_7 tokenizer))
         
     
-    else if (&& (. LOOKTable 65 0 :type (peek tokenizer 0))(. LOOKTable 65 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 79 0 :type (peek tokenizer 0))(. LOOKTable 79 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseExpr_Term_8 tokenizer))
+        
+    
+    else if (&& (. LOOKTable 80 0 :type (peek tokenizer 0))(. LOOKTable 80 1 :type (peek tokenizer 1)))
+        (set ReturnValue(ParseExpr_Term_9 tokenizer))
+        
+    
+    else if (&& (. LOOKTable 81 0 :type (peek tokenizer 0))(. LOOKTable 81 1 :type (peek tokenizer 1)))
+        (set ReturnValue(ParseExpr_Term_10 tokenizer))
+        
+    
+    else if (&& (. LOOKTable 82 0 :type (peek tokenizer 0))(. LOOKTable 82 1 :type (peek tokenizer 1)))
+        (set ReturnValue(ParseExpr_Term_11 tokenizer))
         
     
     else (error (+ "Error parsing Expr_Term at position "  (str :position (peek tokenizer 0)) ": expected Expr_Term"))
@@ -2062,151 +2627,151 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
 
 )
 (defun FillExpr_Operators_0 (ReturnValue tokenizer)
-    (if (not (&& (. LOOKTable 56 0 :type (peek tokenizer 0))(. LOOKTable 56 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 70 0 :type (peek tokenizer 0))(. LOOKTable 70 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Expr_Operators at position "  (str :position (peek tokenizer 0)) ": expected Expr_Term"))
         
     )
     (set (. ReturnValue 'Lhs)(ParseExpr_Term tokenizer))
-    (while (&& (. LOOKTable 70 0 :type (peek tokenizer 0))(. LOOKTable 70 1 :type (peek tokenizer 1)))
+    (while (&& (. LOOKTable 87 0 :type (peek tokenizer 0))(. LOOKTable 87 1 :type (peek tokenizer 1)))
         (append (. ReturnValue 'Parts) (OperatorPart))
-        (Fill_L12 (back (. ReturnValue 'Parts)) tokenizer)
+        (Fill_L15 (back (. ReturnValue 'Parts)) tokenizer)
         
     )
     
 )
 (defun ParseExpr_Operators_0 (tokenizer)
     (setl ReturnValue (Expr_Operators))
-    (if (not (&& (. LOOKTable 56 0 :type (peek tokenizer 0))(. LOOKTable 56 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 70 0 :type (peek tokenizer 0))(. LOOKTable 70 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Expr_Operators at position "  (str :position (peek tokenizer 0)) ": expected Expr_Term"))
         
     )
     (set (. ReturnValue 'Lhs)(ParseExpr_Term tokenizer))
-    (while (&& (. LOOKTable 70 0 :type (peek tokenizer 0))(. LOOKTable 70 1 :type (peek tokenizer 1)))
+    (while (&& (. LOOKTable 87 0 :type (peek tokenizer 0))(. LOOKTable 87 1 :type (peek tokenizer 1)))
         (append (. ReturnValue 'Parts) (OperatorPart))
-        (Fill_L12 (back (. ReturnValue 'Parts)) tokenizer)
+        (Fill_L15 (back (. ReturnValue 'Parts)) tokenizer)
         
     )
     (return ReturnValue)
     
 )
 (defun FillExpr_Operators (ReturnValue tokenizer)
-    (if (not (&& (. LOOKTable 56 0 :type (peek tokenizer 0))(. LOOKTable 56 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 70 0 :type (peek tokenizer 0))(. LOOKTable 70 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Expr_Operators at position "  (str :position (peek tokenizer 0)) ": expected Expr_Term"))
         
     )
     (set (. ReturnValue 'Lhs)(ParseExpr_Term tokenizer))
-    (while (&& (. LOOKTable 70 0 :type (peek tokenizer 0))(. LOOKTable 70 1 :type (peek tokenizer 1)))
+    (while (&& (. LOOKTable 87 0 :type (peek tokenizer 0))(. LOOKTable 87 1 :type (peek tokenizer 1)))
         (append (. ReturnValue 'Parts) (OperatorPart))
-        (Fill_L12 (back (. ReturnValue 'Parts)) tokenizer)
+        (Fill_L15 (back (. ReturnValue 'Parts)) tokenizer)
         
     )
     
 )
 (defun ParseExpr_Operators (tokenizer)
     (setl ReturnValue (Expr_Operators))
-    (if (not (&& (. LOOKTable 56 0 :type (peek tokenizer 0))(. LOOKTable 56 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 70 0 :type (peek tokenizer 0))(. LOOKTable 70 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Expr_Operators at position "  (str :position (peek tokenizer 0)) ": expected Expr_Term"))
         
     )
     (set (. ReturnValue 'Lhs)(ParseExpr_Term tokenizer))
-    (while (&& (. LOOKTable 70 0 :type (peek tokenizer 0))(. LOOKTable 70 1 :type (peek tokenizer 1)))
+    (while (&& (. LOOKTable 87 0 :type (peek tokenizer 0))(. LOOKTable 87 1 :type (peek tokenizer 1)))
         (append (. ReturnValue 'Parts) (OperatorPart))
-        (Fill_L12 (back (. ReturnValue 'Parts)) tokenizer)
+        (Fill_L15 (back (. ReturnValue 'Parts)) tokenizer)
         
     )
     (return ReturnValue)
     
 )
-(defun Fill_L12_0 (ReturnValue tokenizer)
+(defun Fill_L15_0 (ReturnValue tokenizer)
     (if (not (&& (. LOOKTable 11 0 :type (peek tokenizer 0))(. LOOKTable 11 1 :type (peek tokenizer 1))))
-        (error (+ "Error parsing _L12 at position "  (str :position (peek tokenizer 0)) ": expected Op"))
+        (error (+ "Error parsing _L15 at position "  (str :position (peek tokenizer 0)) ": expected Op"))
         
     )
     (FillOp (. ReturnValue 'Operator) tokenizer)
-    (if (&& (. LOOKTable 69 0 :type (peek tokenizer 0))(. LOOKTable 69 1 :type (peek tokenizer 1)))
-        (if (not (&& (. LOOKTable 56 0 :type (peek tokenizer 0))(. LOOKTable 56 1 :type (peek tokenizer 1))))
-            (error (+ "Error parsing _L13 at position "  (str :position (peek tokenizer 0)) ": expected Expr_Term"))
+    (if (&& (. LOOKTable 86 0 :type (peek tokenizer 0))(. LOOKTable 86 1 :type (peek tokenizer 1)))
+        (if (not (&& (. LOOKTable 70 0 :type (peek tokenizer 0))(. LOOKTable 70 1 :type (peek tokenizer 1))))
+            (error (+ "Error parsing _L16 at position "  (str :position (peek tokenizer 0)) ": expected Expr_Term"))
             
         )
         (set (. ReturnValue 'Rhs)(ParseExpr_Term tokenizer))
         
     
-    else (error (+ "Error parsing _L12 at position "  (str :position (peek tokenizer 0)) ": expected _L13"))
+    else (error (+ "Error parsing _L15 at position "  (str :position (peek tokenizer 0)) ": expected _L16"))
     
 
 )
 )
-(defun Parse_L12_0 (tokenizer)
+(defun Parse_L15_0 (tokenizer)
     (setl ReturnValue (OperatorPart))
     (if (not (&& (. LOOKTable 11 0 :type (peek tokenizer 0))(. LOOKTable 11 1 :type (peek tokenizer 1))))
-        (error (+ "Error parsing _L12 at position "  (str :position (peek tokenizer 0)) ": expected Op"))
+        (error (+ "Error parsing _L15 at position "  (str :position (peek tokenizer 0)) ": expected Op"))
         
     )
     (FillOp (. ReturnValue 'Operator) tokenizer)
-    (if (&& (. LOOKTable 69 0 :type (peek tokenizer 0))(. LOOKTable 69 1 :type (peek tokenizer 1)))
-        (if (not (&& (. LOOKTable 56 0 :type (peek tokenizer 0))(. LOOKTable 56 1 :type (peek tokenizer 1))))
-            (error (+ "Error parsing _L13 at position "  (str :position (peek tokenizer 0)) ": expected Expr_Term"))
+    (if (&& (. LOOKTable 86 0 :type (peek tokenizer 0))(. LOOKTable 86 1 :type (peek tokenizer 1)))
+        (if (not (&& (. LOOKTable 70 0 :type (peek tokenizer 0))(. LOOKTable 70 1 :type (peek tokenizer 1))))
+            (error (+ "Error parsing _L16 at position "  (str :position (peek tokenizer 0)) ": expected Expr_Term"))
             
         )
         (set (. ReturnValue 'Rhs)(ParseExpr_Term tokenizer))
         
     
-    else (error (+ "Error parsing _L12 at position "  (str :position (peek tokenizer 0)) ": expected _L13"))
+    else (error (+ "Error parsing _L15 at position "  (str :position (peek tokenizer 0)) ": expected _L16"))
     
 
 )(return ReturnValue)
 
 )
-(defun Fill_L12_1 (ReturnValue tokenizer)
-    (if (not (&& (. LOOKTable 26 0 :type (peek tokenizer 0))(. LOOKTable 26 1 :type (peek tokenizer 1))))
-        (error (+ "Error parsing _L12 at position "  (str :position (peek tokenizer 0)) ": expected PostOp"))
+(defun Fill_L15_1 (ReturnValue tokenizer)
+    (if (not (&& (. LOOKTable 27 0 :type (peek tokenizer 0))(. LOOKTable 27 1 :type (peek tokenizer 1))))
+        (error (+ "Error parsing _L15 at position "  (str :position (peek tokenizer 0)) ": expected PostOp"))
         
     )
     (FillPostOp (. ReturnValue 'Operator) tokenizer)
     
 )
-(defun Parse_L12_1 (tokenizer)
+(defun Parse_L15_1 (tokenizer)
     (setl ReturnValue (OperatorPart))
-    (if (not (&& (. LOOKTable 26 0 :type (peek tokenizer 0))(. LOOKTable 26 1 :type (peek tokenizer 1))))
-        (error (+ "Error parsing _L12 at position "  (str :position (peek tokenizer 0)) ": expected PostOp"))
+    (if (not (&& (. LOOKTable 27 0 :type (peek tokenizer 0))(. LOOKTable 27 1 :type (peek tokenizer 1))))
+        (error (+ "Error parsing _L15 at position "  (str :position (peek tokenizer 0)) ": expected PostOp"))
         
     )
     (FillPostOp (. ReturnValue 'Operator) tokenizer)
     (return ReturnValue)
     
 )
-(defun Fill_L12 (ReturnValue tokenizer)
-    (if (&& (. LOOKTable 71 0 :type (peek tokenizer 0))(. LOOKTable 71 1 :type (peek tokenizer 1)))
-        (Fill_L12_0 ReturnValue tokenizer)
+(defun Fill_L15 (ReturnValue tokenizer)
+    (if (&& (. LOOKTable 88 0 :type (peek tokenizer 0))(. LOOKTable 88 1 :type (peek tokenizer 1)))
+        (Fill_L15_0 ReturnValue tokenizer)
         
     
-    else if (&& (. LOOKTable 72 0 :type (peek tokenizer 0))(. LOOKTable 72 1 :type (peek tokenizer 1)))
-        (Fill_L12_1 ReturnValue tokenizer)
+    else if (&& (. LOOKTable 89 0 :type (peek tokenizer 0))(. LOOKTable 89 1 :type (peek tokenizer 1)))
+        (Fill_L15_1 ReturnValue tokenizer)
         
     
-    else (error (+ "Error parsing _L12 at position "  (str :position (peek tokenizer 0)) ": expected _L12"))
+    else (error (+ "Error parsing _L15 at position "  (str :position (peek tokenizer 0)) ": expected _L15"))
     
 
 )
 )
-(defun Parse_L12 (tokenizer)
+(defun Parse_L15 (tokenizer)
     (setl ReturnValue (OperatorPart))
-    (if (&& (. LOOKTable 71 0 :type (peek tokenizer 0))(. LOOKTable 71 1 :type (peek tokenizer 1)))
-        (Fill_L12_0 ReturnValue tokenizer)
+    (if (&& (. LOOKTable 88 0 :type (peek tokenizer 0))(. LOOKTable 88 1 :type (peek tokenizer 1)))
+        (Fill_L15_0 ReturnValue tokenizer)
         
     
-    else if (&& (. LOOKTable 72 0 :type (peek tokenizer 0))(. LOOKTable 72 1 :type (peek tokenizer 1)))
-        (Fill_L12_1 ReturnValue tokenizer)
+    else if (&& (. LOOKTable 89 0 :type (peek tokenizer 0))(. LOOKTable 89 1 :type (peek tokenizer 1)))
+        (Fill_L15_1 ReturnValue tokenizer)
         
     
-    else (error (+ "Error parsing _L12 at position "  (str :position (peek tokenizer 0)) ": expected _L12"))
+    else (error (+ "Error parsing _L15 at position "  (str :position (peek tokenizer 0)) ": expected _L15"))
     
 
 )(return ReturnValue)
 
 )
 (defun FillExpr_0 (ReturnValue tokenizer)
-    (if (not (&& (. LOOKTable 66 0 :type (peek tokenizer 0))(. LOOKTable 66 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 83 0 :type (peek tokenizer 0))(. LOOKTable 83 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Expr at position "  (str :position (peek tokenizer 0)) ": expected Expr_Operators"))
         
     )
@@ -2215,7 +2780,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
 )
 (defun ParseExpr_0 (tokenizer)
     (setl ReturnValue (Expr))
-    (if (not (&& (. LOOKTable 66 0 :type (peek tokenizer 0))(. LOOKTable 66 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 83 0 :type (peek tokenizer 0))(. LOOKTable 83 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Expr at position "  (str :position (peek tokenizer 0)) ": expected Expr_Operators"))
         
     )
@@ -2224,7 +2789,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     
 )
 (defun FillExpr (ReturnValue tokenizer)
-    (if (not (&& (. LOOKTable 66 0 :type (peek tokenizer 0))(. LOOKTable 66 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 83 0 :type (peek tokenizer 0))(. LOOKTable 83 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Expr at position "  (str :position (peek tokenizer 0)) ": expected Expr_Operators"))
         
     )
@@ -2233,7 +2798,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
 )
 (defun ParseExpr (tokenizer)
     (setl ReturnValue (Expr))
-    (if (not (&& (. LOOKTable 66 0 :type (peek tokenizer 0))(. LOOKTable 66 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 83 0 :type (peek tokenizer 0))(. LOOKTable 83 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Expr at position "  (str :position (peek tokenizer 0)) ": expected Expr_Operators"))
         
     )
@@ -2249,26 +2814,26 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     )
     (setl (. ReturnValue 'ForPart 'Value) :value (peek tokenizer 0))
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 77 0 :type (peek tokenizer 0))(. LOOKTable 77 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 78 0 :type (peek tokenizer 0))(. LOOKTable 78 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 94 0 :type (peek tokenizer 0))(. LOOKTable 94 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 95 0 :type (peek tokenizer 0))(. LOOKTable 95 1 :type (peek tokenizer 1)))
             (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L14 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+                (error (+ "Error parsing _L17 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
                 
             )
             (FillIdf (. ReturnValue 'VarName) tokenizer)
             (if (not (eq :type (peek tokenizer 0) 12))
-                (error (+ "Error parsing _L14 at position "  (str :position (peek tokenizer 0)) ": expected in"))
+                (error (+ "Error parsing _L17 at position "  (str :position (peek tokenizer 0)) ": expected in"))
                 
             )
             (consume-token tokenizer)
             
         
-        else (error (+ "Error parsing Statement_For at position "  (str :position (peek tokenizer 0)) ": expected _L14"))
+        else (error (+ "Error parsing Statement_For at position "  (str :position (peek tokenizer 0)) ": expected _L17"))
         
     
     )
 )
-(if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+(if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
     (error (+ "Error parsing Statement_For at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
     
 )
@@ -2278,7 +2843,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     
 )
 (consume-token tokenizer)
-(while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+(while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
     (append (. ReturnValue 'Body) (Statement))
     (set (back (. ReturnValue 'Body))(ParseStatement tokenizer))
     
@@ -2299,26 +2864,26 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     )
     (setl (. ReturnValue 'ForPart 'Value) :value (peek tokenizer 0))
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 77 0 :type (peek tokenizer 0))(. LOOKTable 77 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 78 0 :type (peek tokenizer 0))(. LOOKTable 78 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 94 0 :type (peek tokenizer 0))(. LOOKTable 94 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 95 0 :type (peek tokenizer 0))(. LOOKTable 95 1 :type (peek tokenizer 1)))
             (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L14 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+                (error (+ "Error parsing _L17 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
                 
             )
             (FillIdf (. ReturnValue 'VarName) tokenizer)
             (if (not (eq :type (peek tokenizer 0) 12))
-                (error (+ "Error parsing _L14 at position "  (str :position (peek tokenizer 0)) ": expected in"))
+                (error (+ "Error parsing _L17 at position "  (str :position (peek tokenizer 0)) ": expected in"))
                 
             )
             (consume-token tokenizer)
             
         
-        else (error (+ "Error parsing Statement_For at position "  (str :position (peek tokenizer 0)) ": expected _L14"))
+        else (error (+ "Error parsing Statement_For at position "  (str :position (peek tokenizer 0)) ": expected _L17"))
         
     
     )
 )
-(if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+(if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
     (error (+ "Error parsing Statement_For at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
     
 )
@@ -2328,7 +2893,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     
 )
 (consume-token tokenizer)
-(while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+(while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
     (append (. ReturnValue 'Body) (Statement))
     (set (back (. ReturnValue 'Body))(ParseStatement tokenizer))
     
@@ -2349,26 +2914,26 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     )
     (setl (. ReturnValue 'ForPart 'Value) :value (peek tokenizer 0))
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 77 0 :type (peek tokenizer 0))(. LOOKTable 77 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 78 0 :type (peek tokenizer 0))(. LOOKTable 78 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 94 0 :type (peek tokenizer 0))(. LOOKTable 94 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 95 0 :type (peek tokenizer 0))(. LOOKTable 95 1 :type (peek tokenizer 1)))
             (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L14 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+                (error (+ "Error parsing _L17 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
                 
             )
             (FillIdf (. ReturnValue 'VarName) tokenizer)
             (if (not (eq :type (peek tokenizer 0) 12))
-                (error (+ "Error parsing _L14 at position "  (str :position (peek tokenizer 0)) ": expected in"))
+                (error (+ "Error parsing _L17 at position "  (str :position (peek tokenizer 0)) ": expected in"))
                 
             )
             (consume-token tokenizer)
             
         
-        else (error (+ "Error parsing Statement_For at position "  (str :position (peek tokenizer 0)) ": expected _L14"))
+        else (error (+ "Error parsing Statement_For at position "  (str :position (peek tokenizer 0)) ": expected _L17"))
         
     
     )
 )
-(if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+(if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
     (error (+ "Error parsing Statement_For at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
     
 )
@@ -2378,7 +2943,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     
 )
 (consume-token tokenizer)
-(while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+(while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
     (append (. ReturnValue 'Body) (Statement))
     (set (back (. ReturnValue 'Body))(ParseStatement tokenizer))
     
@@ -2399,26 +2964,26 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     )
     (setl (. ReturnValue 'ForPart 'Value) :value (peek tokenizer 0))
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 77 0 :type (peek tokenizer 0))(. LOOKTable 77 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 78 0 :type (peek tokenizer 0))(. LOOKTable 78 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 94 0 :type (peek tokenizer 0))(. LOOKTable 94 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 95 0 :type (peek tokenizer 0))(. LOOKTable 95 1 :type (peek tokenizer 1)))
             (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L14 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+                (error (+ "Error parsing _L17 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
                 
             )
             (FillIdf (. ReturnValue 'VarName) tokenizer)
             (if (not (eq :type (peek tokenizer 0) 12))
-                (error (+ "Error parsing _L14 at position "  (str :position (peek tokenizer 0)) ": expected in"))
+                (error (+ "Error parsing _L17 at position "  (str :position (peek tokenizer 0)) ": expected in"))
                 
             )
             (consume-token tokenizer)
             
         
-        else (error (+ "Error parsing Statement_For at position "  (str :position (peek tokenizer 0)) ": expected _L14"))
+        else (error (+ "Error parsing Statement_For at position "  (str :position (peek tokenizer 0)) ": expected _L17"))
         
     
     )
 )
-(if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+(if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
     (error (+ "Error parsing Statement_For at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
     
 )
@@ -2428,7 +2993,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     
 )
 (consume-token tokenizer)
-(while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+(while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
     (append (. ReturnValue 'Body) (Statement))
     (set (back (. ReturnValue 'Body))(ParseStatement tokenizer))
     
@@ -2449,7 +3014,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     )
     (setl (. ReturnValue 'IfPart 'Value) :value (peek tokenizer 0))
     (consume-token tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing IfContent at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
@@ -2459,7 +3024,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
         
     )
     (consume-token tokenizer)
-    (while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+    (while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
         (append (. ReturnValue 'Body) (Statement))
         (set (back (. ReturnValue 'Body))(ParseStatement tokenizer))
         
@@ -2480,7 +3045,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     )
     (setl (. ReturnValue 'IfPart 'Value) :value (peek tokenizer 0))
     (consume-token tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing IfContent at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
@@ -2490,7 +3055,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
         
     )
     (consume-token tokenizer)
-    (while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+    (while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
         (append (. ReturnValue 'Body) (Statement))
         (set (back (. ReturnValue 'Body))(ParseStatement tokenizer))
         
@@ -2511,7 +3076,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     )
     (setl (. ReturnValue 'IfPart 'Value) :value (peek tokenizer 0))
     (consume-token tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing IfContent at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
@@ -2521,7 +3086,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
         
     )
     (consume-token tokenizer)
-    (while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+    (while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
         (append (. ReturnValue 'Body) (Statement))
         (set (back (. ReturnValue 'Body))(ParseStatement tokenizer))
         
@@ -2542,7 +3107,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     )
     (setl (. ReturnValue 'IfPart 'Value) :value (peek tokenizer 0))
     (consume-token tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing IfContent at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
@@ -2552,7 +3117,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
         
     )
     (consume-token tokenizer)
-    (while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+    (while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
         (append (. ReturnValue 'Body) (Statement))
         (set (back (. ReturnValue 'Body))(ParseStatement tokenizer))
         
@@ -2566,47 +3131,47 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     
 )
 (defun FillStatement_If_0 (ReturnValue tokenizer)
-    (if (not (&& (. LOOKTable 79 0 :type (peek tokenizer 0))(. LOOKTable 79 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 96 0 :type (peek tokenizer 0))(. LOOKTable 96 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement_If at position "  (str :position (peek tokenizer 0)) ": expected IfContent"))
         
     )
     (FillIfContent (. ReturnValue 'If) tokenizer)
-    (while (&& (. LOOKTable 83 0 :type (peek tokenizer 0))(. LOOKTable 83 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 84 0 :type (peek tokenizer 0))(. LOOKTable 84 1 :type (peek tokenizer 1)))
+    (while (&& (. LOOKTable 100 0 :type (peek tokenizer 0))(. LOOKTable 100 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 101 0 :type (peek tokenizer 0))(. LOOKTable 101 1 :type (peek tokenizer 1)))
             (if (not (eq :type (peek tokenizer 0) 14))
-                (error (+ "Error parsing _L15 at position "  (str :position (peek tokenizer 0)) ": expected else"))
+                (error (+ "Error parsing _L18 at position "  (str :position (peek tokenizer 0)) ": expected else"))
                 
             )
             (consume-token tokenizer)
-            (if (not (&& (. LOOKTable 79 0 :type (peek tokenizer 0))(. LOOKTable 79 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L15 at position "  (str :position (peek tokenizer 0)) ": expected IfContent"))
+            (if (not (&& (. LOOKTable 96 0 :type (peek tokenizer 0))(. LOOKTable 96 1 :type (peek tokenizer 1))))
+                (error (+ "Error parsing _L18 at position "  (str :position (peek tokenizer 0)) ": expected IfContent"))
                 
             )
             (append (. ReturnValue 'ElseClauses) (IfContent))
             (FillIfContent (back (. ReturnValue 'ElseClauses)) tokenizer)
             
         
-        else (error (+ "Error parsing Statement_If at position "  (str :position (peek tokenizer 0)) ": expected _L15"))
+        else (error (+ "Error parsing Statement_If at position "  (str :position (peek tokenizer 0)) ": expected _L18"))
         
     
     )
 )
-(if (&& (. LOOKTable 87 0 :type (peek tokenizer 0))(. LOOKTable 87 1 :type (peek tokenizer 1)))
-    (if (&& (. LOOKTable 88 0 :type (peek tokenizer 0))(. LOOKTable 88 1 :type (peek tokenizer 1)))
+(if (&& (. LOOKTable 104 0 :type (peek tokenizer 0))(. LOOKTable 104 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 105 0 :type (peek tokenizer 0))(. LOOKTable 105 1 :type (peek tokenizer 1)))
         (if (not (eq :type (peek tokenizer 0) 14))
-            (error (+ "Error parsing _L16 at position "  (str :position (peek tokenizer 0)) ": expected else"))
+            (error (+ "Error parsing _L19 at position "  (str :position (peek tokenizer 0)) ": expected else"))
             
         )
         (consume-token tokenizer)
-        (if (not (&& (. LOOKTable 85 0 :type (peek tokenizer 0))(. LOOKTable 85 1 :type (peek tokenizer 1))))
-            (error (+ "Error parsing _L16 at position "  (str :position (peek tokenizer 0)) ": expected _L17"))
+        (if (not (&& (. LOOKTable 102 0 :type (peek tokenizer 0))(. LOOKTable 102 1 :type (peek tokenizer 1))))
+            (error (+ "Error parsing _L19 at position "  (str :position (peek tokenizer 0)) ": expected _L20"))
             
         )
         (append (. ReturnValue 'ElseClauses) (IfContent))
-        (Fill_L17 (back (. ReturnValue 'ElseClauses)) tokenizer)
+        (Fill_L20 (back (. ReturnValue 'ElseClauses)) tokenizer)
         
     
-    else (error (+ "Error parsing Statement_If at position "  (str :position (peek tokenizer 0)) ": expected _L16"))
+    else (error (+ "Error parsing Statement_If at position "  (str :position (peek tokenizer 0)) ": expected _L19"))
     
 
 )
@@ -2615,47 +3180,47 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
 )
 (defun ParseStatement_If_0 (tokenizer)
     (setl ReturnValue (Statement_If))
-    (if (not (&& (. LOOKTable 79 0 :type (peek tokenizer 0))(. LOOKTable 79 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 96 0 :type (peek tokenizer 0))(. LOOKTable 96 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement_If at position "  (str :position (peek tokenizer 0)) ": expected IfContent"))
         
     )
     (FillIfContent (. ReturnValue 'If) tokenizer)
-    (while (&& (. LOOKTable 83 0 :type (peek tokenizer 0))(. LOOKTable 83 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 84 0 :type (peek tokenizer 0))(. LOOKTable 84 1 :type (peek tokenizer 1)))
+    (while (&& (. LOOKTable 100 0 :type (peek tokenizer 0))(. LOOKTable 100 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 101 0 :type (peek tokenizer 0))(. LOOKTable 101 1 :type (peek tokenizer 1)))
             (if (not (eq :type (peek tokenizer 0) 14))
-                (error (+ "Error parsing _L15 at position "  (str :position (peek tokenizer 0)) ": expected else"))
+                (error (+ "Error parsing _L18 at position "  (str :position (peek tokenizer 0)) ": expected else"))
                 
             )
             (consume-token tokenizer)
-            (if (not (&& (. LOOKTable 79 0 :type (peek tokenizer 0))(. LOOKTable 79 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L15 at position "  (str :position (peek tokenizer 0)) ": expected IfContent"))
+            (if (not (&& (. LOOKTable 96 0 :type (peek tokenizer 0))(. LOOKTable 96 1 :type (peek tokenizer 1))))
+                (error (+ "Error parsing _L18 at position "  (str :position (peek tokenizer 0)) ": expected IfContent"))
                 
             )
             (append (. ReturnValue 'ElseClauses) (IfContent))
             (FillIfContent (back (. ReturnValue 'ElseClauses)) tokenizer)
             
         
-        else (error (+ "Error parsing Statement_If at position "  (str :position (peek tokenizer 0)) ": expected _L15"))
+        else (error (+ "Error parsing Statement_If at position "  (str :position (peek tokenizer 0)) ": expected _L18"))
         
     
     )
 )
-(if (&& (. LOOKTable 87 0 :type (peek tokenizer 0))(. LOOKTable 87 1 :type (peek tokenizer 1)))
-    (if (&& (. LOOKTable 88 0 :type (peek tokenizer 0))(. LOOKTable 88 1 :type (peek tokenizer 1)))
+(if (&& (. LOOKTable 104 0 :type (peek tokenizer 0))(. LOOKTable 104 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 105 0 :type (peek tokenizer 0))(. LOOKTable 105 1 :type (peek tokenizer 1)))
         (if (not (eq :type (peek tokenizer 0) 14))
-            (error (+ "Error parsing _L16 at position "  (str :position (peek tokenizer 0)) ": expected else"))
+            (error (+ "Error parsing _L19 at position "  (str :position (peek tokenizer 0)) ": expected else"))
             
         )
         (consume-token tokenizer)
-        (if (not (&& (. LOOKTable 85 0 :type (peek tokenizer 0))(. LOOKTable 85 1 :type (peek tokenizer 1))))
-            (error (+ "Error parsing _L16 at position "  (str :position (peek tokenizer 0)) ": expected _L17"))
+        (if (not (&& (. LOOKTable 102 0 :type (peek tokenizer 0))(. LOOKTable 102 1 :type (peek tokenizer 1))))
+            (error (+ "Error parsing _L19 at position "  (str :position (peek tokenizer 0)) ": expected _L20"))
             
         )
         (append (. ReturnValue 'ElseClauses) (IfContent))
-        (Fill_L17 (back (. ReturnValue 'ElseClauses)) tokenizer)
+        (Fill_L20 (back (. ReturnValue 'ElseClauses)) tokenizer)
         
     
-    else (error (+ "Error parsing Statement_If at position "  (str :position (peek tokenizer 0)) ": expected _L16"))
+    else (error (+ "Error parsing Statement_If at position "  (str :position (peek tokenizer 0)) ": expected _L19"))
     
 
 )
@@ -2664,47 +3229,47 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
 
 )
 (defun FillStatement_If (ReturnValue tokenizer)
-    (if (not (&& (. LOOKTable 79 0 :type (peek tokenizer 0))(. LOOKTable 79 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 96 0 :type (peek tokenizer 0))(. LOOKTable 96 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement_If at position "  (str :position (peek tokenizer 0)) ": expected IfContent"))
         
     )
     (FillIfContent (. ReturnValue 'If) tokenizer)
-    (while (&& (. LOOKTable 83 0 :type (peek tokenizer 0))(. LOOKTable 83 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 84 0 :type (peek tokenizer 0))(. LOOKTable 84 1 :type (peek tokenizer 1)))
+    (while (&& (. LOOKTable 100 0 :type (peek tokenizer 0))(. LOOKTable 100 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 101 0 :type (peek tokenizer 0))(. LOOKTable 101 1 :type (peek tokenizer 1)))
             (if (not (eq :type (peek tokenizer 0) 14))
-                (error (+ "Error parsing _L15 at position "  (str :position (peek tokenizer 0)) ": expected else"))
+                (error (+ "Error parsing _L18 at position "  (str :position (peek tokenizer 0)) ": expected else"))
                 
             )
             (consume-token tokenizer)
-            (if (not (&& (. LOOKTable 79 0 :type (peek tokenizer 0))(. LOOKTable 79 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L15 at position "  (str :position (peek tokenizer 0)) ": expected IfContent"))
+            (if (not (&& (. LOOKTable 96 0 :type (peek tokenizer 0))(. LOOKTable 96 1 :type (peek tokenizer 1))))
+                (error (+ "Error parsing _L18 at position "  (str :position (peek tokenizer 0)) ": expected IfContent"))
                 
             )
             (append (. ReturnValue 'ElseClauses) (IfContent))
             (FillIfContent (back (. ReturnValue 'ElseClauses)) tokenizer)
             
         
-        else (error (+ "Error parsing Statement_If at position "  (str :position (peek tokenizer 0)) ": expected _L15"))
+        else (error (+ "Error parsing Statement_If at position "  (str :position (peek tokenizer 0)) ": expected _L18"))
         
     
     )
 )
-(if (&& (. LOOKTable 87 0 :type (peek tokenizer 0))(. LOOKTable 87 1 :type (peek tokenizer 1)))
-    (if (&& (. LOOKTable 88 0 :type (peek tokenizer 0))(. LOOKTable 88 1 :type (peek tokenizer 1)))
+(if (&& (. LOOKTable 104 0 :type (peek tokenizer 0))(. LOOKTable 104 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 105 0 :type (peek tokenizer 0))(. LOOKTable 105 1 :type (peek tokenizer 1)))
         (if (not (eq :type (peek tokenizer 0) 14))
-            (error (+ "Error parsing _L16 at position "  (str :position (peek tokenizer 0)) ": expected else"))
+            (error (+ "Error parsing _L19 at position "  (str :position (peek tokenizer 0)) ": expected else"))
             
         )
         (consume-token tokenizer)
-        (if (not (&& (. LOOKTable 85 0 :type (peek tokenizer 0))(. LOOKTable 85 1 :type (peek tokenizer 1))))
-            (error (+ "Error parsing _L16 at position "  (str :position (peek tokenizer 0)) ": expected _L17"))
+        (if (not (&& (. LOOKTable 102 0 :type (peek tokenizer 0))(. LOOKTable 102 1 :type (peek tokenizer 1))))
+            (error (+ "Error parsing _L19 at position "  (str :position (peek tokenizer 0)) ": expected _L20"))
             
         )
         (append (. ReturnValue 'ElseClauses) (IfContent))
-        (Fill_L17 (back (. ReturnValue 'ElseClauses)) tokenizer)
+        (Fill_L20 (back (. ReturnValue 'ElseClauses)) tokenizer)
         
     
-    else (error (+ "Error parsing Statement_If at position "  (str :position (peek tokenizer 0)) ": expected _L16"))
+    else (error (+ "Error parsing Statement_If at position "  (str :position (peek tokenizer 0)) ": expected _L19"))
     
 
 )
@@ -2713,47 +3278,47 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
 )
 (defun ParseStatement_If (tokenizer)
     (setl ReturnValue (Statement_If))
-    (if (not (&& (. LOOKTable 79 0 :type (peek tokenizer 0))(. LOOKTable 79 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 96 0 :type (peek tokenizer 0))(. LOOKTable 96 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement_If at position "  (str :position (peek tokenizer 0)) ": expected IfContent"))
         
     )
     (FillIfContent (. ReturnValue 'If) tokenizer)
-    (while (&& (. LOOKTable 83 0 :type (peek tokenizer 0))(. LOOKTable 83 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 84 0 :type (peek tokenizer 0))(. LOOKTable 84 1 :type (peek tokenizer 1)))
+    (while (&& (. LOOKTable 100 0 :type (peek tokenizer 0))(. LOOKTable 100 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 101 0 :type (peek tokenizer 0))(. LOOKTable 101 1 :type (peek tokenizer 1)))
             (if (not (eq :type (peek tokenizer 0) 14))
-                (error (+ "Error parsing _L15 at position "  (str :position (peek tokenizer 0)) ": expected else"))
+                (error (+ "Error parsing _L18 at position "  (str :position (peek tokenizer 0)) ": expected else"))
                 
             )
             (consume-token tokenizer)
-            (if (not (&& (. LOOKTable 79 0 :type (peek tokenizer 0))(. LOOKTable 79 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L15 at position "  (str :position (peek tokenizer 0)) ": expected IfContent"))
+            (if (not (&& (. LOOKTable 96 0 :type (peek tokenizer 0))(. LOOKTable 96 1 :type (peek tokenizer 1))))
+                (error (+ "Error parsing _L18 at position "  (str :position (peek tokenizer 0)) ": expected IfContent"))
                 
             )
             (append (. ReturnValue 'ElseClauses) (IfContent))
             (FillIfContent (back (. ReturnValue 'ElseClauses)) tokenizer)
             
         
-        else (error (+ "Error parsing Statement_If at position "  (str :position (peek tokenizer 0)) ": expected _L15"))
+        else (error (+ "Error parsing Statement_If at position "  (str :position (peek tokenizer 0)) ": expected _L18"))
         
     
     )
 )
-(if (&& (. LOOKTable 87 0 :type (peek tokenizer 0))(. LOOKTable 87 1 :type (peek tokenizer 1)))
-    (if (&& (. LOOKTable 88 0 :type (peek tokenizer 0))(. LOOKTable 88 1 :type (peek tokenizer 1)))
+(if (&& (. LOOKTable 104 0 :type (peek tokenizer 0))(. LOOKTable 104 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 105 0 :type (peek tokenizer 0))(. LOOKTable 105 1 :type (peek tokenizer 1)))
         (if (not (eq :type (peek tokenizer 0) 14))
-            (error (+ "Error parsing _L16 at position "  (str :position (peek tokenizer 0)) ": expected else"))
+            (error (+ "Error parsing _L19 at position "  (str :position (peek tokenizer 0)) ": expected else"))
             
         )
         (consume-token tokenizer)
-        (if (not (&& (. LOOKTable 85 0 :type (peek tokenizer 0))(. LOOKTable 85 1 :type (peek tokenizer 1))))
-            (error (+ "Error parsing _L16 at position "  (str :position (peek tokenizer 0)) ": expected _L17"))
+        (if (not (&& (. LOOKTable 102 0 :type (peek tokenizer 0))(. LOOKTable 102 1 :type (peek tokenizer 1))))
+            (error (+ "Error parsing _L19 at position "  (str :position (peek tokenizer 0)) ": expected _L20"))
             
         )
         (append (. ReturnValue 'ElseClauses) (IfContent))
-        (Fill_L17 (back (. ReturnValue 'ElseClauses)) tokenizer)
+        (Fill_L20 (back (. ReturnValue 'ElseClauses)) tokenizer)
         
     
-    else (error (+ "Error parsing Statement_If at position "  (str :position (peek tokenizer 0)) ": expected _L16"))
+    else (error (+ "Error parsing Statement_If at position "  (str :position (peek tokenizer 0)) ": expected _L19"))
     
 
 )
@@ -2761,80 +3326,80 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
 (return ReturnValue)
 
 )
-(defun Fill_L17_0 (ReturnValue tokenizer)
+(defun Fill_L20_0 (ReturnValue tokenizer)
     (if (not (eq :type (peek tokenizer 0) 6))
-        (error (+ "Error parsing _L17 at position "  (str :position (peek tokenizer 0)) ": expected lcurl"))
+        (error (+ "Error parsing _L20 at position "  (str :position (peek tokenizer 0)) ": expected lcurl"))
         
     )
     (consume-token tokenizer)
     (setl (. ReturnValue 'HasCondition) false)
-    (while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+    (while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
         (append (. ReturnValue 'Body) (Statement))
         (set (back (. ReturnValue 'Body))(ParseStatement tokenizer))
         
     )
     (if (not (eq :type (peek tokenizer 0) 7))
-        (error (+ "Error parsing _L17 at position "  (str :position (peek tokenizer 0)) ": expected rcurl"))
+        (error (+ "Error parsing _L20 at position "  (str :position (peek tokenizer 0)) ": expected rcurl"))
         
     )
     (consume-token tokenizer)
     
 )
-(defun Parse_L17_0 (tokenizer)
+(defun Parse_L20_0 (tokenizer)
     (setl ReturnValue (IfContent))
     (if (not (eq :type (peek tokenizer 0) 6))
-        (error (+ "Error parsing _L17 at position "  (str :position (peek tokenizer 0)) ": expected lcurl"))
+        (error (+ "Error parsing _L20 at position "  (str :position (peek tokenizer 0)) ": expected lcurl"))
         
     )
     (consume-token tokenizer)
     (setl (. ReturnValue 'HasCondition) false)
-    (while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+    (while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
         (append (. ReturnValue 'Body) (Statement))
         (set (back (. ReturnValue 'Body))(ParseStatement tokenizer))
         
     )
     (if (not (eq :type (peek tokenizer 0) 7))
-        (error (+ "Error parsing _L17 at position "  (str :position (peek tokenizer 0)) ": expected rcurl"))
+        (error (+ "Error parsing _L20 at position "  (str :position (peek tokenizer 0)) ": expected rcurl"))
         
     )
     (consume-token tokenizer)
     (return ReturnValue)
     
 )
-(defun Fill_L17 (ReturnValue tokenizer)
+(defun Fill_L20 (ReturnValue tokenizer)
     (if (not (eq :type (peek tokenizer 0) 6))
-        (error (+ "Error parsing _L17 at position "  (str :position (peek tokenizer 0)) ": expected lcurl"))
+        (error (+ "Error parsing _L20 at position "  (str :position (peek tokenizer 0)) ": expected lcurl"))
         
     )
     (consume-token tokenizer)
     (setl (. ReturnValue 'HasCondition) false)
-    (while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+    (while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
         (append (. ReturnValue 'Body) (Statement))
         (set (back (. ReturnValue 'Body))(ParseStatement tokenizer))
         
     )
     (if (not (eq :type (peek tokenizer 0) 7))
-        (error (+ "Error parsing _L17 at position "  (str :position (peek tokenizer 0)) ": expected rcurl"))
+        (error (+ "Error parsing _L20 at position "  (str :position (peek tokenizer 0)) ": expected rcurl"))
         
     )
     (consume-token tokenizer)
     
 )
-(defun Parse_L17 (tokenizer)
+(defun Parse_L20 (tokenizer)
     (setl ReturnValue (IfContent))
     (if (not (eq :type (peek tokenizer 0) 6))
-        (error (+ "Error parsing _L17 at position "  (str :position (peek tokenizer 0)) ": expected lcurl"))
+        (error (+ "Error parsing _L20 at position "  (str :position (peek tokenizer 0)) ": expected lcurl"))
         
     )
     (consume-token tokenizer)
     (setl (. ReturnValue 'HasCondition) false)
-    (while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+    (while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
         (append (. ReturnValue 'Body) (Statement))
         (set (back (. ReturnValue 'Body))(ParseStatement tokenizer))
         
     )
     (if (not (eq :type (peek tokenizer 0) 7))
-        (error (+ "Error parsing _L17 at position "  (str :position (peek tokenizer 0)) ": expected rcurl"))
+        (error (+ "Error parsing _L20 at position "  (str :position (peek tokenizer 0)) ": expected rcurl"))
         
     )
     (consume-token tokenizer)
@@ -2849,7 +3414,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     )
     (setl (. ReturnValue 'WhilePart 'Value) :value (peek tokenizer 0))
     (consume-token tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement_While at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
@@ -2859,7 +3424,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
         
     )
     (consume-token tokenizer)
-    (while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+    (while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
         (append (. ReturnValue 'Body) (Statement))
         (set (back (. ReturnValue 'Body))(ParseStatement tokenizer))
         
@@ -2880,7 +3445,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     )
     (setl (. ReturnValue 'WhilePart 'Value) :value (peek tokenizer 0))
     (consume-token tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement_While at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
@@ -2890,7 +3455,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
         
     )
     (consume-token tokenizer)
-    (while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+    (while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
         (append (. ReturnValue 'Body) (Statement))
         (set (back (. ReturnValue 'Body))(ParseStatement tokenizer))
         
@@ -2911,7 +3476,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     )
     (setl (. ReturnValue 'WhilePart 'Value) :value (peek tokenizer 0))
     (consume-token tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement_While at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
@@ -2921,7 +3486,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
         
     )
     (consume-token tokenizer)
-    (while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+    (while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
         (append (. ReturnValue 'Body) (Statement))
         (set (back (. ReturnValue 'Body))(ParseStatement tokenizer))
         
@@ -2942,7 +3507,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     )
     (setl (. ReturnValue 'WhilePart 'Value) :value (peek tokenizer 0))
     (consume-token tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement_While at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
@@ -2952,7 +3517,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
         
     )
     (consume-token tokenizer)
-    (while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+    (while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
         (append (. ReturnValue 'Body) (Statement))
         (set (back (. ReturnValue 'Body))(ParseStatement tokenizer))
         
@@ -2966,7 +3531,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     
 )
 (defun FillStatement_Expr_0 (ReturnValue tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement_Expr at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
@@ -2980,7 +3545,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
 )
 (defun ParseStatement_Expr_0 (tokenizer)
     (setl ReturnValue (Statement_Expr))
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement_Expr at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
@@ -2994,7 +3559,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     
 )
 (defun FillStatement_Expr (ReturnValue tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement_Expr at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
@@ -3008,7 +3573,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
 )
 (defun ParseStatement_Expr (tokenizer)
     (setl ReturnValue (Statement_Expr))
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement_Expr at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
@@ -3029,7 +3594,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     )
     (setl (. ReturnValue 'ReturnPart 'Value) :value (peek tokenizer 0))
     (consume-token tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement_Return at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
@@ -3050,7 +3615,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     )
     (setl (. ReturnValue 'ReturnPart 'Value) :value (peek tokenizer 0))
     (consume-token tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement_Return at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
@@ -3071,7 +3636,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     )
     (setl (. ReturnValue 'ReturnPart 'Value) :value (peek tokenizer 0))
     (consume-token tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement_Return at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
@@ -3092,7 +3657,7 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     )
     (setl (. ReturnValue 'ReturnPart 'Value) :value (peek tokenizer 0))
     (consume-token tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement_Return at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
@@ -3152,11 +3717,11 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
     
 )
 (defun FillArgument (ReturnValue tokenizer)
-    (if (&& (. LOOKTable 96 0 :type (peek tokenizer 0))(. LOOKTable 96 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 113 0 :type (peek tokenizer 0))(. LOOKTable 113 1 :type (peek tokenizer 1)))
         (FillArgument_0 ReturnValue tokenizer)
         
     
-    else if (&& (. LOOKTable 97 0 :type (peek tokenizer 0))(. LOOKTable 97 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 114 0 :type (peek tokenizer 0))(. LOOKTable 114 1 :type (peek tokenizer 1)))
         (FillArgument_1 ReturnValue tokenizer)
         
     
@@ -3167,11 +3732,11 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
 )
 (defun ParseArgument (tokenizer)
     (setl ReturnValue (Argument))
-    (if (&& (. LOOKTable 96 0 :type (peek tokenizer 0))(. LOOKTable 96 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 113 0 :type (peek tokenizer 0))(. LOOKTable 113 1 :type (peek tokenizer 1)))
         (FillArgument_0 ReturnValue tokenizer)
         
     
-    else if (&& (. LOOKTable 97 0 :type (peek tokenizer 0))(. LOOKTable 97 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 114 0 :type (peek tokenizer 0))(. LOOKTable 114 1 :type (peek tokenizer 1)))
         (FillArgument_1 ReturnValue tokenizer)
         
     
@@ -3194,47 +3759,47 @@ else (error (+ "Error parsing Expr_Dict at position "  (str :position (peek toke
         
     )
     (FillIdf (. ReturnValue 'Name) tokenizer)
-    (if (not (eq :type (peek tokenizer 0) 30))
+    (if (not (eq :type (peek tokenizer 0) 33))
         (error (+ "Error parsing Statement_Func at position "  (str :position (peek tokenizer 0)) ": expected lpar"))
         
     )
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 102 0 :type (peek tokenizer 0))(. LOOKTable 102 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 103 0 :type (peek tokenizer 0))(. LOOKTable 103 1 :type (peek tokenizer 1)))
-            (if (not (&& (. LOOKTable 95 0 :type (peek tokenizer 0))(. LOOKTable 95 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L18 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
+    (if (&& (. LOOKTable 119 0 :type (peek tokenizer 0))(. LOOKTable 119 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 120 0 :type (peek tokenizer 0))(. LOOKTable 120 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 112 0 :type (peek tokenizer 0))(. LOOKTable 112 1 :type (peek tokenizer 1))))
+                (error (+ "Error parsing _L21 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
                 
             )
             (append (. ReturnValue 'Args) (Argument))
             (FillArgument (back (. ReturnValue 'Args)) tokenizer)
-            (while (&& (. LOOKTable 100 0 :type (peek tokenizer 0))(. LOOKTable 100 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 101 0 :type (peek tokenizer 0))(. LOOKTable 101 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
-                        (error (+ "Error parsing _L19 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
+            (while (&& (. LOOKTable 117 0 :type (peek tokenizer 0))(. LOOKTable 117 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 118 0 :type (peek tokenizer 0))(. LOOKTable 118 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
+                        (error (+ "Error parsing _L22 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
-                    (if (not (&& (. LOOKTable 95 0 :type (peek tokenizer 0))(. LOOKTable 95 1 :type (peek tokenizer 1))))
-                        (error (+ "Error parsing _L19 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
+                    (if (not (&& (. LOOKTable 112 0 :type (peek tokenizer 0))(. LOOKTable 112 1 :type (peek tokenizer 1))))
+                        (error (+ "Error parsing _L22 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
                         
                     )
                     (append (. ReturnValue 'Args) (Argument))
                     (FillArgument (back (. ReturnValue 'Args)) tokenizer)
                     
                 
-                else (error (+ "Error parsing _L18 at position "  (str :position (peek tokenizer 0)) ": expected _L19"))
+                else (error (+ "Error parsing _L21 at position "  (str :position (peek tokenizer 0)) ": expected _L22"))
                 
             
             )
     )
     
 
-else (error (+ "Error parsing Statement_Func at position "  (str :position (peek tokenizer 0)) ": expected _L18"))
+else (error (+ "Error parsing Statement_Func at position "  (str :position (peek tokenizer 0)) ": expected _L21"))
 
 
 )
 )
-(if (not (eq :type (peek tokenizer 0) 31))
+(if (not (eq :type (peek tokenizer 0) 34))
     (error (+ "Error parsing Statement_Func at position "  (str :position (peek tokenizer 0)) ": expected rpar"))
     
 )
@@ -3244,7 +3809,7 @@ else (error (+ "Error parsing Statement_Func at position "  (str :position (peek
     
 )
 (consume-token tokenizer)
-(while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+(while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
     (append (. ReturnValue 'Content) (Statement))
     (set (back (. ReturnValue 'Content))(ParseStatement tokenizer))
     
@@ -3270,47 +3835,47 @@ else (error (+ "Error parsing Statement_Func at position "  (str :position (peek
         
     )
     (FillIdf (. ReturnValue 'Name) tokenizer)
-    (if (not (eq :type (peek tokenizer 0) 30))
+    (if (not (eq :type (peek tokenizer 0) 33))
         (error (+ "Error parsing Statement_Func at position "  (str :position (peek tokenizer 0)) ": expected lpar"))
         
     )
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 102 0 :type (peek tokenizer 0))(. LOOKTable 102 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 103 0 :type (peek tokenizer 0))(. LOOKTable 103 1 :type (peek tokenizer 1)))
-            (if (not (&& (. LOOKTable 95 0 :type (peek tokenizer 0))(. LOOKTable 95 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L18 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
+    (if (&& (. LOOKTable 119 0 :type (peek tokenizer 0))(. LOOKTable 119 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 120 0 :type (peek tokenizer 0))(. LOOKTable 120 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 112 0 :type (peek tokenizer 0))(. LOOKTable 112 1 :type (peek tokenizer 1))))
+                (error (+ "Error parsing _L21 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
                 
             )
             (append (. ReturnValue 'Args) (Argument))
             (FillArgument (back (. ReturnValue 'Args)) tokenizer)
-            (while (&& (. LOOKTable 100 0 :type (peek tokenizer 0))(. LOOKTable 100 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 101 0 :type (peek tokenizer 0))(. LOOKTable 101 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
-                        (error (+ "Error parsing _L19 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
+            (while (&& (. LOOKTable 117 0 :type (peek tokenizer 0))(. LOOKTable 117 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 118 0 :type (peek tokenizer 0))(. LOOKTable 118 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
+                        (error (+ "Error parsing _L22 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
-                    (if (not (&& (. LOOKTable 95 0 :type (peek tokenizer 0))(. LOOKTable 95 1 :type (peek tokenizer 1))))
-                        (error (+ "Error parsing _L19 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
+                    (if (not (&& (. LOOKTable 112 0 :type (peek tokenizer 0))(. LOOKTable 112 1 :type (peek tokenizer 1))))
+                        (error (+ "Error parsing _L22 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
                         
                     )
                     (append (. ReturnValue 'Args) (Argument))
                     (FillArgument (back (. ReturnValue 'Args)) tokenizer)
                     
                 
-                else (error (+ "Error parsing _L18 at position "  (str :position (peek tokenizer 0)) ": expected _L19"))
+                else (error (+ "Error parsing _L21 at position "  (str :position (peek tokenizer 0)) ": expected _L22"))
                 
             
             )
     )
     
 
-else (error (+ "Error parsing Statement_Func at position "  (str :position (peek tokenizer 0)) ": expected _L18"))
+else (error (+ "Error parsing Statement_Func at position "  (str :position (peek tokenizer 0)) ": expected _L21"))
 
 
 )
 )
-(if (not (eq :type (peek tokenizer 0) 31))
+(if (not (eq :type (peek tokenizer 0) 34))
     (error (+ "Error parsing Statement_Func at position "  (str :position (peek tokenizer 0)) ": expected rpar"))
     
 )
@@ -3320,7 +3885,7 @@ else (error (+ "Error parsing Statement_Func at position "  (str :position (peek
     
 )
 (consume-token tokenizer)
-(while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+(while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
     (append (. ReturnValue 'Content) (Statement))
     (set (back (. ReturnValue 'Content))(ParseStatement tokenizer))
     
@@ -3346,47 +3911,47 @@ else (error (+ "Error parsing Statement_Func at position "  (str :position (peek
         
     )
     (FillIdf (. ReturnValue 'Name) tokenizer)
-    (if (not (eq :type (peek tokenizer 0) 30))
+    (if (not (eq :type (peek tokenizer 0) 33))
         (error (+ "Error parsing Statement_Func at position "  (str :position (peek tokenizer 0)) ": expected lpar"))
         
     )
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 102 0 :type (peek tokenizer 0))(. LOOKTable 102 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 103 0 :type (peek tokenizer 0))(. LOOKTable 103 1 :type (peek tokenizer 1)))
-            (if (not (&& (. LOOKTable 95 0 :type (peek tokenizer 0))(. LOOKTable 95 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L18 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
+    (if (&& (. LOOKTable 119 0 :type (peek tokenizer 0))(. LOOKTable 119 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 120 0 :type (peek tokenizer 0))(. LOOKTable 120 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 112 0 :type (peek tokenizer 0))(. LOOKTable 112 1 :type (peek tokenizer 1))))
+                (error (+ "Error parsing _L21 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
                 
             )
             (append (. ReturnValue 'Args) (Argument))
             (FillArgument (back (. ReturnValue 'Args)) tokenizer)
-            (while (&& (. LOOKTable 100 0 :type (peek tokenizer 0))(. LOOKTable 100 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 101 0 :type (peek tokenizer 0))(. LOOKTable 101 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
-                        (error (+ "Error parsing _L19 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
+            (while (&& (. LOOKTable 117 0 :type (peek tokenizer 0))(. LOOKTable 117 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 118 0 :type (peek tokenizer 0))(. LOOKTable 118 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
+                        (error (+ "Error parsing _L22 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
-                    (if (not (&& (. LOOKTable 95 0 :type (peek tokenizer 0))(. LOOKTable 95 1 :type (peek tokenizer 1))))
-                        (error (+ "Error parsing _L19 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
+                    (if (not (&& (. LOOKTable 112 0 :type (peek tokenizer 0))(. LOOKTable 112 1 :type (peek tokenizer 1))))
+                        (error (+ "Error parsing _L22 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
                         
                     )
                     (append (. ReturnValue 'Args) (Argument))
                     (FillArgument (back (. ReturnValue 'Args)) tokenizer)
                     
                 
-                else (error (+ "Error parsing _L18 at position "  (str :position (peek tokenizer 0)) ": expected _L19"))
+                else (error (+ "Error parsing _L21 at position "  (str :position (peek tokenizer 0)) ": expected _L22"))
                 
             
             )
     )
     
 
-else (error (+ "Error parsing Statement_Func at position "  (str :position (peek tokenizer 0)) ": expected _L18"))
+else (error (+ "Error parsing Statement_Func at position "  (str :position (peek tokenizer 0)) ": expected _L21"))
 
 
 )
 )
-(if (not (eq :type (peek tokenizer 0) 31))
+(if (not (eq :type (peek tokenizer 0) 34))
     (error (+ "Error parsing Statement_Func at position "  (str :position (peek tokenizer 0)) ": expected rpar"))
     
 )
@@ -3396,7 +3961,7 @@ else (error (+ "Error parsing Statement_Func at position "  (str :position (peek
     
 )
 (consume-token tokenizer)
-(while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+(while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
     (append (. ReturnValue 'Content) (Statement))
     (set (back (. ReturnValue 'Content))(ParseStatement tokenizer))
     
@@ -3422,47 +3987,47 @@ else (error (+ "Error parsing Statement_Func at position "  (str :position (peek
         
     )
     (FillIdf (. ReturnValue 'Name) tokenizer)
-    (if (not (eq :type (peek tokenizer 0) 30))
+    (if (not (eq :type (peek tokenizer 0) 33))
         (error (+ "Error parsing Statement_Func at position "  (str :position (peek tokenizer 0)) ": expected lpar"))
         
     )
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 102 0 :type (peek tokenizer 0))(. LOOKTable 102 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 103 0 :type (peek tokenizer 0))(. LOOKTable 103 1 :type (peek tokenizer 1)))
-            (if (not (&& (. LOOKTable 95 0 :type (peek tokenizer 0))(. LOOKTable 95 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L18 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
+    (if (&& (. LOOKTable 119 0 :type (peek tokenizer 0))(. LOOKTable 119 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 120 0 :type (peek tokenizer 0))(. LOOKTable 120 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 112 0 :type (peek tokenizer 0))(. LOOKTable 112 1 :type (peek tokenizer 1))))
+                (error (+ "Error parsing _L21 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
                 
             )
             (append (. ReturnValue 'Args) (Argument))
             (FillArgument (back (. ReturnValue 'Args)) tokenizer)
-            (while (&& (. LOOKTable 100 0 :type (peek tokenizer 0))(. LOOKTable 100 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 101 0 :type (peek tokenizer 0))(. LOOKTable 101 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
-                        (error (+ "Error parsing _L19 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
+            (while (&& (. LOOKTable 117 0 :type (peek tokenizer 0))(. LOOKTable 117 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 118 0 :type (peek tokenizer 0))(. LOOKTable 118 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
+                        (error (+ "Error parsing _L22 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
-                    (if (not (&& (. LOOKTable 95 0 :type (peek tokenizer 0))(. LOOKTable 95 1 :type (peek tokenizer 1))))
-                        (error (+ "Error parsing _L19 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
+                    (if (not (&& (. LOOKTable 112 0 :type (peek tokenizer 0))(. LOOKTable 112 1 :type (peek tokenizer 1))))
+                        (error (+ "Error parsing _L22 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
                         
                     )
                     (append (. ReturnValue 'Args) (Argument))
                     (FillArgument (back (. ReturnValue 'Args)) tokenizer)
                     
                 
-                else (error (+ "Error parsing _L18 at position "  (str :position (peek tokenizer 0)) ": expected _L19"))
+                else (error (+ "Error parsing _L21 at position "  (str :position (peek tokenizer 0)) ": expected _L22"))
                 
             
             )
     )
     
 
-else (error (+ "Error parsing Statement_Func at position "  (str :position (peek tokenizer 0)) ": expected _L18"))
+else (error (+ "Error parsing Statement_Func at position "  (str :position (peek tokenizer 0)) ": expected _L21"))
 
 
 )
 )
-(if (not (eq :type (peek tokenizer 0) 31))
+(if (not (eq :type (peek tokenizer 0) 34))
     (error (+ "Error parsing Statement_Func at position "  (str :position (peek tokenizer 0)) ": expected rpar"))
     
 )
@@ -3472,7 +4037,7 @@ else (error (+ "Error parsing Statement_Func at position "  (str :position (peek
     
 )
 (consume-token tokenizer)
-(while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+(while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
     (append (. ReturnValue 'Content) (Statement))
     (set (back (. ReturnValue 'Content))(ParseStatement tokenizer))
     
@@ -3498,42 +4063,42 @@ else (error (+ "Error parsing Statement_Func at position "  (str :position (peek
         
     )
     (FillIdf (. ReturnValue 'Name) tokenizer)
-    (if (&& (. LOOKTable 108 0 :type (peek tokenizer 0))(. LOOKTable 108 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 109 0 :type (peek tokenizer 0))(. LOOKTable 109 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 125 0 :type (peek tokenizer 0))(. LOOKTable 125 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 126 0 :type (peek tokenizer 0))(. LOOKTable 126 1 :type (peek tokenizer 1)))
             (if (not (eq :type (peek tokenizer 0) 5))
-                (error (+ "Error parsing _L20 at position "  (str :position (peek tokenizer 0)) ": expected colon"))
+                (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected colon"))
                 
             )
             (consume-token tokenizer)
             (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L20 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+                (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
                 
             )
             (append (. ReturnValue 'Parents) (Idf))
             (FillIdf (back (. ReturnValue 'Parents)) tokenizer)
-            (while (&& (. LOOKTable 106 0 :type (peek tokenizer 0))(. LOOKTable 106 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 107 0 :type (peek tokenizer 0))(. LOOKTable 107 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
-                        (error (+ "Error parsing _L21 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
+            (while (&& (. LOOKTable 123 0 :type (peek tokenizer 0))(. LOOKTable 123 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 124 0 :type (peek tokenizer 0))(. LOOKTable 124 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
+                        (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
                     (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
-                        (error (+ "Error parsing _L21 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+                        (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
                         
                     )
                     (append (. ReturnValue 'Parents) (Idf))
                     (FillIdf (back (. ReturnValue 'Parents)) tokenizer)
                     
                 
-                else (error (+ "Error parsing _L20 at position "  (str :position (peek tokenizer 0)) ": expected _L21"))
+                else (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected _L24"))
                 
             
             )
     )
     
 
-else (error (+ "Error parsing Statement_Class at position "  (str :position (peek tokenizer 0)) ": expected _L20"))
+else (error (+ "Error parsing Statement_Class at position "  (str :position (peek tokenizer 0)) ": expected _L23"))
 
 
 )
@@ -3543,26 +4108,26 @@ else (error (+ "Error parsing Statement_Class at position "  (str :position (pee
     
 )
 (consume-token tokenizer)
-(while (&& (. LOOKTable 118 0 :type (peek tokenizer 0))(. LOOKTable 118 1 :type (peek tokenizer 1)))
-    (if (&& (. LOOKTable 119 0 :type (peek tokenizer 0))(. LOOKTable 119 1 :type (peek tokenizer 1)))
-        (if (not (&& (. LOOKTable 110 0 :type (peek tokenizer 0))(. LOOKTable 110 1 :type (peek tokenizer 1))))
-            (error (+ "Error parsing _L22 at position "  (str :position (peek tokenizer 0)) ": expected _L23"))
+(while (&& (. LOOKTable 135 0 :type (peek tokenizer 0))(. LOOKTable 135 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 136 0 :type (peek tokenizer 0))(. LOOKTable 136 1 :type (peek tokenizer 1)))
+        (if (not (&& (. LOOKTable 127 0 :type (peek tokenizer 0))(. LOOKTable 127 1 :type (peek tokenizer 1))))
+            (error (+ "Error parsing _L25 at position "  (str :position (peek tokenizer 0)) ": expected _L26"))
             
         )
         (append (. ReturnValue 'Variables) (MemberVariable))
-        (Fill_L23 (back (. ReturnValue 'Variables)) tokenizer)
+        (Fill_L26 (back (. ReturnValue 'Variables)) tokenizer)
         
     
-    else if (&& (. LOOKTable 120 0 :type (peek tokenizer 0))(. LOOKTable 120 1 :type (peek tokenizer 1)))
-        (if (not (&& (. LOOKTable 116 0 :type (peek tokenizer 0))(. LOOKTable 116 1 :type (peek tokenizer 1))))
-            (error (+ "Error parsing _L22 at position "  (str :position (peek tokenizer 0)) ": expected _L24"))
+    else if (&& (. LOOKTable 137 0 :type (peek tokenizer 0))(. LOOKTable 137 1 :type (peek tokenizer 1)))
+        (if (not (&& (. LOOKTable 133 0 :type (peek tokenizer 0))(. LOOKTable 133 1 :type (peek tokenizer 1))))
+            (error (+ "Error parsing _L25 at position "  (str :position (peek tokenizer 0)) ": expected _L27"))
             
         )
         (append (. ReturnValue 'Methods) (MemberFunc))
-        (Fill_L24 (back (. ReturnValue 'Methods)) tokenizer)
+        (Fill_L27 (back (. ReturnValue 'Methods)) tokenizer)
         
     
-    else (error (+ "Error parsing Statement_Class at position "  (str :position (peek tokenizer 0)) ": expected _L22"))
+    else (error (+ "Error parsing Statement_Class at position "  (str :position (peek tokenizer 0)) ": expected _L25"))
     
 
 )
@@ -3588,42 +4153,42 @@ else (error (+ "Error parsing Statement_Class at position "  (str :position (pee
         
     )
     (FillIdf (. ReturnValue 'Name) tokenizer)
-    (if (&& (. LOOKTable 108 0 :type (peek tokenizer 0))(. LOOKTable 108 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 109 0 :type (peek tokenizer 0))(. LOOKTable 109 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 125 0 :type (peek tokenizer 0))(. LOOKTable 125 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 126 0 :type (peek tokenizer 0))(. LOOKTable 126 1 :type (peek tokenizer 1)))
             (if (not (eq :type (peek tokenizer 0) 5))
-                (error (+ "Error parsing _L20 at position "  (str :position (peek tokenizer 0)) ": expected colon"))
+                (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected colon"))
                 
             )
             (consume-token tokenizer)
             (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L20 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+                (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
                 
             )
             (append (. ReturnValue 'Parents) (Idf))
             (FillIdf (back (. ReturnValue 'Parents)) tokenizer)
-            (while (&& (. LOOKTable 106 0 :type (peek tokenizer 0))(. LOOKTable 106 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 107 0 :type (peek tokenizer 0))(. LOOKTable 107 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
-                        (error (+ "Error parsing _L21 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
+            (while (&& (. LOOKTable 123 0 :type (peek tokenizer 0))(. LOOKTable 123 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 124 0 :type (peek tokenizer 0))(. LOOKTable 124 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
+                        (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
                     (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
-                        (error (+ "Error parsing _L21 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+                        (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
                         
                     )
                     (append (. ReturnValue 'Parents) (Idf))
                     (FillIdf (back (. ReturnValue 'Parents)) tokenizer)
                     
                 
-                else (error (+ "Error parsing _L20 at position "  (str :position (peek tokenizer 0)) ": expected _L21"))
+                else (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected _L24"))
                 
             
             )
     )
     
 
-else (error (+ "Error parsing Statement_Class at position "  (str :position (peek tokenizer 0)) ": expected _L20"))
+else (error (+ "Error parsing Statement_Class at position "  (str :position (peek tokenizer 0)) ": expected _L23"))
 
 
 )
@@ -3633,26 +4198,26 @@ else (error (+ "Error parsing Statement_Class at position "  (str :position (pee
     
 )
 (consume-token tokenizer)
-(while (&& (. LOOKTable 118 0 :type (peek tokenizer 0))(. LOOKTable 118 1 :type (peek tokenizer 1)))
-    (if (&& (. LOOKTable 119 0 :type (peek tokenizer 0))(. LOOKTable 119 1 :type (peek tokenizer 1)))
-        (if (not (&& (. LOOKTable 110 0 :type (peek tokenizer 0))(. LOOKTable 110 1 :type (peek tokenizer 1))))
-            (error (+ "Error parsing _L22 at position "  (str :position (peek tokenizer 0)) ": expected _L23"))
+(while (&& (. LOOKTable 135 0 :type (peek tokenizer 0))(. LOOKTable 135 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 136 0 :type (peek tokenizer 0))(. LOOKTable 136 1 :type (peek tokenizer 1)))
+        (if (not (&& (. LOOKTable 127 0 :type (peek tokenizer 0))(. LOOKTable 127 1 :type (peek tokenizer 1))))
+            (error (+ "Error parsing _L25 at position "  (str :position (peek tokenizer 0)) ": expected _L26"))
             
         )
         (append (. ReturnValue 'Variables) (MemberVariable))
-        (Fill_L23 (back (. ReturnValue 'Variables)) tokenizer)
+        (Fill_L26 (back (. ReturnValue 'Variables)) tokenizer)
         
     
-    else if (&& (. LOOKTable 120 0 :type (peek tokenizer 0))(. LOOKTable 120 1 :type (peek tokenizer 1)))
-        (if (not (&& (. LOOKTable 116 0 :type (peek tokenizer 0))(. LOOKTable 116 1 :type (peek tokenizer 1))))
-            (error (+ "Error parsing _L22 at position "  (str :position (peek tokenizer 0)) ": expected _L24"))
+    else if (&& (. LOOKTable 137 0 :type (peek tokenizer 0))(. LOOKTable 137 1 :type (peek tokenizer 1)))
+        (if (not (&& (. LOOKTable 133 0 :type (peek tokenizer 0))(. LOOKTable 133 1 :type (peek tokenizer 1))))
+            (error (+ "Error parsing _L25 at position "  (str :position (peek tokenizer 0)) ": expected _L27"))
             
         )
         (append (. ReturnValue 'Methods) (MemberFunc))
-        (Fill_L24 (back (. ReturnValue 'Methods)) tokenizer)
+        (Fill_L27 (back (. ReturnValue 'Methods)) tokenizer)
         
     
-    else (error (+ "Error parsing Statement_Class at position "  (str :position (peek tokenizer 0)) ": expected _L22"))
+    else (error (+ "Error parsing Statement_Class at position "  (str :position (peek tokenizer 0)) ": expected _L25"))
     
 
 )
@@ -3678,42 +4243,42 @@ else (error (+ "Error parsing Statement_Class at position "  (str :position (pee
         
     )
     (FillIdf (. ReturnValue 'Name) tokenizer)
-    (if (&& (. LOOKTable 108 0 :type (peek tokenizer 0))(. LOOKTable 108 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 109 0 :type (peek tokenizer 0))(. LOOKTable 109 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 125 0 :type (peek tokenizer 0))(. LOOKTable 125 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 126 0 :type (peek tokenizer 0))(. LOOKTable 126 1 :type (peek tokenizer 1)))
             (if (not (eq :type (peek tokenizer 0) 5))
-                (error (+ "Error parsing _L20 at position "  (str :position (peek tokenizer 0)) ": expected colon"))
+                (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected colon"))
                 
             )
             (consume-token tokenizer)
             (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L20 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+                (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
                 
             )
             (append (. ReturnValue 'Parents) (Idf))
             (FillIdf (back (. ReturnValue 'Parents)) tokenizer)
-            (while (&& (. LOOKTable 106 0 :type (peek tokenizer 0))(. LOOKTable 106 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 107 0 :type (peek tokenizer 0))(. LOOKTable 107 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
-                        (error (+ "Error parsing _L21 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
+            (while (&& (. LOOKTable 123 0 :type (peek tokenizer 0))(. LOOKTable 123 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 124 0 :type (peek tokenizer 0))(. LOOKTable 124 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
+                        (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
                     (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
-                        (error (+ "Error parsing _L21 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+                        (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
                         
                     )
                     (append (. ReturnValue 'Parents) (Idf))
                     (FillIdf (back (. ReturnValue 'Parents)) tokenizer)
                     
                 
-                else (error (+ "Error parsing _L20 at position "  (str :position (peek tokenizer 0)) ": expected _L21"))
+                else (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected _L24"))
                 
             
             )
     )
     
 
-else (error (+ "Error parsing Statement_Class at position "  (str :position (peek tokenizer 0)) ": expected _L20"))
+else (error (+ "Error parsing Statement_Class at position "  (str :position (peek tokenizer 0)) ": expected _L23"))
 
 
 )
@@ -3723,26 +4288,26 @@ else (error (+ "Error parsing Statement_Class at position "  (str :position (pee
     
 )
 (consume-token tokenizer)
-(while (&& (. LOOKTable 118 0 :type (peek tokenizer 0))(. LOOKTable 118 1 :type (peek tokenizer 1)))
-    (if (&& (. LOOKTable 119 0 :type (peek tokenizer 0))(. LOOKTable 119 1 :type (peek tokenizer 1)))
-        (if (not (&& (. LOOKTable 110 0 :type (peek tokenizer 0))(. LOOKTable 110 1 :type (peek tokenizer 1))))
-            (error (+ "Error parsing _L22 at position "  (str :position (peek tokenizer 0)) ": expected _L23"))
+(while (&& (. LOOKTable 135 0 :type (peek tokenizer 0))(. LOOKTable 135 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 136 0 :type (peek tokenizer 0))(. LOOKTable 136 1 :type (peek tokenizer 1)))
+        (if (not (&& (. LOOKTable 127 0 :type (peek tokenizer 0))(. LOOKTable 127 1 :type (peek tokenizer 1))))
+            (error (+ "Error parsing _L25 at position "  (str :position (peek tokenizer 0)) ": expected _L26"))
             
         )
         (append (. ReturnValue 'Variables) (MemberVariable))
-        (Fill_L23 (back (. ReturnValue 'Variables)) tokenizer)
+        (Fill_L26 (back (. ReturnValue 'Variables)) tokenizer)
         
     
-    else if (&& (. LOOKTable 120 0 :type (peek tokenizer 0))(. LOOKTable 120 1 :type (peek tokenizer 1)))
-        (if (not (&& (. LOOKTable 116 0 :type (peek tokenizer 0))(. LOOKTable 116 1 :type (peek tokenizer 1))))
-            (error (+ "Error parsing _L22 at position "  (str :position (peek tokenizer 0)) ": expected _L24"))
+    else if (&& (. LOOKTable 137 0 :type (peek tokenizer 0))(. LOOKTable 137 1 :type (peek tokenizer 1)))
+        (if (not (&& (. LOOKTable 133 0 :type (peek tokenizer 0))(. LOOKTable 133 1 :type (peek tokenizer 1))))
+            (error (+ "Error parsing _L25 at position "  (str :position (peek tokenizer 0)) ": expected _L27"))
             
         )
         (append (. ReturnValue 'Methods) (MemberFunc))
-        (Fill_L24 (back (. ReturnValue 'Methods)) tokenizer)
+        (Fill_L27 (back (. ReturnValue 'Methods)) tokenizer)
         
     
-    else (error (+ "Error parsing Statement_Class at position "  (str :position (peek tokenizer 0)) ": expected _L22"))
+    else (error (+ "Error parsing Statement_Class at position "  (str :position (peek tokenizer 0)) ": expected _L25"))
     
 
 )
@@ -3768,42 +4333,42 @@ else (error (+ "Error parsing Statement_Class at position "  (str :position (pee
         
     )
     (FillIdf (. ReturnValue 'Name) tokenizer)
-    (if (&& (. LOOKTable 108 0 :type (peek tokenizer 0))(. LOOKTable 108 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 109 0 :type (peek tokenizer 0))(. LOOKTable 109 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 125 0 :type (peek tokenizer 0))(. LOOKTable 125 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 126 0 :type (peek tokenizer 0))(. LOOKTable 126 1 :type (peek tokenizer 1)))
             (if (not (eq :type (peek tokenizer 0) 5))
-                (error (+ "Error parsing _L20 at position "  (str :position (peek tokenizer 0)) ": expected colon"))
+                (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected colon"))
                 
             )
             (consume-token tokenizer)
             (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L20 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+                (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
                 
             )
             (append (. ReturnValue 'Parents) (Idf))
             (FillIdf (back (. ReturnValue 'Parents)) tokenizer)
-            (while (&& (. LOOKTable 106 0 :type (peek tokenizer 0))(. LOOKTable 106 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 107 0 :type (peek tokenizer 0))(. LOOKTable 107 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
-                        (error (+ "Error parsing _L21 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
+            (while (&& (. LOOKTable 123 0 :type (peek tokenizer 0))(. LOOKTable 123 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 124 0 :type (peek tokenizer 0))(. LOOKTable 124 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
+                        (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
                     (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
-                        (error (+ "Error parsing _L21 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+                        (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
                         
                     )
                     (append (. ReturnValue 'Parents) (Idf))
                     (FillIdf (back (. ReturnValue 'Parents)) tokenizer)
                     
                 
-                else (error (+ "Error parsing _L20 at position "  (str :position (peek tokenizer 0)) ": expected _L21"))
+                else (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected _L24"))
                 
             
             )
     )
     
 
-else (error (+ "Error parsing Statement_Class at position "  (str :position (peek tokenizer 0)) ": expected _L20"))
+else (error (+ "Error parsing Statement_Class at position "  (str :position (peek tokenizer 0)) ": expected _L23"))
 
 
 )
@@ -3813,26 +4378,26 @@ else (error (+ "Error parsing Statement_Class at position "  (str :position (pee
     
 )
 (consume-token tokenizer)
-(while (&& (. LOOKTable 118 0 :type (peek tokenizer 0))(. LOOKTable 118 1 :type (peek tokenizer 1)))
-    (if (&& (. LOOKTable 119 0 :type (peek tokenizer 0))(. LOOKTable 119 1 :type (peek tokenizer 1)))
-        (if (not (&& (. LOOKTable 110 0 :type (peek tokenizer 0))(. LOOKTable 110 1 :type (peek tokenizer 1))))
-            (error (+ "Error parsing _L22 at position "  (str :position (peek tokenizer 0)) ": expected _L23"))
+(while (&& (. LOOKTable 135 0 :type (peek tokenizer 0))(. LOOKTable 135 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 136 0 :type (peek tokenizer 0))(. LOOKTable 136 1 :type (peek tokenizer 1)))
+        (if (not (&& (. LOOKTable 127 0 :type (peek tokenizer 0))(. LOOKTable 127 1 :type (peek tokenizer 1))))
+            (error (+ "Error parsing _L25 at position "  (str :position (peek tokenizer 0)) ": expected _L26"))
             
         )
         (append (. ReturnValue 'Variables) (MemberVariable))
-        (Fill_L23 (back (. ReturnValue 'Variables)) tokenizer)
+        (Fill_L26 (back (. ReturnValue 'Variables)) tokenizer)
         
     
-    else if (&& (. LOOKTable 120 0 :type (peek tokenizer 0))(. LOOKTable 120 1 :type (peek tokenizer 1)))
-        (if (not (&& (. LOOKTable 116 0 :type (peek tokenizer 0))(. LOOKTable 116 1 :type (peek tokenizer 1))))
-            (error (+ "Error parsing _L22 at position "  (str :position (peek tokenizer 0)) ": expected _L24"))
+    else if (&& (. LOOKTable 137 0 :type (peek tokenizer 0))(. LOOKTable 137 1 :type (peek tokenizer 1)))
+        (if (not (&& (. LOOKTable 133 0 :type (peek tokenizer 0))(. LOOKTable 133 1 :type (peek tokenizer 1))))
+            (error (+ "Error parsing _L25 at position "  (str :position (peek tokenizer 0)) ": expected _L27"))
             
         )
         (append (. ReturnValue 'Methods) (MemberFunc))
-        (Fill_L24 (back (. ReturnValue 'Methods)) tokenizer)
+        (Fill_L27 (back (. ReturnValue 'Methods)) tokenizer)
         
     
-    else (error (+ "Error parsing Statement_Class at position "  (str :position (peek tokenizer 0)) ": expected _L22"))
+    else (error (+ "Error parsing Statement_Class at position "  (str :position (peek tokenizer 0)) ": expected _L25"))
     
 
 )
@@ -3845,372 +4410,372 @@ else (error (+ "Error parsing Statement_Class at position "  (str :position (pee
 (return ReturnValue)
 
 )
-(defun Fill_L23_0 (ReturnValue tokenizer)
+(defun Fill_L26_0 (ReturnValue tokenizer)
     (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
-        (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+        (error (+ "Error parsing _L26 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
         
     )
     (FillIdf (. ReturnValue 'Name) tokenizer)
-    (if (not (eq :type (peek tokenizer 0) 29))
-        (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected eq"))
+    (if (not (eq :type (peek tokenizer 0) 32))
+        (error (+ "Error parsing _L26 at position "  (str :position (peek tokenizer 0)) ": expected eq"))
         
     )
     (consume-token tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
-        (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
+        (error (+ "Error parsing _L26 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
     (set (. ReturnValue 'Value)(ParseExpr tokenizer))
     (if (not (eq :type (peek tokenizer 0) 15))
-        (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected semi"))
+        (error (+ "Error parsing _L26 at position "  (str :position (peek tokenizer 0)) ": expected semi"))
         
     )
     (consume-token tokenizer)
     
 )
-(defun Parse_L23_0 (tokenizer)
+(defun Parse_L26_0 (tokenizer)
     (setl ReturnValue (MemberVariable))
     (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
-        (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+        (error (+ "Error parsing _L26 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
         
     )
     (FillIdf (. ReturnValue 'Name) tokenizer)
-    (if (not (eq :type (peek tokenizer 0) 29))
-        (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected eq"))
+    (if (not (eq :type (peek tokenizer 0) 32))
+        (error (+ "Error parsing _L26 at position "  (str :position (peek tokenizer 0)) ": expected eq"))
         
     )
     (consume-token tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
-        (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
+        (error (+ "Error parsing _L26 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
     (set (. ReturnValue 'Value)(ParseExpr tokenizer))
     (if (not (eq :type (peek tokenizer 0) 15))
-        (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected semi"))
+        (error (+ "Error parsing _L26 at position "  (str :position (peek tokenizer 0)) ": expected semi"))
         
     )
     (consume-token tokenizer)
     (return ReturnValue)
     
 )
-(defun Fill_L23 (ReturnValue tokenizer)
+(defun Fill_L26 (ReturnValue tokenizer)
     (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
-        (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+        (error (+ "Error parsing _L26 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
         
     )
     (FillIdf (. ReturnValue 'Name) tokenizer)
-    (if (not (eq :type (peek tokenizer 0) 29))
-        (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected eq"))
+    (if (not (eq :type (peek tokenizer 0) 32))
+        (error (+ "Error parsing _L26 at position "  (str :position (peek tokenizer 0)) ": expected eq"))
         
     )
     (consume-token tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
-        (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
+        (error (+ "Error parsing _L26 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
     (set (. ReturnValue 'Value)(ParseExpr tokenizer))
     (if (not (eq :type (peek tokenizer 0) 15))
-        (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected semi"))
+        (error (+ "Error parsing _L26 at position "  (str :position (peek tokenizer 0)) ": expected semi"))
         
     )
     (consume-token tokenizer)
     
 )
-(defun Parse_L23 (tokenizer)
+(defun Parse_L26 (tokenizer)
     (setl ReturnValue (MemberVariable))
     (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
-        (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+        (error (+ "Error parsing _L26 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
         
     )
     (FillIdf (. ReturnValue 'Name) tokenizer)
-    (if (not (eq :type (peek tokenizer 0) 29))
-        (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected eq"))
+    (if (not (eq :type (peek tokenizer 0) 32))
+        (error (+ "Error parsing _L26 at position "  (str :position (peek tokenizer 0)) ": expected eq"))
         
     )
     (consume-token tokenizer)
-    (if (not (&& (. LOOKTable 73 0 :type (peek tokenizer 0))(. LOOKTable 73 1 :type (peek tokenizer 1))))
-        (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
+    (if (not (&& (. LOOKTable 90 0 :type (peek tokenizer 0))(. LOOKTable 90 1 :type (peek tokenizer 1))))
+        (error (+ "Error parsing _L26 at position "  (str :position (peek tokenizer 0)) ": expected Expr"))
         
     )
     (set (. ReturnValue 'Value)(ParseExpr tokenizer))
     (if (not (eq :type (peek tokenizer 0) 15))
-        (error (+ "Error parsing _L23 at position "  (str :position (peek tokenizer 0)) ": expected semi"))
+        (error (+ "Error parsing _L26 at position "  (str :position (peek tokenizer 0)) ": expected semi"))
         
     )
     (consume-token tokenizer)
     (return ReturnValue)
     
 )
-(defun Fill_L24_0 (ReturnValue tokenizer)
+(defun Fill_L27_0 (ReturnValue tokenizer)
     (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
-        (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+        (error (+ "Error parsing _L27 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
         
     )
     (FillIdf (. ReturnValue 'Name) tokenizer)
-    (if (not (eq :type (peek tokenizer 0) 30))
-        (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected lpar"))
+    (if (not (eq :type (peek tokenizer 0) 33))
+        (error (+ "Error parsing _L27 at position "  (str :position (peek tokenizer 0)) ": expected lpar"))
         
     )
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 114 0 :type (peek tokenizer 0))(. LOOKTable 114 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 115 0 :type (peek tokenizer 0))(. LOOKTable 115 1 :type (peek tokenizer 1)))
-            (if (not (&& (. LOOKTable 95 0 :type (peek tokenizer 0))(. LOOKTable 95 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L25 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
+    (if (&& (. LOOKTable 131 0 :type (peek tokenizer 0))(. LOOKTable 131 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 132 0 :type (peek tokenizer 0))(. LOOKTable 132 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 112 0 :type (peek tokenizer 0))(. LOOKTable 112 1 :type (peek tokenizer 1))))
+                (error (+ "Error parsing _L28 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
                 
             )
             (append (. ReturnValue 'Args) (Argument))
             (FillArgument (back (. ReturnValue 'Args)) tokenizer)
-            (while (&& (. LOOKTable 112 0 :type (peek tokenizer 0))(. LOOKTable 112 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 113 0 :type (peek tokenizer 0))(. LOOKTable 113 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
-                        (error (+ "Error parsing _L26 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
+            (while (&& (. LOOKTable 129 0 :type (peek tokenizer 0))(. LOOKTable 129 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 130 0 :type (peek tokenizer 0))(. LOOKTable 130 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
+                        (error (+ "Error parsing _L29 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
-                    (if (not (&& (. LOOKTable 95 0 :type (peek tokenizer 0))(. LOOKTable 95 1 :type (peek tokenizer 1))))
-                        (error (+ "Error parsing _L26 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
+                    (if (not (&& (. LOOKTable 112 0 :type (peek tokenizer 0))(. LOOKTable 112 1 :type (peek tokenizer 1))))
+                        (error (+ "Error parsing _L29 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
                         
                     )
                     (append (. ReturnValue 'Args) (Argument))
                     (FillArgument (back (. ReturnValue 'Args)) tokenizer)
                     
                 
-                else (error (+ "Error parsing _L25 at position "  (str :position (peek tokenizer 0)) ": expected _L26"))
+                else (error (+ "Error parsing _L28 at position "  (str :position (peek tokenizer 0)) ": expected _L29"))
                 
             
             )
     )
     
 
-else (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected _L25"))
+else (error (+ "Error parsing _L27 at position "  (str :position (peek tokenizer 0)) ": expected _L28"))
 
 
 )
 )
-(if (not (eq :type (peek tokenizer 0) 31))
-    (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected rpar"))
+(if (not (eq :type (peek tokenizer 0) 34))
+    (error (+ "Error parsing _L27 at position "  (str :position (peek tokenizer 0)) ": expected rpar"))
     
 )
 (consume-token tokenizer)
 (if (not (eq :type (peek tokenizer 0) 6))
-    (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected lcurl"))
+    (error (+ "Error parsing _L27 at position "  (str :position (peek tokenizer 0)) ": expected lcurl"))
     
 )
 (consume-token tokenizer)
-(while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+(while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
     (append (. ReturnValue 'Body) (Statement))
     (set (back (. ReturnValue 'Body))(ParseStatement tokenizer))
     
 )
 (if (not (eq :type (peek tokenizer 0) 7))
-    (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected rcurl"))
+    (error (+ "Error parsing _L27 at position "  (str :position (peek tokenizer 0)) ": expected rcurl"))
     
 )
 (consume-token tokenizer)
 
 )
-(defun Parse_L24_0 (tokenizer)
+(defun Parse_L27_0 (tokenizer)
     (setl ReturnValue (MemberFunc))
     (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
-        (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+        (error (+ "Error parsing _L27 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
         
     )
     (FillIdf (. ReturnValue 'Name) tokenizer)
-    (if (not (eq :type (peek tokenizer 0) 30))
-        (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected lpar"))
+    (if (not (eq :type (peek tokenizer 0) 33))
+        (error (+ "Error parsing _L27 at position "  (str :position (peek tokenizer 0)) ": expected lpar"))
         
     )
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 114 0 :type (peek tokenizer 0))(. LOOKTable 114 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 115 0 :type (peek tokenizer 0))(. LOOKTable 115 1 :type (peek tokenizer 1)))
-            (if (not (&& (. LOOKTable 95 0 :type (peek tokenizer 0))(. LOOKTable 95 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L25 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
+    (if (&& (. LOOKTable 131 0 :type (peek tokenizer 0))(. LOOKTable 131 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 132 0 :type (peek tokenizer 0))(. LOOKTable 132 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 112 0 :type (peek tokenizer 0))(. LOOKTable 112 1 :type (peek tokenizer 1))))
+                (error (+ "Error parsing _L28 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
                 
             )
             (append (. ReturnValue 'Args) (Argument))
             (FillArgument (back (. ReturnValue 'Args)) tokenizer)
-            (while (&& (. LOOKTable 112 0 :type (peek tokenizer 0))(. LOOKTable 112 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 113 0 :type (peek tokenizer 0))(. LOOKTable 113 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
-                        (error (+ "Error parsing _L26 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
+            (while (&& (. LOOKTable 129 0 :type (peek tokenizer 0))(. LOOKTable 129 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 130 0 :type (peek tokenizer 0))(. LOOKTable 130 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
+                        (error (+ "Error parsing _L29 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
-                    (if (not (&& (. LOOKTable 95 0 :type (peek tokenizer 0))(. LOOKTable 95 1 :type (peek tokenizer 1))))
-                        (error (+ "Error parsing _L26 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
+                    (if (not (&& (. LOOKTable 112 0 :type (peek tokenizer 0))(. LOOKTable 112 1 :type (peek tokenizer 1))))
+                        (error (+ "Error parsing _L29 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
                         
                     )
                     (append (. ReturnValue 'Args) (Argument))
                     (FillArgument (back (. ReturnValue 'Args)) tokenizer)
                     
                 
-                else (error (+ "Error parsing _L25 at position "  (str :position (peek tokenizer 0)) ": expected _L26"))
+                else (error (+ "Error parsing _L28 at position "  (str :position (peek tokenizer 0)) ": expected _L29"))
                 
             
             )
     )
     
 
-else (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected _L25"))
+else (error (+ "Error parsing _L27 at position "  (str :position (peek tokenizer 0)) ": expected _L28"))
 
 
 )
 )
-(if (not (eq :type (peek tokenizer 0) 31))
-    (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected rpar"))
+(if (not (eq :type (peek tokenizer 0) 34))
+    (error (+ "Error parsing _L27 at position "  (str :position (peek tokenizer 0)) ": expected rpar"))
     
 )
 (consume-token tokenizer)
 (if (not (eq :type (peek tokenizer 0) 6))
-    (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected lcurl"))
+    (error (+ "Error parsing _L27 at position "  (str :position (peek tokenizer 0)) ": expected lcurl"))
     
 )
 (consume-token tokenizer)
-(while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+(while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
     (append (. ReturnValue 'Body) (Statement))
     (set (back (. ReturnValue 'Body))(ParseStatement tokenizer))
     
 )
 (if (not (eq :type (peek tokenizer 0) 7))
-    (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected rcurl"))
+    (error (+ "Error parsing _L27 at position "  (str :position (peek tokenizer 0)) ": expected rcurl"))
     
 )
 (consume-token tokenizer)
 (return ReturnValue)
 
 )
-(defun Fill_L24 (ReturnValue tokenizer)
+(defun Fill_L27 (ReturnValue tokenizer)
     (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
-        (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+        (error (+ "Error parsing _L27 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
         
     )
     (FillIdf (. ReturnValue 'Name) tokenizer)
-    (if (not (eq :type (peek tokenizer 0) 30))
-        (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected lpar"))
+    (if (not (eq :type (peek tokenizer 0) 33))
+        (error (+ "Error parsing _L27 at position "  (str :position (peek tokenizer 0)) ": expected lpar"))
         
     )
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 114 0 :type (peek tokenizer 0))(. LOOKTable 114 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 115 0 :type (peek tokenizer 0))(. LOOKTable 115 1 :type (peek tokenizer 1)))
-            (if (not (&& (. LOOKTable 95 0 :type (peek tokenizer 0))(. LOOKTable 95 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L25 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
+    (if (&& (. LOOKTable 131 0 :type (peek tokenizer 0))(. LOOKTable 131 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 132 0 :type (peek tokenizer 0))(. LOOKTable 132 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 112 0 :type (peek tokenizer 0))(. LOOKTable 112 1 :type (peek tokenizer 1))))
+                (error (+ "Error parsing _L28 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
                 
             )
             (append (. ReturnValue 'Args) (Argument))
             (FillArgument (back (. ReturnValue 'Args)) tokenizer)
-            (while (&& (. LOOKTable 112 0 :type (peek tokenizer 0))(. LOOKTable 112 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 113 0 :type (peek tokenizer 0))(. LOOKTable 113 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
-                        (error (+ "Error parsing _L26 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
+            (while (&& (. LOOKTable 129 0 :type (peek tokenizer 0))(. LOOKTable 129 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 130 0 :type (peek tokenizer 0))(. LOOKTable 130 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
+                        (error (+ "Error parsing _L29 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
-                    (if (not (&& (. LOOKTable 95 0 :type (peek tokenizer 0))(. LOOKTable 95 1 :type (peek tokenizer 1))))
-                        (error (+ "Error parsing _L26 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
+                    (if (not (&& (. LOOKTable 112 0 :type (peek tokenizer 0))(. LOOKTable 112 1 :type (peek tokenizer 1))))
+                        (error (+ "Error parsing _L29 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
                         
                     )
                     (append (. ReturnValue 'Args) (Argument))
                     (FillArgument (back (. ReturnValue 'Args)) tokenizer)
                     
                 
-                else (error (+ "Error parsing _L25 at position "  (str :position (peek tokenizer 0)) ": expected _L26"))
+                else (error (+ "Error parsing _L28 at position "  (str :position (peek tokenizer 0)) ": expected _L29"))
                 
             
             )
     )
     
 
-else (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected _L25"))
+else (error (+ "Error parsing _L27 at position "  (str :position (peek tokenizer 0)) ": expected _L28"))
 
 
 )
 )
-(if (not (eq :type (peek tokenizer 0) 31))
-    (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected rpar"))
+(if (not (eq :type (peek tokenizer 0) 34))
+    (error (+ "Error parsing _L27 at position "  (str :position (peek tokenizer 0)) ": expected rpar"))
     
 )
 (consume-token tokenizer)
 (if (not (eq :type (peek tokenizer 0) 6))
-    (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected lcurl"))
+    (error (+ "Error parsing _L27 at position "  (str :position (peek tokenizer 0)) ": expected lcurl"))
     
 )
 (consume-token tokenizer)
-(while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+(while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
     (append (. ReturnValue 'Body) (Statement))
     (set (back (. ReturnValue 'Body))(ParseStatement tokenizer))
     
 )
 (if (not (eq :type (peek tokenizer 0) 7))
-    (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected rcurl"))
+    (error (+ "Error parsing _L27 at position "  (str :position (peek tokenizer 0)) ": expected rcurl"))
     
 )
 (consume-token tokenizer)
 
 )
-(defun Parse_L24 (tokenizer)
+(defun Parse_L27 (tokenizer)
     (setl ReturnValue (MemberFunc))
     (if (not (&& (. LOOKTable 0 0 :type (peek tokenizer 0))(. LOOKTable 0 1 :type (peek tokenizer 1))))
-        (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
+        (error (+ "Error parsing _L27 at position "  (str :position (peek tokenizer 0)) ": expected Idf"))
         
     )
     (FillIdf (. ReturnValue 'Name) tokenizer)
-    (if (not (eq :type (peek tokenizer 0) 30))
-        (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected lpar"))
+    (if (not (eq :type (peek tokenizer 0) 33))
+        (error (+ "Error parsing _L27 at position "  (str :position (peek tokenizer 0)) ": expected lpar"))
         
     )
     (consume-token tokenizer)
-    (if (&& (. LOOKTable 114 0 :type (peek tokenizer 0))(. LOOKTable 114 1 :type (peek tokenizer 1)))
-        (if (&& (. LOOKTable 115 0 :type (peek tokenizer 0))(. LOOKTable 115 1 :type (peek tokenizer 1)))
-            (if (not (&& (. LOOKTable 95 0 :type (peek tokenizer 0))(. LOOKTable 95 1 :type (peek tokenizer 1))))
-                (error (+ "Error parsing _L25 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
+    (if (&& (. LOOKTable 131 0 :type (peek tokenizer 0))(. LOOKTable 131 1 :type (peek tokenizer 1)))
+        (if (&& (. LOOKTable 132 0 :type (peek tokenizer 0))(. LOOKTable 132 1 :type (peek tokenizer 1)))
+            (if (not (&& (. LOOKTable 112 0 :type (peek tokenizer 0))(. LOOKTable 112 1 :type (peek tokenizer 1))))
+                (error (+ "Error parsing _L28 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
                 
             )
             (append (. ReturnValue 'Args) (Argument))
             (FillArgument (back (. ReturnValue 'Args)) tokenizer)
-            (while (&& (. LOOKTable 112 0 :type (peek tokenizer 0))(. LOOKTable 112 1 :type (peek tokenizer 1)))
-                (if (&& (. LOOKTable 113 0 :type (peek tokenizer 0))(. LOOKTable 113 1 :type (peek tokenizer 1)))
-                    (if (not (eq :type (peek tokenizer 0) 32))
-                        (error (+ "Error parsing _L26 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
+            (while (&& (. LOOKTable 129 0 :type (peek tokenizer 0))(. LOOKTable 129 1 :type (peek tokenizer 1)))
+                (if (&& (. LOOKTable 130 0 :type (peek tokenizer 0))(. LOOKTable 130 1 :type (peek tokenizer 1)))
+                    (if (not (eq :type (peek tokenizer 0) 35))
+                        (error (+ "Error parsing _L29 at position "  (str :position (peek tokenizer 0)) ": expected comma"))
                         
                     )
                     (consume-token tokenizer)
-                    (if (not (&& (. LOOKTable 95 0 :type (peek tokenizer 0))(. LOOKTable 95 1 :type (peek tokenizer 1))))
-                        (error (+ "Error parsing _L26 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
+                    (if (not (&& (. LOOKTable 112 0 :type (peek tokenizer 0))(. LOOKTable 112 1 :type (peek tokenizer 1))))
+                        (error (+ "Error parsing _L29 at position "  (str :position (peek tokenizer 0)) ": expected Argument"))
                         
                     )
                     (append (. ReturnValue 'Args) (Argument))
                     (FillArgument (back (. ReturnValue 'Args)) tokenizer)
                     
                 
-                else (error (+ "Error parsing _L25 at position "  (str :position (peek tokenizer 0)) ": expected _L26"))
+                else (error (+ "Error parsing _L28 at position "  (str :position (peek tokenizer 0)) ": expected _L29"))
                 
             
             )
     )
     
 
-else (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected _L25"))
+else (error (+ "Error parsing _L27 at position "  (str :position (peek tokenizer 0)) ": expected _L28"))
 
 
 )
 )
-(if (not (eq :type (peek tokenizer 0) 31))
-    (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected rpar"))
+(if (not (eq :type (peek tokenizer 0) 34))
+    (error (+ "Error parsing _L27 at position "  (str :position (peek tokenizer 0)) ": expected rpar"))
     
 )
 (consume-token tokenizer)
 (if (not (eq :type (peek tokenizer 0) 6))
-    (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected lcurl"))
+    (error (+ "Error parsing _L27 at position "  (str :position (peek tokenizer 0)) ": expected lcurl"))
     
 )
 (consume-token tokenizer)
-(while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+(while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
     (append (. ReturnValue 'Body) (Statement))
     (set (back (. ReturnValue 'Body))(ParseStatement tokenizer))
     
 )
 (if (not (eq :type (peek tokenizer 0) 7))
-    (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer 0)) ": expected rcurl"))
+    (error (+ "Error parsing _L27 at position "  (str :position (peek tokenizer 0)) ": expected rcurl"))
     
 )
 (consume-token tokenizer)
@@ -4218,7 +4783,7 @@ else (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer
 
 )
 (defun FillStatement_0 (ReturnValue tokenizer)
-    (if (not (&& (. LOOKTable 75 0 :type (peek tokenizer 0))(. LOOKTable 75 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 92 0 :type (peek tokenizer 0))(. LOOKTable 92 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement at position "  (str :position (peek tokenizer 0)) ": expected Statement_For"))
         
     )
@@ -4227,7 +4792,7 @@ else (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer
 )
 (defun ParseStatement_0 (tokenizer)
     (setl ReturnValue (Statement))
-    (if (not (&& (. LOOKTable 75 0 :type (peek tokenizer 0))(. LOOKTable 75 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 92 0 :type (peek tokenizer 0))(. LOOKTable 92 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement at position "  (str :position (peek tokenizer 0)) ": expected Statement_For"))
         
     )
@@ -4236,7 +4801,7 @@ else (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer
     
 )
 (defun FillStatement_1 (ReturnValue tokenizer)
-    (if (not (&& (. LOOKTable 89 0 :type (peek tokenizer 0))(. LOOKTable 89 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 106 0 :type (peek tokenizer 0))(. LOOKTable 106 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement at position "  (str :position (peek tokenizer 0)) ": expected Statement_While"))
         
     )
@@ -4245,7 +4810,7 @@ else (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer
 )
 (defun ParseStatement_1 (tokenizer)
     (setl ReturnValue (Statement))
-    (if (not (&& (. LOOKTable 89 0 :type (peek tokenizer 0))(. LOOKTable 89 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 106 0 :type (peek tokenizer 0))(. LOOKTable 106 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement at position "  (str :position (peek tokenizer 0)) ": expected Statement_While"))
         
     )
@@ -4254,7 +4819,7 @@ else (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer
     
 )
 (defun FillStatement_2 (ReturnValue tokenizer)
-    (if (not (&& (. LOOKTable 91 0 :type (peek tokenizer 0))(. LOOKTable 91 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 108 0 :type (peek tokenizer 0))(. LOOKTable 108 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement at position "  (str :position (peek tokenizer 0)) ": expected Statement_Expr"))
         
     )
@@ -4263,7 +4828,7 @@ else (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer
 )
 (defun ParseStatement_2 (tokenizer)
     (setl ReturnValue (Statement))
-    (if (not (&& (. LOOKTable 91 0 :type (peek tokenizer 0))(. LOOKTable 91 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 108 0 :type (peek tokenizer 0))(. LOOKTable 108 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement at position "  (str :position (peek tokenizer 0)) ": expected Statement_Expr"))
         
     )
@@ -4272,7 +4837,7 @@ else (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer
     
 )
 (defun FillStatement_3 (ReturnValue tokenizer)
-    (if (not (&& (. LOOKTable 81 0 :type (peek tokenizer 0))(. LOOKTable 81 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 98 0 :type (peek tokenizer 0))(. LOOKTable 98 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement at position "  (str :position (peek tokenizer 0)) ": expected Statement_If"))
         
     )
@@ -4281,7 +4846,7 @@ else (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer
 )
 (defun ParseStatement_3 (tokenizer)
     (setl ReturnValue (Statement))
-    (if (not (&& (. LOOKTable 81 0 :type (peek tokenizer 0))(. LOOKTable 81 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 98 0 :type (peek tokenizer 0))(. LOOKTable 98 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement at position "  (str :position (peek tokenizer 0)) ": expected Statement_If"))
         
     )
@@ -4290,7 +4855,7 @@ else (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer
     
 )
 (defun FillStatement_4 (ReturnValue tokenizer)
-    (if (not (&& (. LOOKTable 93 0 :type (peek tokenizer 0))(. LOOKTable 93 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 110 0 :type (peek tokenizer 0))(. LOOKTable 110 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement at position "  (str :position (peek tokenizer 0)) ": expected Statement_Return"))
         
     )
@@ -4299,7 +4864,7 @@ else (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer
 )
 (defun ParseStatement_4 (tokenizer)
     (setl ReturnValue (Statement))
-    (if (not (&& (. LOOKTable 93 0 :type (peek tokenizer 0))(. LOOKTable 93 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 110 0 :type (peek tokenizer 0))(. LOOKTable 110 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement at position "  (str :position (peek tokenizer 0)) ": expected Statement_Return"))
         
     )
@@ -4308,7 +4873,7 @@ else (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer
     
 )
 (defun FillStatement_5 (ReturnValue tokenizer)
-    (if (not (&& (. LOOKTable 98 0 :type (peek tokenizer 0))(. LOOKTable 98 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 115 0 :type (peek tokenizer 0))(. LOOKTable 115 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement at position "  (str :position (peek tokenizer 0)) ": expected Statement_Func"))
         
     )
@@ -4317,7 +4882,7 @@ else (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer
 )
 (defun ParseStatement_5 (tokenizer)
     (setl ReturnValue (Statement))
-    (if (not (&& (. LOOKTable 98 0 :type (peek tokenizer 0))(. LOOKTable 98 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 115 0 :type (peek tokenizer 0))(. LOOKTable 115 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement at position "  (str :position (peek tokenizer 0)) ": expected Statement_Func"))
         
     )
@@ -4326,7 +4891,7 @@ else (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer
     
 )
 (defun FillStatement_6 (ReturnValue tokenizer)
-    (if (not (&& (. LOOKTable 104 0 :type (peek tokenizer 0))(. LOOKTable 104 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement at position "  (str :position (peek tokenizer 0)) ": expected Statement_Class"))
         
     )
@@ -4335,7 +4900,7 @@ else (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer
 )
 (defun ParseStatement_6 (tokenizer)
     (setl ReturnValue (Statement))
-    (if (not (&& (. LOOKTable 104 0 :type (peek tokenizer 0))(. LOOKTable 104 1 :type (peek tokenizer 1))))
+    (if (not (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1))))
         (error (+ "Error parsing Statement at position "  (str :position (peek tokenizer 0)) ": expected Statement_Class"))
         
     )
@@ -4344,31 +4909,31 @@ else (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer
     
 )
 (defun FillStatement (ReturnValue tokenizer)
-    (if (&& (. LOOKTable 122 0 :type (peek tokenizer 0))(. LOOKTable 122 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 139 0 :type (peek tokenizer 0))(. LOOKTable 139 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseStatement_0 tokenizer))
         
     
-    else if (&& (. LOOKTable 123 0 :type (peek tokenizer 0))(. LOOKTable 123 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 140 0 :type (peek tokenizer 0))(. LOOKTable 140 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseStatement_1 tokenizer))
         
     
-    else if (&& (. LOOKTable 124 0 :type (peek tokenizer 0))(. LOOKTable 124 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 141 0 :type (peek tokenizer 0))(. LOOKTable 141 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseStatement_2 tokenizer))
         
     
-    else if (&& (. LOOKTable 125 0 :type (peek tokenizer 0))(. LOOKTable 125 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 142 0 :type (peek tokenizer 0))(. LOOKTable 142 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseStatement_3 tokenizer))
         
     
-    else if (&& (. LOOKTable 126 0 :type (peek tokenizer 0))(. LOOKTable 126 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 143 0 :type (peek tokenizer 0))(. LOOKTable 143 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseStatement_4 tokenizer))
         
     
-    else if (&& (. LOOKTable 127 0 :type (peek tokenizer 0))(. LOOKTable 127 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 144 0 :type (peek tokenizer 0))(. LOOKTable 144 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseStatement_5 tokenizer))
         
     
-    else if (&& (. LOOKTable 128 0 :type (peek tokenizer 0))(. LOOKTable 128 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 145 0 :type (peek tokenizer 0))(. LOOKTable 145 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseStatement_6 tokenizer))
         
     
@@ -4379,31 +4944,31 @@ else (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer
 )
 (defun ParseStatement (tokenizer)
     (setl ReturnValue (Statement))
-    (if (&& (. LOOKTable 122 0 :type (peek tokenizer 0))(. LOOKTable 122 1 :type (peek tokenizer 1)))
+    (if (&& (. LOOKTable 139 0 :type (peek tokenizer 0))(. LOOKTable 139 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseStatement_0 tokenizer))
         
     
-    else if (&& (. LOOKTable 123 0 :type (peek tokenizer 0))(. LOOKTable 123 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 140 0 :type (peek tokenizer 0))(. LOOKTable 140 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseStatement_1 tokenizer))
         
     
-    else if (&& (. LOOKTable 124 0 :type (peek tokenizer 0))(. LOOKTable 124 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 141 0 :type (peek tokenizer 0))(. LOOKTable 141 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseStatement_2 tokenizer))
         
     
-    else if (&& (. LOOKTable 125 0 :type (peek tokenizer 0))(. LOOKTable 125 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 142 0 :type (peek tokenizer 0))(. LOOKTable 142 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseStatement_3 tokenizer))
         
     
-    else if (&& (. LOOKTable 126 0 :type (peek tokenizer 0))(. LOOKTable 126 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 143 0 :type (peek tokenizer 0))(. LOOKTable 143 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseStatement_4 tokenizer))
         
     
-    else if (&& (. LOOKTable 127 0 :type (peek tokenizer 0))(. LOOKTable 127 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 144 0 :type (peek tokenizer 0))(. LOOKTable 144 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseStatement_5 tokenizer))
         
     
-    else if (&& (. LOOKTable 128 0 :type (peek tokenizer 0))(. LOOKTable 128 1 :type (peek tokenizer 1)))
+    else if (&& (. LOOKTable 145 0 :type (peek tokenizer 0))(. LOOKTable 145 1 :type (peek tokenizer 1)))
         (set ReturnValue(ParseStatement_6 tokenizer))
         
     
@@ -4414,7 +4979,7 @@ else (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer
 
 )
 (defun FillStatementList_0 (ReturnValue tokenizer)
-    (while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+    (while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
         (append (. ReturnValue 'Statements) (Statement))
         (set (back (. ReturnValue 'Statements))(ParseStatement tokenizer))
         
@@ -4423,7 +4988,7 @@ else (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer
 )
 (defun ParseStatementList_0 (tokenizer)
     (setl ReturnValue (StatementList))
-    (while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+    (while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
         (append (. ReturnValue 'Statements) (Statement))
         (set (back (. ReturnValue 'Statements))(ParseStatement tokenizer))
         
@@ -4432,7 +4997,7 @@ else (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer
     
 )
 (defun FillStatementList (ReturnValue tokenizer)
-    (while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+    (while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
         (append (. ReturnValue 'Statements) (Statement))
         (set (back (. ReturnValue 'Statements))(ParseStatement tokenizer))
         
@@ -4441,7 +5006,7 @@ else (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer
 )
 (defun ParseStatementList (tokenizer)
     (setl ReturnValue (StatementList))
-    (while (&& (. LOOKTable 121 0 :type (peek tokenizer 0))(. LOOKTable 121 1 :type (peek tokenizer 1)))
+    (while (&& (. LOOKTable 138 0 :type (peek tokenizer 0))(. LOOKTable 138 1 :type (peek tokenizer 1)))
         (append (. ReturnValue 'Statements) (Statement))
         (set (back (. ReturnValue 'Statements))(ParseStatement tokenizer))
         
@@ -4449,4 +5014,4 @@ else (error (+ "Error parsing _L24 at position "  (str :position (peek tokenizer
     (return ReturnValue)
     
 )
-(set LOOKTable (list (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) (list false false false false false true true true true true false false true false false true false false false true true true true true true true true true true true true true true true) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) (list false false false false false true true true true true false false true false false true false false false true true true true true true true true true true true true true true true) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false true true true true true true true true true true false true true true) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false true true true true true true true true true true false true true true) ) (list (list false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false true true true true true true true true true true false true true true) ) (list (list false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false true true true true true true true true true true false true true true) ) (list (list true true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false true true true true true true true true true true false true true true) ) (list (list true true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false true true true true true true true true true true false true true true) ) (list (list true true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false true true true true true true true true true true false true true true) ) (list (list true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false true true true true true true true true true true false true true true) ) (list (list false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false true true true true true true true true true true false true true true) ) (list (list false false false false false false false false false false false false false false false false false false false false true true true true true true true true true true false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false true true true true true true true true true true false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false true true true true true true true true true true false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false true false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false true false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false true) ) (list (list false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true true false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true true false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) (list true true false false false false true true true true false false false false false false true true true true true true true true true true true true true true true false true true) ) (list (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) (list true true false false false false true true true true false false false false false false true true true true true true true true true true true true true true true false true true) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) (list true true false false false false true true true true false false false false false false true true true true true true true true true true true true true true true true true true) ) (list (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) (list true true false false false false true true true true false false false false false false true true true true true true true true true true true true true true true true true true) ) (list (list false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false true true true true true true true true true true false true true true) ) (list (list false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false true true true true true true true true true true false true true true) ) (list (list false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false true true true true true true true true true true false true true true) ) (list (list false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false true true true true true true true true true true false true true true) ) (list (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) (list true true false false false true true true true true false false false false false false true true true true true true true true true true true true true true true false false true) ) (list (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) (list true true false false false true true true true true false false false false false false true true true true true true true true true true true true true true true false false true) ) (list (list false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true true false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true true false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) (list true true false false false false true true true true false false false false false false true true true true true true true true true true true true true true true false true true) ) (list (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) (list true true false false false false true true true true false false false false false false true true true true true true true true true true true true true true true false true true) ) (list (list false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true true true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true true true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) (list true true false false false true true true true true false false false false false false true true true true true true true true true true true true true true true false false true) ) (list (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) (list true true false false false true true true true true false false false false false false true true true true true true true true true true true true true true true false false true) ) (list (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) (list true true false false false true true true true true false false false false false true true true true true true true true true true true true true true true true true true true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false true true true true true true true true true true false true true true) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false true) ) (list (list false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false true true true true true true true true true true false true true true) ) (list (list true true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false true true true true true true true true true true false true true true) ) (list (list false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false true true true true true true true true true true false true true true) ) (list (list false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false true true true true true true true true true true false true true true) ) (list (list false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true true false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true true true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) (list true true false false false true true true true true false false false false false true true true true true true true true true true true true true true true true true true true) ) (list (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) (list true true false false false true true true true true false false false false false true true true true true true true true true true true true true true true true true true true) ) (list (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) (list true true false false false true true true true true false false false false false true true true true true true true true true true true true true true true true true true true) ) (list (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) (list true true false false false true true true true true false false false false false true true true true true true true true true true true true true true true true true true true) ) (list (list false false false false false false false false true false false false false false false false false false false false true true true true true true true true true true false false false false) (list true true false false false false true false true true false false false false false false true true true true false false false false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false true true true true true true true true true true false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false true true false false true) ) (list (list false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true true false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) (list true true false false false true true true true true false false false false false true true true true true true true true true true true true true true true true true true true) ) (list (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) (list true true false false false true true true true true false false false false false true true true true true true true true true true true true true true true true true true true) ) (list (list false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) (list false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false true) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) (list false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false true) ) (list (list false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false) ) (list (list false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true true true true false true true true false true true false true false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true true true true false true true true false true true false true false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false) (list false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false) (list false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) (list true true false false false false true true true true false false false false false true true true true true true true true true true true true true true true true false false true) ) (list (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) (list true true false false false false true true true true false false false false false true true true true true true true true true true true true true true true true false false true) ) (list (list false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false true true true) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false true) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true true true) ) (list (list false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) ) (list (list false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false true true true) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false true true true) ) (list (list false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) ) (list (list false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) ) (list (list false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) ) (list (list false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false false true) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false true true true) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false true true true) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false false true) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false true) ) (list (list true true true true true false true false true false true true false true false false true true true true false false false false false false false false false false true false false false) (list true true false false false false true true true true false false false false false true true true true true true true true true true true true true true true true false false true) ) (list (list false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) (list true true false false false false true true true true false false false false false true true true true true true true true true true true true true true true true false false true) ) (list (list false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true false false false false false false false false false false true false false false) ) (list (list false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) ) (list (list false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) ) (list (list true true true true true false true false true false true true false true false false true true true true false false false false false false false false false false true false false true) (list true true false false false false true true true true false false false false false true true true true true true true true true true true true true true true true false false true) ) (list (list true true true true true false true false true false true true false true false false true true true true false false false false false false false false false false true false false true) (list true true false false false false true true true true false false false false false true true true true true true true true true true true true true true true true false false true) ) ))
+(set LOOKTable (list (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false true false false true false false false false true true true true true false true true true true true true true true true true true) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false true false false true false false false false true true true true true false true true true true true true true true true true true) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false false true true true true false true true true true true true true false true true true) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false false true true true true false true true true true true true true false true true true) ) (list (list false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false false true true true true false true true true true true true true false true true true) ) (list (list false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false false true true true true false true true true true true true true false true true true) ) (list (list true true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false false true true true true false true true true true true true true false true true true) ) (list (list true true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false false true true true true false true true true true true true true false true true true) ) (list (list true true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false false true true true true false true true true true true true true false true true true) ) (list (list true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false false true true true true false true true true true true true true false true true true) ) (list (list false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false false true true true true false true true true true true true true false true true true) ) (list (list false false false false false false false false false false false false false false false false false false false false false true true true true false true true true true true true true false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false true true true true false true true true true true true true false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false true true true true false true true true true true true true false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false true) ) (list (list false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true true false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true true false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) (list true true false false false true true true true true false false false false false false true true true true true true true true true true true true true true true true true true false true true) ) (list (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) (list true true false false false true true true true true false false false false false false true true true true true true true true true true true true true true true true true true false true true) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) (list true true false false false true true true true true false false false false false false true true true true true true true true true true true true true true true true true true true true true) ) (list (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) (list true true false false false true true true true true false false false false false false true true true true true true true true true true true true true true true true true true true true true) ) (list (list false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false false true true true true false true true true true true true true false true true true) ) (list (list false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false false true true true true false true true true true true true true false true true true) ) (list (list false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false false true true true true false true true true true true true true false true true true) ) (list (list false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false false true true true true false true true true true true true true false true true true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false) (list false false false false false true false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false) (list false false false false false true false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true true) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true true) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false true false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false true true true true true false true true true true true true true true true true true) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false true true true true true false true true true true true true true true true true true) ) (list (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) (list true true false false false true true true true true false false false false false false true true true true true true true true true true true true true true true true true true false false true) ) (list (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) (list true true false false false true true true true true false false false false false false true true true true true true true true true true true true true true true true true true false false true) ) (list (list false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true true false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true true false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) (list true true false false false true true true true true false false false false false false true true true true true true true true true true true true true true true true true true false true true) ) (list (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) (list true true false false false true true true true true false false false false false false true true true true true true true true true true true true true true true true true true false true true) ) (list (list false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true true true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true true true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) (list true true false false false true true true true true false false false false false false true true true true true true true true true true true true true true true true true true false false true) ) (list (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) (list true true false false false true true true true true false false false false false false true true true true true true true true true true true true true true true true true true false false true) ) (list (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) (list true true false false false true true true true true false false false false false true true true true true true true true true true true true true true true true true true true true true true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false false true true true true false true true true true true true true false true true true) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false true) ) (list (list false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false false true true true true false true true true true true true true false true true true) ) (list (list true true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false false true true true true false true true true true true true true false true true true) ) (list (list false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false false true true true true false true true true true true true true false true true true) ) (list (list false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false false true true true true false true true true true true true true false true true true) ) (list (list false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true true false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true true true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false) (list false false false false false true false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false) (list false false false false false true true true true true false false false false false true false false false false false true true true true false true true true true true true true false true true true) ) (list (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) (list true true false false false true true true true true false false false false false true true true true true true true true true true true true true true true true true true true true true true) ) (list (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) (list true true false false false true true true true true false false false false false true true true true true true true true true true true true true true true true true true true true true true) ) (list (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) (list true true false false false true true true true true false false false false false true true true true true true true true true true true true true true true true true true true true true true) ) (list (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) (list true true false false false true true true true true false false false false false true true true true true true true true true true true true true true true true true true true true true true) ) (list (list false false false false false false false false true false false false false false false false false false false false false true true true true false true true true true true true true false false false false) (list true true false false false false true false true true false false false false false false true true true true true false false false false true false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false true true true true false true true true true true true true false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false true true false false true) ) (list (list false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true true false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) (list true true false false false true true true true true false false false false false true true true true true true true true true true true true true true true true true true true true true true) ) (list (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) (list true true false false false true true true true true false false false false false true true true true true true true true true true true true true true true true true true true true true true) ) (list (list false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false true) ) (list (list false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false) ) (list (list false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true true true true false true true true false true true false true false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true true true true false true true true false true true false true false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) (list true true false false false true true true true true false false false false false true true true true true true true true true true true true true true true true true true true false false true) ) (list (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) (list true true false false false true true true true true false false false false false true true true true true true true true true true true true true true true true true true true false false true) ) (list (list false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false true true true) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true true true) ) (list (list false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) ) (list (list false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false true true true) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false true true true) ) (list (list false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) ) (list (list false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) ) (list (list false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) ) (list (list false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false) (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false true true true) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false true true true) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true true false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false false true) ) (list (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false true false false true) ) (list (list true true true true true false true false true false true true false true false false true true true true true false false false false true false false false false false false false true false false false) (list true true false false false true true true true true false false false false false true true true true true true true true true true true true true true true true true true true false false true) ) (list (list false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) (list true true false false false true true true true true false false false false false true true true true true true true true true true true true true true true true true true true false false true) ) (list (list false false false false false false false false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list true true false false false false true false true false false false false false false false true true true true true false false false false true false false false false false false false true false false false) ) (list (list false false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) ) (list (list false false true false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false false) (list false false false false false false false false false false false false false false false false false false false false true false false false false false false false false false false false false false false false false) ) (list (list true true true true true false true false true false true true false true false false true true true true true false false false false true false false false false false false false true false false true) (list true true false false false true true true true true false false false false false true true true true true true true true true true true true true true true true true true true false false true) ) (list (list true true true true true false true false true false true true false true false false true true true true true false false false false true false false false false false false false true false false true) (list true true false false false true true true true true false false false false false true true true true true true true true true true true true true true true true true true true false false true) ) ))

@@ -631,6 +631,7 @@ public:
     {
     public:
         virtual Value operator() BUILTIN_ARGLIST = 0;
+        virtual ~Invocable() = default;
     };
 
     class FunctionObject 

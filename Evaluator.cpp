@@ -1453,7 +1453,7 @@ namespace MBLisp
             auto SignalToStore = MBUtility::MakeCopyableUnique<StoredSignal>();
             SignalToStore->SignalValue = std::move(SignalValue);
             SignalToStore->ForcedUnwind = ForceUnwind;
-            CurrentState.StackFrames.back().StoredSignal = std::move(SignalToStore);
+            CurrentState.StackFrames.back().StoredCatchedSignal = std::move(SignalToStore);
 
             p_InvokeTrapHandler(CurrentState);
             return;
@@ -1728,10 +1728,10 @@ namespace MBLisp
                 CurrentState.ActiveUnwindState = *CurrentState.StackFrames.back().StoredUnwindState;
                 CurrentState.StackFrames.back().StoredUnwindState.reset();
             }
-            if(CurrentState.StackFrames.back().StoredSignal != nullptr)
+            if(CurrentState.StackFrames.back().StoredCatchedSignal != nullptr)
             {
-                StoredSignal Value = std::move(*CurrentState.StackFrames.back().StoredSignal);
-                CurrentState.StackFrames.back().StoredSignal.reset();
+                StoredSignal Value = std::move(*CurrentState.StackFrames.back().StoredCatchedSignal);
+                CurrentState.StackFrames.back().StoredCatchedSignal.reset();
                 p_EmitSignal(CurrentState,Value.SignalValue,
                         Value.ForcedUnwind,true);
             }

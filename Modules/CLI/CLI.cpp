@@ -11,6 +11,7 @@
 #include <cstdint>
 
 #include <MBUtility/MBStrings.h>
+#include <MBTUI/Spin.h>
 namespace MBLisp
 {
     static MBCLI::TerminalColor ParseColor(std::string_view Content)
@@ -65,9 +66,9 @@ namespace MBLisp
         m_ModuleScope = Evaluator->GetModuleScope("cli");
         m_Value = Val;
 
-        //auto NewParent = Value::EmplaceExternal<std::shared_ptr<MBCLI::Window::ParentInfo>>(std::make_shared<MBCLI::Window::ParentInfo>()).GetRef<std::shared_ptr<MBCLI::Window::ParentInfo>>();
+        //auto NewParent = Value::EmplaceExternal<std::shared_ptr<MBCLI::UpdateInfo>>(std::make_shared<MBCLI::UpdateInfo>()).GetRef<std::shared_ptr<MBCLI::UpdateInfo>>();
         //(*NewParent)->Parent = GetParentInfo();
-        m_Evaluator->Eval(m_ModuleScope,m_Evaluator->GetValue(*m_ModuleScope,"set-parent-info"),{m_Value, Value::EmplaceExternal<std::shared_ptr<MBCLI::Window::ParentInfo>>(GetParentInfo())  });
+        m_Evaluator->Eval(m_ModuleScope,m_Evaluator->GetValue(*m_ModuleScope,"set-parent-info"),{m_Value, Value::EmplaceExternal<std::shared_ptr<MBCLI::UpdateInfo>>(GetParentInfo())  });
     }
     bool LispWindow::HandleInput(MBCLI::ConsoleInput const& Input)
     {
@@ -386,6 +387,11 @@ namespace MBLisp
         }
     }
 
+    Value i_Spin(Evaluator& Evaluator,Dict& Attributes,List& Children)
+    {
+        auto ReturnValue = Value::EmplacePolymorphic<MBTUI::SpinWindow,MBCLI::Window>();
+        return ReturnValue;
+    }
     Value CLIModule::p_Repl(Evaluator& Evaluator,Dict& Attributes,List& Children)
     {
         auto ReturnValue = Value::EmplacePolymorphic<MBTUI::REPL,MBCLI::Window>();
@@ -506,19 +512,19 @@ namespace MBLisp
     }
 
 
-    static void SetParentInfo(Value const& Value,std::shared_ptr<MBCLI::Window::ParentInfo> Parent)
+    static void SetParentInfo(Value const& Value,std::shared_ptr<MBCLI::UpdateInfo> Parent)
     {
         int hej = 2;
     }
-    static void SetParentInfo_Window(MBCLI::Window& Value,std::shared_ptr<MBCLI::Window::ParentInfo> Parent)
+    static void SetParentInfo_Window(MBCLI::Window& Value,std::shared_ptr<MBCLI::UpdateInfo> Parent)
     {
         Value.GetParentInfo()->Parent = Parent;
     }
-    static void SetParentInfo_UpdatedInfo(std::shared_ptr<MBCLI::Window::ParentInfo>& Value,std::shared_ptr<MBCLI::Window::ParentInfo> Parent)
+    static void SetParentInfo_UpdatedInfo(std::shared_ptr<MBCLI::UpdateInfo>& Value,std::shared_ptr<MBCLI::UpdateInfo> Parent)
     {
         Value->Parent = Parent;
     }
-    static void SetUpdated(std::shared_ptr<MBCLI::Window::ParentInfo> Parent,bool Updated)
+    static void SetUpdated(std::shared_ptr<MBCLI::UpdateInfo> Parent,bool Updated)
     {
         if(Updated)
         {
@@ -532,9 +538,9 @@ namespace MBLisp
 
     static Value NewUpdatedInfo()
     {
-        return Value::EmplaceExternal<std::shared_ptr<MBCLI::Window::ParentInfo>>(std::make_shared<MBCLI::Window::ParentInfo>());
+        return Value::EmplaceExternal<std::shared_ptr<MBCLI::UpdateInfo>>(std::make_shared<MBCLI::UpdateInfo>());
     }
-    static bool Updated(std::shared_ptr<MBCLI::Window::ParentInfo> Parent)
+    static bool Updated(std::shared_ptr<MBCLI::UpdateInfo> Parent)
     {
         return Parent->Updated;
     }
@@ -835,6 +841,9 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<p_WidthDims>(ReturnValue,"width");
         AssociatedEvaluator.AddGeneric<p_HeightDims>(ReturnValue,"height");
 
+
+        AssociatedEvaluator.AddGeneric<i_Spin>(ReturnValue,"spin");
+
         AssociatedEvaluator.AddGeneric<p_Stacker>(ReturnValue,"stacker");
         AssociatedEvaluator.AddGeneric<SetAtr_Stacker>(ReturnValue,"set-atr");
         AssociatedEvaluator.AddGeneric<SetAttribute_Absolute>(ReturnValue,"set-atr");
@@ -886,6 +895,7 @@ namespace MBLisp
         AssociatedEvaluator.AddType<MBCLI::Window>(ReturnValue,"window_t");
         AssociatedEvaluator.AddType<MBTUI::Text>(ReturnValue,"text_t");
         AssociatedEvaluator.AddType<MBTUI::REPL>(ReturnValue,"repl_t");
+        AssociatedEvaluator.AddType<MBTUI::SpinWindow>(ReturnValue,"spin_t");
 
 
         //Hider

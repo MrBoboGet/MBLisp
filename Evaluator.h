@@ -87,7 +87,7 @@ namespace MBLisp
 
 
         MBUtility::CopyableUnique<UnwindState> StoredUnwindState;
-        MBUtility::CopyableUnique<StoredSignal> StoredSignal;
+        MBUtility::CopyableUnique<StoredSignal> StoredCatchedSignal;
 
 
         //GC Stuff
