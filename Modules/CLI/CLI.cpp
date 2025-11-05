@@ -312,6 +312,13 @@ namespace MBLisp
                 Stacker.SetBGColor(ParseColor(Value.GetType<String>()));
             }
         }
+        else if(Attribute == "axis-count")
+        {
+            if(Value.IsType<Int>())
+            {
+                Stacker.SetAxisCount(Value.GetType<Int>());
+            }
+        }
         else if(Attribute == "text-color")
         {
             if(Value.IsType<String>())
@@ -545,6 +552,10 @@ namespace MBLisp
         return Parent->Updated;
     }
 
+    static void SetSelectedIndex(MBTUI::Stacker& Stacker,Int Index)
+    {
+        Stacker.SetSelectedWindowIndex(Index);
+    }
     static Value GetSelected(MBTUI::Stacker& Stacker)
     {
         if(!Stacker.WindowSelected())
@@ -849,6 +860,7 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<SetAttribute_Absolute>(ReturnValue,"set-atr");
         AssociatedEvaluator.AddGeneric<p_AddValueChildStacker>(ReturnValue,"add-child");
         AssociatedEvaluator.AddGeneric<GetSelected>(ReturnValue,"get-selected");
+        AssociatedEvaluator.AddGeneric<SetSelectedIndex>(ReturnValue,"set-selected-index");
         AssociatedEvaluator.AddGeneric<GetFirst_Stacker>(ReturnValue,"first");
         AssociatedEvaluator.AddGeneric<ChildCount_Stacker>(ReturnValue,"child-count");
         AssociatedEvaluator.AddGeneric<SetChildren_Stacker>(ReturnValue,"set-children");
