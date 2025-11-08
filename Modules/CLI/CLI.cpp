@@ -218,6 +218,36 @@ namespace MBLisp
         }
         return ReturnValue;
     }
+    template<typename T>
+    static void HandleSizeSpec(T& Window ,String const& Attribute,Value const& Value)
+    {
+        auto CurrentSpec = Window.GetSizeSpec();
+        if(Attribute == "height")
+        {
+            if(Value.IsType<Int>())
+            {
+                CurrentSpec.SetHeight(Value.GetType<Int>());
+            }
+            else if(Value.IsType<String>())
+            {
+                CurrentSpec.SetHeight(Value.GetType<String>());
+            }
+        }
+        else if(Attribute == "width")
+        {
+            if(Value.IsType<Int>())
+            {
+                CurrentSpec.SetWidth(Value.GetType<Int>());
+            }
+            else if(Value.IsType<String>())
+            {
+                CurrentSpec.SetWidth(Value.GetType<String>());
+            }
+        }
+        Window.SetSizeSpec(CurrentSpec);
+    }
+
+
 
     static void SetAtr_Stacker(MBTUI::Stacker& Stacker,String const& Attribute,Value const& Value)
     {
@@ -399,21 +429,75 @@ namespace MBLisp
         auto ReturnValue = Value::EmplacePolymorphic<MBTUI::SpinWindow,MBCLI::Window>();
         return ReturnValue;
     }
-    Value CLIModule::p_Repl(Evaluator& Evaluator,Dict& Attributes,List& Children)
+    void REPL_SetAtr(MBTUI::REPL& Repl,String const& Atr,Value const& Val,Evaluator& Evaluator)
     {
-        auto ReturnValue = Value::EmplacePolymorphic<MBTUI::REPL,MBCLI::Window>();
-        auto EnterFuncIt = Attributes.find(String("onenter"));
-        if(EnterFuncIt != Attributes.end())
+        if(Atr == "onenter")
         {
             MBUtility::MOFunction<void(std::string const&)> EnterFunc = 
-                [Evaluator=Evaluator.shared_from_this(),Func = EnterFuncIt->second](std::string const& Line)
+                [Evaluator=Evaluator.shared_from_this(),Func = Val](std::string const& Line)
                 {
                     Evaluator->Eval(Func,{Line});
                 };
-            ReturnValue.GetType<MBTUI::REPL>().SetOnEnterFunc(std::move(EnterFunc));
+            Repl.SetOnEnterFunc(std::move(EnterFunc));
+        }
+        else if(Atr == "completion")
+        {
+            MBUtility::MOFunction<std::vector<std::string>(MBTUI::REPL_Line  const& LineInfo)> EnterFunc = 
+                [Evaluator=Evaluator.shared_from_this(),Func = Val](MBTUI::REPL_Line  const& LineInfo)
+                {
+                    List Tokens;
+                    for(auto const& Token : LineInfo.Tokens)
+                    {
+                        Tokens.push_back(Token);
+                    }
+                    auto Res = Evaluator->Eval(Func,{std::move(Tokens)});
+                    std::vector<std::string> Ret;
+                    if(!Res.IsType<List>())
+                    {
+                        throw std::runtime_error("Error invoking completion function: result is not a list");
+                    }
+                    for(auto const& Value : Res.GetType<List>())
+                    {
+                        if(!Value.IsType<String>())
+                        {
+                            throw std::runtime_error("Error invoking completion function: element in list is not of type string");
+                        }
+                        Ret.push_back(Value.GetType<String>());
+                    }
+                    return Ret;
+                };
+            Repl.AddCompletionFunc(std::move(EnterFunc));
+        }
+        else if(Atr == "oneshot")
+        {
+            if(Val.IsType<bool>())
+            {
+                Repl.SetOneshot(Val.GetType<bool>());
+            }
+        }
+        HandleSizeSpec(Repl, Atr,Val);
+    }
+    Value CLIModule::p_Repl(Evaluator& Evaluator,Dict& Attributes,List& Children)
+    {
+        auto ReturnValue = Value::EmplacePolymorphic<MBTUI::REPL,MBCLI::Window>();
+        //auto EnterFuncIt = Attributes.find(String("onenter"));
+        //if(EnterFuncIt != Attributes.end())
+        //{
+        //    MBUtility::MOFunction<void(std::string const&)> EnterFunc = 
+        //        [Evaluator=Evaluator.shared_from_this(),Func = EnterFuncIt->second](std::string const& Line)
+        //        {
+        //            Evaluator->Eval(Func,{Line});
+        //        };
+        //    ReturnValue.GetType<MBTUI::REPL>().SetOnEnterFunc(std::move(EnterFunc));
+        //}
+        for(auto const& Val : Attributes)
+        {
+            REPL_SetAtr(ReturnValue.GetType<MBTUI::REPL>(),Val.first.GetType<String>(),Val.second,Evaluator);
         }
         return ReturnValue;
     }
+
+
     Value GetLine_Repl(MBTUI::REPL& Repl)
     {
         return String(Repl.GetLineString());
@@ -458,6 +542,23 @@ namespace MBLisp
     MBCLI::ConsoleInput CLIModule::p_GetInput(MBCLI::MBTerminal& Terminal)
     {
         return Terminal.ReadNextInput();
+    }
+    Value p_GetEvent(MBCLI::MBTerminal& Terminal)
+    {
+        auto Event = Terminal.GetNextEvent();
+        if(Event.IsType<MBCLI::ConsoleInput>())
+        {
+            return Value::EmplaceExternal<MBCLI::ConsoleInput>(Event.GetType<MBCLI::ConsoleInput>());
+        }
+        else if(Event.IsType<MBCLI::ResizeEvent>())
+        {
+            return Value::EmplaceExternal<MBCLI::ResizeEvent>(Event.GetType<MBCLI::ResizeEvent>());
+        }
+        else if(Event.IsType<MBCLI::CancelledEvent>())
+        {
+            return Value::EmplaceExternal<MBCLI::CancelledEvent>(Event.GetType<MBCLI::CancelledEvent>());
+        }
+        return Value();
     }
     MBCLI::CursorInfo CLIModule::CursorInfoPos(Int X,Int Y)
     {
@@ -640,6 +741,7 @@ namespace MBLisp
                 Absolute.SetVisible(Val.GetType<bool>());   
             }
         }
+        HandleSizeSpec(Absolute, Atr,Val);
     }
 
     Value CreateAbsolute(Evaluator& Evaluator,Dict& Attributes,List& Children)
@@ -868,6 +970,7 @@ namespace MBLisp
         //AssociatedEvaluator.AddGeneric<p_AddChildStacker>(ReturnValue,"add-child");
         AssociatedEvaluator.AddObjectMethod<&MBTUI::Stacker::ClearChildren>(ReturnValue,"clear");
         AssociatedEvaluator.AddGeneric<p_Repl>(ReturnValue,"repl");
+        AssociatedEvaluator.AddGeneric<REPL_SetAtr>(ReturnValue,"set-atr");
         AssociatedEvaluator.AddGeneric<GetLine_Repl>("get-line");
         AssociatedEvaluator.AddGeneric<SetLine_Repl>(ReturnValue,"set-line");
 
@@ -887,6 +990,7 @@ namespace MBLisp
 
         AssociatedEvaluator.AddGeneric<p_Terminal>(ReturnValue,"terminal");
         AssociatedEvaluator.AddGeneric<p_GetInput>(ReturnValue,"get-input");
+        AssociatedEvaluator.AddGeneric<p_GetEvent>(ReturnValue,"get-event");
         AssociatedEvaluator.AddGeneric<p_WriteWindow>(ReturnValue,"write-window");
         AssociatedEvaluator.AddGeneric<p_WriteWindowBuiltin>(ReturnValue,"write-window");
         AssociatedEvaluator.AddGeneric<p_TermDims>(ReturnValue,"dims");
@@ -901,6 +1005,8 @@ namespace MBLisp
 
 
         AssociatedEvaluator.AddType<MBCLI::ConsoleInput>(ReturnValue,"input_t");
+        AssociatedEvaluator.AddType<MBCLI::ResizeEvent>(ReturnValue,"resize_t");
+        AssociatedEvaluator.AddType<MBCLI::CancelledEvent>(ReturnValue,"canceled_t");
         AssociatedEvaluator.AddType<MBTUI::Stacker>(ReturnValue,"stacker_t");
         AssociatedEvaluator.AddType<MBTUI::Absolute>(ReturnValue,"absolute_t");
         AssociatedEvaluator.AddType<MBCLI::Dimensions>(ReturnValue,"dims_t");

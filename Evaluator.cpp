@@ -173,19 +173,39 @@ namespace MBLisp
     {
         return Arguments[0].GetType<Symbol>().ID < Arguments[1].GetType<Symbol>().ID;
     }
-    Value Evaluator::Sort BUILTIN_ARGLIST
+    //Value Evaluator::Sort BUILTIN_ARGLIST
+    //{
+    //    Ref<List> AssociatedList = Arguments[0].GetRef<List>();
+    //    Value LessFunc = Context.GetState().GetCurrentScope().FindVariable(Context.GetEvaluator().p_GetSymbolID("<"));
+    //    std::sort(AssociatedList->begin(),AssociatedList->end(),[&](Value const& lhs,Value const& rhs)
+    //            {
+    //                if(!(lhs.IsType<String>() && rhs.IsType<String>()))
+    //                {
+    //                    return false;
+    //                }
+    //                return lhs.GetType<String>() < rhs.GetType<String>();
+    //            });
+    //    return AssociatedList;
+    //}
+    static Ref<List> Sort_Callable(Ref<List> ListToSort,Value& Callable,Evaluator& CurrentState)
     {
-        Ref<List> AssociatedList = Arguments[0].GetRef<List>();
-        Value LessFunc = Context.GetState().GetCurrentScope().FindVariable(Context.GetEvaluator().p_GetSymbolID("<"));
-        std::sort(AssociatedList->begin(),AssociatedList->end(),[&](Value const& lhs,Value const& rhs)
+        bool ReturnValue = true;
+        std::sort(ListToSort->begin(),ListToSort->end(),[&](Value const& lhs,Value const& rhs)
+            {
+                auto Res = CurrentState.Eval(Callable,{lhs,rhs});
+                if(!Res.IsType<bool>())
                 {
-                    if(!(lhs.IsType<String>() && rhs.IsType<String>()))
-                    {
-                        return false;
-                    }
-                    return lhs.GetType<String>() < rhs.GetType<String>();
-                });
-        return AssociatedList;
+                    throw std::runtime_error("Error sorting list: less than operator returned non boolean value");
+                }
+                return Res.GetType<bool>();
+            });
+        return ListToSort;
+    }
+    static Ref<List> Sort_Default(Ref<List> ListToSort,CallContext& CurrentState)
+    {
+        bool ReturnValue = true;
+        Value LessFunc = CurrentState.GetState().GetCurrentScope().FindVariable(CurrentState.GetEvaluator().GetSymbolID("<"));
+        return Sort_Callable(ListToSort,LessFunc,CurrentState.GetEvaluator());
     }
     Value Evaluator::CreateList BUILTIN_ARGLIST
     {
@@ -2967,7 +2987,9 @@ namespace MBLisp
         AddMethod<List>("back",Back_List);
         AddMethod<List,Int>("index",Index_List);
         AddMethod<List>("len",Len_List);
-        AddMethod<List>("sort",Sort);
+        //AddMethod<List>("sort",Sort);
+        AddGeneric<Sort_Default>("sort");
+        AddGeneric<Sort_Callable>("sort");
         AddGeneric<Pop_List>("pop");
         AddMethod<List,Any>("push",Append_List);
         AddGeneric<Reverse_List>("reverse");

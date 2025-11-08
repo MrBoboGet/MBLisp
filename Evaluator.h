@@ -273,7 +273,7 @@ namespace MBLisp
         static void Print(Evaluator& AssociatedEvaluator,Value const& ValueToPrint);
         static Value Print BUILTIN_ARGLIST;
         static Value Less BUILTIN_ARGLIST;
-        static Value Sort BUILTIN_ARGLIST;
+        //static Value Sort BUILTIN_ARGLIST;
         static Value Plus  BUILTIN_ARGLIST;
         static Int Plus_Int (Int Lhs,Int Rhs);
         static String Plus_String (String& Lhs,String& Rhs);
@@ -552,6 +552,10 @@ namespace MBLisp
             {
                 //Dont add anything 
             }
+            else if constexpr(std::is_same_v<Type,CallContext>)
+            {
+                //Dont add anything 
+            }
             else if constexpr(IsRefType::value)
             {
                 //Types.push_back(0);
@@ -690,24 +694,33 @@ namespace MBLisp
             }
             else
             {
+                
+                typedef typename std::remove_cv<
+                            typename std::remove_reference<typename i_TypeExtractor<0,sizeof...(SuppliedArgTypes),TotalArgTypes...>::type>::type>::type ArgType;
+                typedef IsTemplateInstantiation<ArgType,Ref> IsRefType;
+                
+                if constexpr(std::is_same_v<Evaluator,ArgType>)
+                {
+                    return p_InvokeFunction(Function,Context,Offset,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
+                        Context.GetEvaluator());
+                }
+                else if constexpr(std::is_same_v<CallContext,ArgType>)
+                {
+                    return p_InvokeFunction(Function,Context,Offset,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
+                        Context);
+                }
+                
+                
                 //+1 beccause the first argument  is always the type of the invoking object
                 if(Offset >= LispArgs.size())
                 {
                     throw std::runtime_error("Insufficient arguments supplied");   
                 }
 
-                typedef typename std::remove_cv<
-                            typename std::remove_reference<typename i_TypeExtractor<0,sizeof...(SuppliedArgTypes),TotalArgTypes...>::type>::type>::type ArgType;
-                typedef IsTemplateInstantiation<ArgType,Ref> IsRefType;
                 if constexpr(std::is_same_v<Value,ArgType>)
                 {
                     return p_InvokeFunction(Function,Context,Offset+1,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
                         LispArgs[Offset]);
-                }
-                else if constexpr(std::is_same_v<Evaluator,ArgType>)
-                {
-                    return p_InvokeFunction(Function,Context,Offset,LispArgs,std::forward<SuppliedArgTypes>(Args)...,
-                        Context.GetEvaluator());
                 }
                 else if constexpr(IsRefType::value)
                 {
