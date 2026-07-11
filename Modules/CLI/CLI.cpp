@@ -657,6 +657,10 @@ namespace MBLisp
     {
         Stacker.SetSelectedWindowIndex(Index);
     }
+    static MBLisp::Int GetSelectedIndex(MBTUI::Stacker& Stacker)
+    {
+        return Stacker.SelectedWindowIndex();
+    }
     static Value GetSelected(MBTUI::Stacker& Stacker)
     {
         if(!Stacker.WindowSelected())
@@ -962,6 +966,7 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<SetAttribute_Absolute>(ReturnValue,"set-atr");
         AssociatedEvaluator.AddGeneric<p_AddValueChildStacker>(ReturnValue,"add-child");
         AssociatedEvaluator.AddGeneric<GetSelected>(ReturnValue,"get-selected");
+        AssociatedEvaluator.AddGeneric<GetSelectedIndex>(ReturnValue,"get-selected-index");
         AssociatedEvaluator.AddGeneric<SetSelectedIndex>(ReturnValue,"set-selected-index");
         AssociatedEvaluator.AddGeneric<GetFirst_Stacker>(ReturnValue,"first");
         AssociatedEvaluator.AddGeneric<ChildCount_Stacker>(ReturnValue,"child-count");
