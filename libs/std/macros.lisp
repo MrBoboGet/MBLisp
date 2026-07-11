@@ -1,0 +1,15 @@
+(defmacro %>% (&rest body)
+    (if (eq (len body) 0) (return null))
+    (setl return-value :0 body)
+    (doit i (range 1 (len body))
+        (setl cur-elem (. body i))
+        (if (eq (type cur-elem) list_t)
+            (setl cur-elem (copy cur-elem))
+            (insert-at cur-elem 1 return-value)
+         else
+            (setl cur-elem (list cur-elem return-value))
+        )
+        (setl return-value cur-elem)
+    )
+    return-value
+)
