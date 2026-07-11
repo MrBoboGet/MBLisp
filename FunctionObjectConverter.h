@@ -65,7 +65,7 @@ namespace MBLisp
     using FromBuiltin_t = typename std::remove_cv<typename std::remove_reference<T>::type>::type;
 
     template<typename T>
-    auto FromBuiltin(Value& Val)
+    decltype(auto) FromBuiltin(Value& Val)
     {
         typedef typename std::remove_cv<typename std::remove_reference<T>::type>::type Type;
         if constexpr(IsTemplateInstantiation<T,Ref>::value)
