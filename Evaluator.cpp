@@ -2811,6 +2811,30 @@ namespace MBLisp
     {
         return lhs * rhs;
     }
+    static Int Div_Int(Int lhs,Int rhs)
+    {
+        return lhs / rhs;
+    }
+    static String Times_String_Lhs(String const& lhs,Int rhs)
+    {
+        String res;
+        res.reserve(lhs.size() * std::max(rhs,Int(0)));
+        for(Int i = 0; i < rhs; i++)
+        {
+            res.append(lhs.begin(),lhs.end());
+        }
+        return res;
+    }
+    static String Times_String_Rhs(Int lhs,String const& rhs)
+    {
+        String res;
+        res.reserve(rhs.size() * std::max(lhs,Int(0)));
+        for(Int i = 0; i < lhs; i++)
+        {
+            res.append(rhs.begin(),rhs.end());
+        }
+        return res;
+    }
     void Clear_String(String& Str)
     {
         Str.clear();
@@ -3081,6 +3105,9 @@ namespace MBLisp
         AddGeneric<&Plus_Int>("plus");
         AddMethod<Int,Int>("minus",Minus_Int);
         AddGeneric<Times_Int>("times");
+        AddGeneric<Times_String_Lhs>("times");
+        AddGeneric<Times_String_Rhs>("times");
+        AddGeneric<Div_Int>("divide");
         AddGeneric<&Plus_String>("plus");
         AddGeneric<&InsertElements>("insert-elements");
         
