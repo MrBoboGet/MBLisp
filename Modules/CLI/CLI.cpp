@@ -831,6 +831,7 @@ namespace MBLisp
                 Text.SetMultiline(Val.GetType<bool>());
             }
         }
+        HandleSizeSpec(Text, Atr,Val);
     }
     Value Text_Create(String const& Content)
     {
@@ -1019,7 +1020,6 @@ namespace MBLisp
         AssociatedEvaluator.AddType<MBTUI::Text>(ReturnValue,"text_t");
         AssociatedEvaluator.AddType<MBTUI::REPL>(ReturnValue,"repl_t");
         AssociatedEvaluator.AddType<MBTUI::SpinWindow>(ReturnValue,"spin_t");
-
 
         //Hider
         AssociatedEvaluator.AddGeneric<CreateHider>(ReturnValue,"hider");

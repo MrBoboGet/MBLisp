@@ -39,6 +39,10 @@ namespace MBLisp
     {
         return MBUnicode::PathToUTF8(std::filesystem::path(Path).filename());
     }
+    static void CreateSymlink(String const& TargetPath, String const& LinkPath)
+    {
+        std::filesystem::create_symlink(std::filesystem::canonical(TargetPath),LinkPath);
+    }
     static String PathAppend(String const& Base,String const& NewFile)
     {
         return MBUnicode::PathToUTF8(std::filesystem::path(Base) / NewFile);
@@ -3165,6 +3169,7 @@ namespace MBLisp
         AddMethod<String>("path-id",PathID);
         AddGeneric<FileName>("file-name");
         AddGeneric<PathAppend>("path-append");
+        AddGeneric<CreateSymlink>("create-symlink");
 
         
         //Readtables
