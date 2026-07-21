@@ -894,6 +894,16 @@ namespace MBLisp
         ListToModify.pop_back();
         return ReturnValue;
     }
+    static Value PopFront_List(List& ListToModify)
+    {
+        if(ListToModify.size() == 0)
+        {
+            throw std::runtime_error("Cannot pop from empty list");
+        }
+        Value ReturnValue = ListToModify.front();
+        ListToModify.erase(ListToModify.begin());
+        return ReturnValue;
+    }
     bool Evaluator::Reverse_List(List& ListToModify)
     {
         std::reverse(ListToModify.begin(),ListToModify.end());
@@ -3020,6 +3030,7 @@ namespace MBLisp
         AddGeneric<Sort_Default>("sort");
         AddGeneric<Sort_Callable>("sort");
         AddGeneric<Pop_List>("pop");
+        AddGeneric<PopFront_List>("pop-front");
         AddMethod<List,Any>("push",Append_List);
         AddGeneric<Reverse_List>("reverse");
         AddGeneric<SetLoc_List>("set-loc");

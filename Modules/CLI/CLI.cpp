@@ -921,6 +921,16 @@ namespace MBLisp
         return ReturnValue;
     }
 
+    void AddTimer(Evaluator& Evaluator,Temporary<MBCLI::BufferView> View,Int MilliSeconds,Value Callback)
+    {
+        View.Get().GetContext().Get<MBCLI::TerminalTimer*>()->AddTimer(std::chrono::milliseconds(MilliSeconds),
+                [Callback=std::move(Callback),Evaluator=Evaluator.shared_from_this()]
+                {
+                    auto Scope = Evaluator->GetModuleScope("cli");
+                    Evaluator->Eval(std::move(Scope),std::move(Callback),{});
+                });
+    }
+
 
     MBLisp::Ref<MBLisp::Scope> CLIModule::GetModuleScope(MBLisp::Evaluator& AssociatedEvaluator)
     {
@@ -1002,6 +1012,7 @@ namespace MBLisp
         AssociatedEvaluator.AddGeneric<p_TermDims>(ReturnValue,"dims");
         AssociatedEvaluator.AddGeneric<p_HeightTerm>(ReturnValue,"height");
         AssociatedEvaluator.AddGeneric<p_WidthTerm>(ReturnValue,"width");
+        AssociatedEvaluator.AddGeneric<AddTimer>(ReturnValue,"add-timer");
 
         AssociatedEvaluator.AddGeneric<p_Clear>("clear");
         AssociatedEvaluator.AddGeneric<p_ClearTerm>("clear");
