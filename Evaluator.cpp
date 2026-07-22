@@ -3886,4 +3886,21 @@ namespace MBLisp
         }
         OutFile << MBParsing::JSONObject(std::move(Objects)).ToPrettyString();
     }
+    String Evaluator::GetExceptionMessage(UncaughtSignal const& Exception)
+    {
+        String ReturnValue;
+        if(Exception.ThrownValue.IsType<String>())
+        {
+            ReturnValue = Exception.ThrownValue.GetType<String>();
+        }
+        else if(Exception.ThrownValue.IsType<StackTrace>())
+        {
+            ReturnValue = GetString(Exception.ThrownValue.GetType<StackTrace>());
+        }
+        else 
+        {
+            ReturnValue = Exception.what();   
+        }
+        return ReturnValue;
+    }
 }

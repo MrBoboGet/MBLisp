@@ -947,5 +947,6 @@ namespace MBLisp
         
         
         void DumpInternalModule(std::string_view Name,Scope& Scope);
+        String GetExceptionMessage(UncaughtSignal const& Exception);
     };
 }
